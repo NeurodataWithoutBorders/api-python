@@ -51,7 +51,7 @@ class File(object):
                 'description': ('Default location for format specification files'
                     ' (defining the format using the specification language).  This'
                     ' used for loading specification files listed in the "dimp" parameter.'),
-                'default': './'},
+                'default': os.path.dirname(os.path.realpath(__file__))},
             'link_type': {
                 'description': 'Type of links when linking one dataset to another',
                 'values': { # following tuples have description, then 'Default' if default value

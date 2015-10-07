@@ -1,8 +1,8 @@
 import time
 import h5gate as g
-import nwb_init as ni
+from nwb import init
 
-def nwb_file(fname, start_time="", ddef={}, dimp=[], default_ns='core', options={}):
+def create(fname, start_time="", ddef={}, dimp=[], default_ns='core', options={}):
 	""" Create NWB file.  Returns h5gate File object.
 	fname  - name of nwb (hdf5) file to create.
 	start_time - session starting time.  If not specified, current time is used.  
@@ -23,5 +23,5 @@ def nwb_file(fname, start_time="", ddef={}, dimp=[], default_ns='core', options=
 	# create nwb file
 	f = g.File(fname, ddef, dimp, default_ns, options)
 	# set initial metadata
-	ni.nwb_init(f, fname, start_time)
+	init.initialize_metadata(f, fname, start_time)
 	return f
