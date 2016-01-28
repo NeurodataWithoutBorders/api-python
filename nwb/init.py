@@ -8,7 +8,7 @@ VERS_PATCH = 1
 FILE_VERSION_STR = "NWB-%d.%d.%d" % (VERS_MAJOR, VERS_MINOR, VERS_PATCH)
 IDENT_PREFIX = "Neurodata h5gate testing " + FILE_VERSION_STR + ": "
 
-def nwb_init(f, file_name, start_time):
+def initialize_metadata(f, file_name, start_time):
     """ Set initial metadata in nwb file.  f is NWB_file object (inherits
     from h5gate) """     
     f.set_dataset("neurodata_version", FILE_VERSION_STR)
