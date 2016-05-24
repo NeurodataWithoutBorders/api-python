@@ -1,11 +1,14 @@
 # Python API for Neurodata Without Borders (NWB) format
 
-Version 1.0 (August 4, 2015)
+Version 0.5 (May 24, 2016)
 
 
 ## 1. Overview.
 
 The Python API for the NWB format is a write API that can be used to create NWB files (it does not provide functionality for reading).  It is implemented using a specification language and API that are domain-independent.  The API provides a small set of generic functions for storing data in the file (that is, creating HDF5 groups and datasets).  The specialization of the API to create NWB files is achieved by having the format defined using the specification language.
+
+** May 24, 2016 update **  See examples and unittests for examples of creating, and validating NWB files.
+ 
 
 ## 2. Files.
 
