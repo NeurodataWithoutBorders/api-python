@@ -13,20 +13,20 @@ echo "describe a particular NWB file."
 
 echo
 echo "Making core doc by doing:"
-cmd="python nwb/make_docs.py > ../text_output_files/doc/core_doc.html"
+cmd="python -m nwb.make_docs > ../text_output_files/doc/core_doc.html"
 echo "$cmd"
-python nwb/make_docs.py > ../text_output_files/doc/core_doc.html
+python -m nwb.make_docs > ../text_output_files/doc/core_doc.html
 
 echo
 echo "Making core doc with two extensions by doing:"
-cmd="python nwb/make_docs.py ../create_scripts/extensions/e-intracellular.py,../create_scripts/extensions/e-general.py > \
+cmd="python -m nwb.make_docs ../create_scripts/extensions/e-intracellular.py,../create_scripts/extensions/e-general.py > \
 ../text_output_files/doc/core_intra_gen.html"
-python nwb/make_docs.py ../create_scripts/extensions/e-intracellular.py,../create_scripts/extensions/e-general.py > \
+python -m nwb.make_docs ../create_scripts/extensions/e-intracellular.py,../create_scripts/extensions/e-general.py > \
 ../text_output_files/doc/core_intra_gen.html
 
 echo
 echo "Making documentation from created NWB file by doing:"
-cmd="python nwb/make_docs.py ../created_nwb_files/interface-e.nwb ../created_nwb_fles/interface-e.nwb > ../text_output/doc/interface-e.html"
+cmd="python -m nwb.make_docs ../created_nwb_files/interface-e.nwb ../created_nwb_fles/interface-e.nwb > ../text_output/doc/interface-e.html"
 echo "$cmd"
-python nwb/make_docs.py ../created_nwb_files/interface-e.nwb > ../text_output_files/doc/interface-e.html
+python -m nwb.make_docs ../created_nwb_files/interface-e.nwb > ../text_output_files/doc/interface-e.html
 

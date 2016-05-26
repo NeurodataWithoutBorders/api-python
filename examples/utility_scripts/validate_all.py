@@ -48,7 +48,7 @@ def save_output(stem, output):
         
 def validate_nwb_file(stem, file):
     global needed_extensions, extensions_dir
-    command = ['python', 'nwb/nwb_validate.py', file]
+    command = ['python', '-m', 'nwb.nwb_validate', file]
     if stem in needed_extensions:
         extensions = needed_extensions[stem]
         # add directory for extensions in front of each extension
@@ -56,7 +56,7 @@ def validate_nwb_file(stem, file):
         command.append(extensions)
     command_str = " ".join(command)
     print "doing", command_str
-    output = "command was: " + command_str + "/n"
+    output = "command was: " + command_str + "\n"
     output += check_output(command)
     return output
         

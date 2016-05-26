@@ -10,7 +10,7 @@ echo "The difference is displaed on the screen, and saved"
 echo "in file: ../text_output_files/diff/motion_correction1_2_diff.txt"
 
 
-python nwb/h5diffci.py ../created_nwb_files/motion_correction.nwb ../created_nwb_files/motion_correction2.nwb > \
+python -m nwb.h5diffci ../created_nwb_files/motion_correction.nwb ../created_nwb_files/motion_correction2.nwb > \
 ../text_output_files/diff/motion_correction1_2_diff.txt
 
 cat  ../text_output_files/diff/motion_correction1_2_diff.txt

@@ -12,7 +12,7 @@ fi
    # Note the two dashes after the file name.  First dash is for
    # extensions, second is for the core specification (nwb_core.py).
 
-   python nwb/nwb_validate.py ../created_nwb_files/annotations.nwb - -
+   python -m nwb.nwb_validate ../created_nwb_files/annotations.nwb - -
 
 
 
