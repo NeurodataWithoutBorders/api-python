@@ -10,6 +10,7 @@ import re
 import copy
 import os.path
 import imp
+import ast
 import shutil
 import find_links
 import combine_messages as cm
@@ -351,9 +352,7 @@ class File(object):
 #                     if close_paren == ")":
 #                         output_lines.append(paren_str + '"')
                     
-                     
         
-            
     def load_format_specifications(self, spec_files):
         """ Load format specification files, specified by "spec_files" parameter.
         Save in self.ddef (ddef stands for data definitions)"""
@@ -368,12 +367,14 @@ class File(object):
             # using eval for now.  In future, should use ast.literal_eval to prevent
             # potential security problems
             try:
-                vals = eval(file_contents)
+                # vals = eval(file_contents)
+                vals = ast.literal_eval(file_contents)
             except Exception, e:
                 print ("** Invalid format in specification file '%s' (should "
                     "be mostly JSON)") % file_name
                 print "Error is: %s" % e
                 sys.exit(1)
+            patch_json_vals(vals, {"float('NaN')": float('NaN')})
 #             dd = imp.load_source('temp_module', path)
             if fs_var not in vals:
 #             if fs_var not in dir(dd):
@@ -2218,18 +2219,18 @@ class File(object):
                     else:
                         vi['identified_custom_nodes'][type].append(node.full_path)
             elif node.sdef['ns'] != self.default_ns and self.options['identify_extension_nodes']:
-				# this node defined in an extension and should be identified by an attribute
-				eaid = self.options['extension_node_identifier']
-				found_match = False
-				if eaid in node.h5attrs:
-					found_val = node.h5attrs[eaid]
-					expected_val = "%s:%s" % (node.sdef['ns'], node.sdef['id'])
-					if found_val == expected_val or found_val == node.sdef['ns']:
-						found_match = True
-				if found_match:
-					vi['identified_extension_nodes'][type].append(node.full_path)
-				else:
-					vi['extension_nodes_missing_flag'][type].append(node.full_path)
+                # this node defined in an extension and should be identified by an attribute
+                eaid = self.options['extension_node_identifier']
+                found_match = False
+                if eaid in node.h5attrs:
+                    found_val = node.h5attrs[eaid]
+                    expected_val = "%s:%s" % (node.sdef['ns'], node.sdef['id'])
+                    if found_val == expected_val or found_val == node.sdef['ns']:
+                        found_match = True
+                if found_match:
+                    vi['identified_extension_nodes'][type].append(node.full_path)
+                else:
+                    vi['extension_nodes_missing_flag'][type].append(node.full_path)
             self.validate_attributes(node, vi)
             if node.link_info:
                 # this node is link to another node
@@ -2326,6 +2327,8 @@ class File(object):
         """ Check for any attributes that are required or recommended but do not
         have a value *or* are const and have an incorrect value.  Also record
         any described by an extension"""
+#         if "my_drifting_grating_features" in node.full_path:
+#             import pdb; pdb.set_trace()
         if not hasattr(node, "attributes"):
             # this node does not have any attributes
             return
@@ -3274,16 +3277,16 @@ class File(object):
                     self.load_node(h5_node, mpath, 'extlink')
                 else:
                     # successfully loaded h5_node
-					if ext_target:
-						# found external link which exists
-						msg = ("%s: found external link.  Loading nodes from it, even though it's not "
-							"part of the original hdf5 file") % mpath
-						self.warning.append(msg)
-					if isinstance(h5_node, h5py.Dataset):
-						self.load_node(h5_node, mpath, 'dataset')
-					else:
-						np2 = (h5_node, mpath)
-						groups_to_visit.append(np2)
+                    if ext_target:
+                        # found external link which exists
+                        msg = ("%s: found external link.  Loading nodes from it, even though it's not "
+                            "part of the original hdf5 file") % mpath
+                        self.warning.append(msg)
+                    if isinstance(h5_node, h5py.Dataset):
+                        self.load_node(h5_node, mpath, 'dataset')
+                    else:
+                        np2 = (h5_node, mpath)
+                        groups_to_visit.append(np2)
         # fill in any links that did not have target available when reading
         find_links.fill_missing_links(self)
         
@@ -3360,9 +3363,9 @@ class File(object):
         # Save hdf5 node attributes for later validation (checking for missing attributes)
         # only save if h5_node is not None.  It will be None if there is an external link
         if h5_node:
-			for key in h5_node.attrs:
-				value = h5_node.attrs[key]
-				node.h5attrs[key] = value
+            for key in h5_node.attrs:
+                value = h5_node.attrs[key]
+                node.h5attrs[key] = value
         return node
 
     def save_counts(self, dict, key):
@@ -3960,7 +3963,7 @@ class File(object):
         as a string using key '_source' to an array with key 'source' and values the
         ancestors of the sources.  This used if there is a superclass overriding
         attributes in a subclass.  It may also be used for extensions.
-        The order in the array that the latest in the list is
+        The order in the array is that the latest in the list is
         the most recent source, earlier in list are from structures that are extended
         (e.g. base classes).
         """
@@ -3968,8 +3971,8 @@ class File(object):
             if aid not in dest.keys():
                 dest[aid] = copy.deepcopy(source[aid])
                 if 'qty' not in dest[aid]:
-					# if present, rename key from '_qty' to 'qty' to be consistent with mstats key
-					dest[aid]['qty'] = dest[aid].pop('_qty') if '_qty' in dest[aid] else "!"  # default is required
+                    # if present, rename key from '_qty' to 'qty' to be consistent with mstats key
+                    dest[aid]['qty'] = dest[aid].pop('_qty') if '_qty' in dest[aid] else "!"  # default is required
                 if '_source' in dest[aid]:
                     # rename key from '_source' to 'source' to be consistent with mstats key
                     assert 'source' not in dest[aid], "attribute '%s', has 'source' in def: %s" % (
@@ -3979,6 +3982,10 @@ class File(object):
                 continue
             # attribute already is in dest, append any specified '_source' to 'source' list
             a_source = source[aid]['_source'] if '_source' in source[aid] else None
+            # replace qty specified in superclass with qty for subclass
+            source_qty = (source[aid]['qty'] if 'qty' in source[aid] else
+                source[aid]['_qty'] if '_qty' in source[aid] else "!")  # default is required
+            dest[aid]['qty'] = source_qty
             if a_source:
                 if 'source' in dest[aid]:
                     dest[aid]['source'].append(a_source)
@@ -5287,7 +5294,18 @@ def valid_dtype(ddt, found):
     # of data passed in because there are many different types.  Instead, check sizes using value
     # stored in hdf5 file at the end.  That is needed for validation anyway.
     return valid_type
-  
+
+
+def patch_json_vals(json, replace):
+    # Replace old_values with new_values in json
+    # json is a dict (basically JSON format)
+    # replace is a dict mapping old_values to new_values
+    # This used to replace string "float('NaN')" with float('NaN') i.e. and actual NaN.
+    for key in json.keys():
+        if type(json[key]) is dict:
+            patch_json_vals(json[key], replace)
+        elif type(json[key]) is str and json[key] in replace:
+            json[key] = replace[json[key]]
   
     
 class Group(Node):

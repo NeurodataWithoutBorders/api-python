@@ -210,8 +210,7 @@
                     "data_type": "int32", },
                 "count": {
                     "description": ("Number of data samples available in this time series, "
-                        "during this epoch. "
-                        "COMMENT: Changed from stop_idx to lessen ambiguity"),
+                        "during this epoch."),
                     "data_type": "int32", },
                 "timeseries/": {
                     "description": ("Link to TimeSeries.  An HDF5 soft-link should be "
@@ -357,7 +356,7 @@
 				"description": "Dataset for storing contents of a specification file for either "
 					"the core format or an extension.  Name should match name of file.`",
 				"attributes": {
-					"help": {
+					"help?": {
 					    "data_type": "text",
 					    "value": "Contents of format specification file." },
 					"namespaces": {
@@ -677,7 +676,7 @@
                     "defined for all of the TimeSeries classes listed. The class hierarchy "
                     "is described more fully below. "
                     "COMMENT: For example: [0]=""TimeSeries"", [1]=""ElectricalSeries"" "
-                    "[1]=""PatchClampSeries"". The hierarchical order should be preserved "
+                    "[2]=""PatchClampSeries"". The hierarchical order should be preserved "
                     "in the array -- i.e., the parent object of subclassed element N in the "
                     "array should be element N-1")},
             "neurodata_type": {
@@ -867,7 +866,7 @@
                 "dimensions": ["2"],
                 "value":["TimeSeries","AbstractFeatureSeries"],
                 "const": True},
-            "help": {
+            "help?": {
                 "data_type": "text",
                 "value": ("Features of an applied stimulus. This is useful when storing the raw "
                     "stimulus is impractical"),
@@ -900,7 +899,7 @@
                 "dimensions": ["2"],
                 "value":["TimeSeries","AnnotationSeries"],
                 "const": True },
-            "help": {
+            "help?": {
                 "data_type": "text",
                 "value": "Time-stamped annotations about an experiment",
                 "const": True}},
@@ -911,10 +910,10 @@
             "attributes": {
 				"conversion": {
 					"description": "Value is float('NaN') (const) since this does not apply.",
-					"value": float("NaN"), "const": True},
+					"value": "float('NaN')", "const": True},
 				"resolution": {
 					"description": "Value is float('nan') (const) since this does not apply",
-					"value": float("NaN"), "const": True},
+					"value": "float('NaN')", "const": True},
 				"unit": {
 					"description": "Value is \"n/a\" to indicate that this does not apply", 
 					"value": "n/a", "const": True}}},
@@ -934,7 +933,7 @@
                 "dimensions": ["2"],
                 "value":["TimeSeries","IndexSeries"],
                 "const": True},
-            "help": {
+            "help?": {
                 "data_type": "text",
                 "value": ("A sequence that is generated from an existing image stack. "
                     "Frames can be presented in an arbitrary order. The data[] field "
@@ -973,7 +972,7 @@
                 "dimensions": ["2"],
                 "value": ["TimeSeries","IntervalSeries"],
                 "const": True},
-            "help": {
+            "help?": {
                 "data_type": "text",
                 "value": "Stores the start and stop times for events",
                 "const": True}},
@@ -983,10 +982,10 @@
             "attributes": {
                 "conversion": {
                     # "description": "Valus is float('nan') (const) since this does not apply.",
-                    "value": float("NaN"), "const": True},
+                    "value": "float('NaN')", "const": True},
                 "resolution": {
                     # "description": "Value is float('nan') (const) since this does not apply",
-                    "value": float("NaN"), "const": True},
+                    "value": "float('NaN')", "const": True},
                 "unit": {
                     # "description": "Value is \"n/a\" to indicate that this does not apply", 
                     "value": "n/a", "const": True}},
@@ -1001,7 +1000,7 @@
                 "dimensions": ["2"],
                 "value":["TimeSeries","OptogeneticSeries"],
                 "const": True},
-            "help": {
+            "help?": {
                 "data_type": "text",
                 "value": "Optogenetic stimulus",
                 "const": True}},
@@ -1025,7 +1024,7 @@
                 "dimensions": ["2"],
                 "value": ["TimeSeries","RoiResponseSeries"],
                 "const": True },
-            "help": {
+            "help?": {
                 "data_type": "text",
                 "value": ("ROI responses over an imaging plane. Each row in data[] should "
                     "correspond to the signal from one ROI"),
@@ -1068,7 +1067,7 @@
                 "dimensions": ["2"],
                 "value":["TimeSeries","SpatialSeries"],
                 "const": True },
-             "help": {
+             "help?": {
                 "data_type": "text",
                 "value": ("Stores points in space over time. The data[] array structure "
                     "is [num samples][num spatial dimensions]"),
@@ -1086,8 +1085,8 @@
         "description": ("Stores acquired voltage data from extracellular recordings. "
         "The data field of an ElectricalSeries is an int or float array storing data "
         "in Volts. "
-        "TimeSeries::data array structure: :blue:`[num events] [num channels] [num samples] "
-        "(or [num events] [num samples] for single electrode).`"),
+        "TimeSeries::data array structure: :blue:`[num times] [num channels] "
+        "(or [num_times] for single electrode).`"),
         "merge": ["<TimeSeries>/"],
         "attributes": {
             "ancestry": {
@@ -1095,7 +1094,7 @@
                 "dimensions": ["2"],
                 "const":True,
                 "value": ["TimeSeries","ElectricalSeries"]},
-             "help": {
+             "help?": {
                 "data_type": "text",
                 "value": "Stores acquired voltage data from extracellular recordings",
                 "const": True}},
@@ -1107,7 +1106,8 @@
             "data_type": "number",
             "attributes": { "unit": { "data_type": "text", "value": "volt" }}},
         "electrode_idx": {
-            "description": "Indicies to electrodes in general/extracellular_ephys/electrode_map.",
+            "description": ("Indicies (zero-based) to electrodes in "
+                "general/extracellular_ephys/electrode_map."),
             "dimensions": ["num_channels"],
             "data_type": "int32",
             "references": "/general/extracellular_ephys/electrode_map.num_electrodes",},     
@@ -1128,7 +1128,7 @@
                 "dimensions": ["3"],
                 "value":["TimeSeries","ElectricalSeries","SpikeEventSeries"],
                 "const": True},
-             "help": {
+             "help?": {
                 "data_type": "text",
                 "value": "Snapshots of spike events from data.",
                 "const": True}},
@@ -1151,7 +1151,7 @@
                 "dimensions": ["2"],
                 "value": ["TimeSeries","PatchClampSeries"],
                 "const": True},
-            "help": {
+            "help?": {
                 "data_type": "text",
                 "value": ("Superclass definition for patch-clamp data"),
                 "const": True}},
@@ -1177,7 +1177,7 @@
                 "dimensions": ["3"],
                 "value": ["TimeSeries","PatchClampSeries","VoltageClampStimulusSeries"],
                 "const": True},
-            "help": {
+            "help?": {
                 "data_type": "text",
                 "value": ("Stimulus voltage applied during voltage clamp recording"),
                 "const": True}},      
@@ -1192,7 +1192,7 @@
                 "dimensions": ["3"],
                 "value": ["TimeSeries","PatchClampSeries","CurrentClampStimulusSeries"],
                 "const": True},
-            "help": {
+            "help?": {
                 "data_type": "text",
                 "value": ("Stimulus current applied during current clamp recording"),
                 "const": True}},            
@@ -1208,7 +1208,7 @@
                 "dimensions": ["3"],
                 "value": ["TimeSeries","PatchClampSeries","VoltageClampSeries"],
                 "const": True},
-            "help": {
+            "help?": {
                 "data_type": "text",
                 "value": ("Current recorded from cell during voltage-clamp recording"),
                 "const": True}},
@@ -1252,7 +1252,7 @@
                 "dimensions": ["3"],
                 "value": ["TimeSeries","PatchClampSeries","CurrentClampSeries"],
                 "const": True},
-            "help": {
+            "help?": {
                 "data_type": "text",
                 "value": ("Voltage recorded from cell during current-clamp recording"),
                 "const": True}},
@@ -1283,7 +1283,7 @@
                 "dimensions": ["4"],
                 "value": ["TimeSeries","PatchClampSeries","CurrentClampSeries","IZeroClampSeries"],
                 "const": True},
-            "help": {
+            "help?": {
                 "data_type": "text",
                 "value": ("Voltage from intracellular recordings "
                     "when all current and amplifier settings are off"),
@@ -1302,7 +1302,7 @@
                 "dimensions": ["2"],
                 "value":["TimeSeries","ImageSeries"],
                 "const": True},
-            "help": {
+            "help?": {
                 "data_type": "text",
                 "value": "Storage object for time-series 2-D image data",
                 "const": True}},
@@ -1358,7 +1358,7 @@
                 "dimensions": ["3"], 
                 "value":["TimeSeries","ImageSeries","ImageMaskSeries"],
                 "const": True},
-            "help": {
+            "help?": {
                 "data_type": "text",
                 "value": "An alpha mask that is applied to a presented visual stimulus",
                 "const": True}},
@@ -1383,7 +1383,7 @@
                 "dimensions": ["3"],
                 "value": ["TimeSeries","ImageSeries","TwoPhotonSeries"],
                 "const": True},
-            "help": {
+            "help?": {
                 "data_type":"text",
                 "value":"Image stack recorded from 2-photon microscope",
                 "const": True }},
@@ -1424,7 +1424,7 @@
                 "dimensions": ["3"],
                 "value":["TimeSeries","ImageSeries","OpticalSeries"],
                 "const": True},
-            "help": {
+            "help?": {
                 "data_type":"text",
                 "value":"Time-series image stack for optical recording or stimulus",
                 "const": True}},
@@ -1479,7 +1479,7 @@
             "See description of <a href=\"#BehavioralEpochs\">BehavioralEpochs</a> "
             "for more details."),
         "attributes": {
-            "help": {
+            "help?": {
                 "data_type":"text",
                 "value":"Position data, whether along the x, xy or xyz axis",
                 "const": True}},
@@ -1502,7 +1502,7 @@
         "BehavioralEpochs should use IntervalSeries. BehavioralEvents is used for "
         "irregular events. BehavioralTimeSeries is for continuous data."),
         "attributes": {
-            "help": {
+            "help?": {
                 "data_type":"text",
                 "value":"General container for storing behavorial epochs",
                 "const": True}},
@@ -1520,7 +1520,7 @@
         "_description": ("Clustered spike data, whether from automatic clustering tools "
             "(e.g., klustakwik) or as a result of manual sorting."),
         "attributes": {
-            "help": {
+            "help?": {
                 "data_type":"text",
                 "value":("Clustered spike data, whether from automatic clustering tools "
                     "(eg, klustakwik) or as a result of manual sorting"),
@@ -1564,7 +1564,7 @@
             "updating. For example, IMEC probes may require different storage requirements to "
             "store/display mean waveforms, requiring a new interface or an extension of this one."),
         "attributes": {
-            "help": {
+            "help?": {
                 "data_type":"text",
                 "value":("Mean waveform shape of clusters. Waveforms should be high-pass "
                     "filtered (ie, not the same bandpass filter used waveform analysis and "
@@ -1606,7 +1606,7 @@
             "of rotation (this should be ""clockwise""). The si_unit for the SpatialSeries should "
             "be ""radians"" or ""degrees""."),
         "attributes": {
-            "help": {
+            "help?": {
                 "data_type":"text",
                 "value":("Direction as measured radially. Spatial series reference frame should "
                 "indicate which direction corresponds to zero and what is the direction of positive "
@@ -1620,7 +1620,7 @@
             " of dF/F should be the same as for segmentation (ie, same names for ROIs and for"
             " image planes)."),
         "attributes": {
-            "help": {
+            "help?": {
                 "data_type":"text",
                 "value":("Df/f over time of one or more ROIs. TimeSeries names should correspond "
                     "to imaging plane names"),
@@ -1640,10 +1640,10 @@
                     " threshold, or dV/dT threshold, as well as relevant values."),
             "data_type": "text"},                 
         "source_idx": {
-            "description": ("Indices into source ElectricalSeries::data array corresponding "
-                "to time of event. Module description should define what is meant by time of "
-                "event (e.g., .25msec before action potential peak, zero-crossing time, etc). "
-                "The index points to each event from the raw data"),
+            "description": ("Indices (zero-based) into source ElectricalSeries::data array "
+                "corresponding to time of event. Module description should define what is "
+                "meant by time of event (e.g., .25msec before action potential peak, "
+                "zero-crossing time, etc). The index points to each event from the raw data"),
             "dimensions": ["num_events"],
             "data_type": "int32",
             "references": "source_electrical_series/data.num_times"},
@@ -1668,7 +1668,7 @@
         "description": ("Represents either the waveforms of detected events, as extracted from a raw data "
             "trace in /acquisition, or the event waveforms that were stored during experiment acquisition."),
         "attributes": {
-            "help": {
+            "help?": {
                 "data_type":"text",
                 "value":("Waveform of detected extracellularly recorded spike events"),
                 "const": True}},
@@ -1678,7 +1678,7 @@
         "merge": ["<Interface>/", ],
         "description": "Eye-tracking data, representing direction of gaze.",
         "attributes": {
-            "help": {
+            "help?": {
                 "data_type":"text",
                 "value": ("Eye-tracking data, representing direction of gaze"),
                 "const": True}},
@@ -1689,7 +1689,7 @@
         "_description": ("Features, such as PC1 and PC2, that are extracted from signals stored "
             "in a SpikeEvent TimeSeries or other source."),
         "attributes": {
-            "help": {
+            "help?": {
                 "data_type":"text",
                 "value": ("Container for salient features of detected events"),
                 "const": True}},
@@ -1706,8 +1706,8 @@
             "dimensions": ["num_features"],
             "data_type": "text"},    
         "electrode_idx": {
-            "description": ("Indices to electrodes described in the experiment's electrode map array "
-                "(under /general/extracellular_ephys)."),
+            "description": ("Indices (zero-based) to electrodes described in the experiment's "
+                "electrode map array (under /general/extracellular_ephys)."),
             "dimensions": ["num_channels"],
             "data_type": "int32",
             "references": "/general/extracellular_ephys/electrode_map.num_electrodes"},
@@ -1723,7 +1723,7 @@
             "ephys signals and electrodes, as a single signal can apply to many nearby electrodes, and one "
             "electrode may have different filtered (e.g., theta and/or gamma) signals represented."),
         "attributes": {
-            "help": {
+            "help?": {
                 "data_type":"text",
                 "value": ("Ephys data from one or more channels that is subjected to filtering, such as "
                     "for gamma or theta oscillations (LFP has its own interface). Filter properties should "
@@ -1737,7 +1737,7 @@
             "fluorescence should be the same as for segmentation (ie, same names for ROIs and for image "
             "planes)."), 
         "attributes": {
-            "help": {
+            "help?": {
                 "data_type":"text",
                 "value": ("Fluorescence over time of one or more ROIs. TimeSeries names should correspond "
                     "to imaging plane names"),
@@ -1753,7 +1753,7 @@
             "also be used for masking neuropil. If segmentation is allowed to change with time, a new "
             "imaging plane (or module) is required and ROI names should remain consistent between them."),
         "attributes": {
-            "help": {
+            "help?": {
                 "data_type":"text",
                 "value": ("Stores groups of pixels that define regions of interest from one or more "
                     "imaging planes",),
@@ -1815,7 +1815,7 @@
             "and [row, col], which equates to [y][x]. Field of view and dimension arrays may appear "
             "backward (i.e., y before x)."),
         "attributes": {
-            "help": {
+            "help?": {
                 "data_type":"text",
                 "value": ("Intrinsic signal optical imaging or Widefield imaging for measuring retinotopy"),
                 "const": True}},
@@ -1969,7 +1969,7 @@
             "ElectricalSeries will identify which channels are providing LFP data. Filter properties "
             "should be noted in the ElectricalSeries description or comments field."),
         "attributes": {
-            "help": {
+            "help?": {
                 "data_type":"text",
                 "value": ("LFP data from one or more channels. Filter properties should be "
                     "noted in the ElectricalSeries"),
@@ -1982,7 +1982,7 @@
             "system, to account for movement and drift between frames. "
             "Note: each frame at each point in time is assumed to be 2-D (has only x & y dimensions)."),
         "attributes": {
-            "help": {
+            "help?": {
                 "data_type":"text",
                 "value": ("Image stacks whose frames have been shifted (registered) to account for motion"),
                 "const": True}},
@@ -2030,7 +2030,7 @@
         "merge": ["<Interface>/", ],
         "description": "Position data, whether along the x, x/y or x/y/z axis.",
         "attributes": {
-            "help": {
+            "help?": {
                 "data_type":"text",
                 "value":"Position data, whether along the x, xy or xyz axis",
                 "const": True}},
@@ -2040,7 +2040,7 @@
         "merge": ["<Interface>/", ],
         "description": "Eye-tracking data, representing pupil size.",
         "attributes": {
-            "help": {
+            "help?": {
                 "data_type":"text",
                 "value":"Eye-tracking data, representing pupil size",
                 "const": True}},
@@ -2053,7 +2053,7 @@
             "the value in the source module, if that is possible/relevant (e.g., name of ROIs from "
             "Segmentation module)."),
         "attributes": {
-            "help": {
+            "help?": {
                 "data_type":"text",
                 "value": ("Estimated spike times from a single unit"),
                 "const": True}},
