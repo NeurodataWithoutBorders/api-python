@@ -26,7 +26,7 @@ python -m nwb.make_docs ../create_scripts/extensions/e-intracellular.py,../creat
 
 echo
 echo "Making documentation from created NWB file by doing:"
-cmd="python -m nwb.make_docs ../created_nwb_files/interface-e.nwb ../created_nwb_fles/interface-e.nwb > ../text_output/doc/interface-e.html"
+cmd="python -m nwb.make_docs ../created_nwb_fles/interface-e.nwb > ../text_output/doc/interface-e.html"
 echo "$cmd"
 python -m nwb.make_docs ../created_nwb_files/interface-e.nwb > ../text_output_files/doc/interface-e.html
 

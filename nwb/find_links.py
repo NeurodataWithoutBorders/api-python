@@ -701,7 +701,7 @@ def gnfpt(node, path_parts):
         if not id:
             print ("Unable to find member id %s in autogen at: %s\n"
                 " available members are: %s") % (pp, node.full_path, node.mstats.keys())
-            import pdb; pdb.set_trace()
+            # import pdb; pdb.set_trace()
             sys.exit(1)
         # found member in mstats.  Get nodes
         found_nodes = []
@@ -1187,7 +1187,7 @@ def compute_autogen(f, a):
                 return
             else:
                 print "Unexpected node type in autogen length, type=%s, target=%s" % (ntype, target)
-                import pdb; pdb.set_trace()
+                # import pdb; pdb.set_trace()
                 sys.exit(1)
         else:
             length = len(val)
@@ -1247,8 +1247,8 @@ def process_ag_extern(f, a, enclosing_node):
         if minfo['created']:
             for node in minfo['created']:
                 if node.link_info and 'extlink' in node.link_info:
-                    if 'image_stack' == node.sdef['id'].rstrip('/'):
-                        import pdb; pdb.set_trace()
+#                     if 'image_stack' == node.sdef['id'].rstrip('/'):
+#                         import pdb; pdb.set_trace()
                     extern.append(node.sdef['id'].rstrip('/'))
     if extern:
         a['agvalue'] = sorted(extern)
