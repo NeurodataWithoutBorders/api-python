@@ -1842,6 +1842,9 @@ class File(object):
                 # this node is link to another node
                 link_info = node.link_info
                 if 'node' in link_info:
+                    if link_info['node'] is None:
+                        # link was expected but not present. Error should already be generated for this
+                        continue
                     # normal link
                     target_path = node.link_info['node'].full_path
                     find_links.add_item(vi['links'], target_path, node.full_path)
@@ -1896,6 +1899,15 @@ class File(object):
             # this node does not have any attributes
             return
         ats = node.attributes  # convenient shorthand
+        # get custom_node_identifier and extension_node_identifier in list so can easily
+        # skip checking these (assume they are checked for when validating node)
+        added_nodes_identifiers = []
+        if self.options['identify_extension_nodes']:
+            added_nodes_identifiers.append(self.options['extension_node_identifier'])
+        if self.options['identify_custom_nodes']:
+            cni = self.options['custom_node_identifier'][0]
+            if cni not in added_nodes_identifiers:
+                added_nodes_identifiers.append(cni)
         for aid in ats:
             if 'autogen' in ats[aid]:
                 # values in autogen attributes automatically included
@@ -1925,6 +1937,10 @@ class File(object):
                 # this attribute is optional.  Don't check if it's present
                 continue                
             if not val_present:
+                if aid in added_nodes_identifiers:
+                    # this attribute id is one used for identifying added nodes (custom or extension)
+                    # don't flag the value missing here.  Assume that will be done in routine "validate_node"
+                    continue
                 if const:
                     msg = "%s: (expected %s='%s')" %(node.full_path, aid, eval)
                 else:
@@ -3885,7 +3901,8 @@ class Node(object):
         self.add_node_identifier()
         self.parent = parent
         self.link_info = link_info
-        self.create_link()   
+        self.create_link()
+        self.check_for_link_expected()
         self.save_node()
         
     # following allows using "sorted" on list of nodes, sorting by full_path
@@ -3946,6 +3963,20 @@ class Node(object):
             else:
                 raise SystemError("** Error: invalid key in link_info %s" % self.link_info)
     
+    def check_for_link_expected(self):
+        """ Check for link specified in definition of node (i.e. this node should be a
+        link) but it's not a link.  If this happens, need to generate a warning (or
+        error) and substitute the definition of the item linked-to, for the link
+        definition"""
+        if 'link' not in self.sdef['df'] or self.link_info is not None:
+            return
+        inc_path = self.get_include_path()
+        msg = "%s:\n(Id path='%s') expecting link but found %s" % (self.full_path, inc_path, self.sdef['type'])
+        self.file.error.append(msg)
+        self.link_info = {"node": None, "error": "Expected link not present"}
+        return
+        # import pdb; pdb.set_trace()
+        
     
     def save_node(self):
         """ Save newly created node in id_lookups (if node is defined structure created

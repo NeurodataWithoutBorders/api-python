@@ -1116,7 +1116,7 @@ def compute_autogen(f, a):
         suffix = get_constant_suffix(a['agtarget'])
         for node in agtarget_nodes:
             # if not hasattr(node, 'link_info'):
-            if not node.link_info:
+            if not node.link_info or node.link_info['node'] is None:
                 f.error.append("%s: referenced in 'link_path' autogen, but is not a link" % node.full_path)
                 return
             else:
