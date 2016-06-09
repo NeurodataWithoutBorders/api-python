@@ -11,8 +11,8 @@
 
 "info": {
     "name": "NWB file format specification",
-    "version": "1.0.3-beta",
-    "date": "May 23, 2016",
+    "version": "1.0.4_beta",
+    "date": "June 8, 2016",
     "author": "Keith Godfrey.  Converted to format specification by Jeff Teeters.",
     "contact": "jteeters@berkeley.edu, keithg@alleninstitute.org",
     "description": "Specification for the core NWB (Neurodata Withoug Borders) format."
@@ -702,8 +702,8 @@
                     "COMMENT: Attribute is only present if links "
                     "are present. List should include the path to this TimeSeries also."),
                 "data_type": "text",
-                # dimension commented out to make a single string
-                # "dimensions": ["num_tslinks"],
+                # commented out dimension to make a single string
+                "dimensions": ["num_tslinks"],
                 "autogen": {
                     "type": "links",
                     "target":"timestamps",

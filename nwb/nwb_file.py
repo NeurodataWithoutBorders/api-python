@@ -8,7 +8,8 @@ import nwb_init as ni
 def open(file_name, start_time=None, mode="w-", identifier=None, description=None,
     core_spec="nwb_core.py", extensions=[], default_ns="core",
     keep_original=False, auto_compress=True):
-    """ Open NWB file.  Initialize identifier and description if "write" mode.
+    """
+    Open NWB file.  Initialize identifier and description if "write" mode.
     Returns h5gate File object which is used by API to add content to the file.
     Inputs are:
     

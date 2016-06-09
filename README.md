@@ -1,58 +1,129 @@
 # Python API for Neurodata Without Borders (NWB) format
 
-Version 0.5 (May 24, 2016)
+Version 0.8 (June 9, 2016)
 
+Note: Version number above is the version of the API software, not the version of the NWB format.  Date is the most recent date this document was modified.
 
 ## 1. Overview.
 
 The Python API for the NWB format is a write API that can be used to create NWB files (it does not provide functionality for reading).  It is implemented using a specification language and API that are domain-independent.  The API provides a small set of generic functions for storing data in the file (that is, creating HDF5 groups and datasets).  The specialization of the API to create NWB files is achieved by having the format defined using the specification language.
 
-** May 24, 2016 update **  See examples and unittests for examples of creating, and validating NWB files.
- 
 
-## 2. Files.
+## 2. Installaton.
 
-The Python API is implemented using five files:
-1) h5gate.py
-2) nwb_core.py
-3) nwb_file.py
-4) nwb_init.py
-5) nwb_utils.py
- 
-The first, h5gate.py, is the main script that implements the API.  It is domain and format independent in that it could be used to implement other formats both for neuroscience data and for other domains.
-
-File nwb_core.py contains a formal specification of the NWB format.  It is written in a “specification language”.  The specification language itself is also domain and format independent and is constructed using a JSON-like syntax.
-
-Files nwb_file.py and nwb_init.py are used to setup the API and initialize a newly created NWB file.  File nwb_utils.py contains utility functions that are useful when creating NWB files.
-
-
-## 3. Using the API.
-To use the Python API, all of the above files must be in the Python path.
-
-### 3.1 Initialization.
-The initialization of a NWB file is performed using code like the following:
-
-``` python
-	# import nwb api
-	from nwb import nwb_file
-
-	# import utility routines
-	from nwb import utils
-
-	# Create the NWB file
-	fname='sample_01.nwb'
-	start_time='2015-07-27 8:34AM'
-	f = nwb_file.create(fname, start_time)
+```
+git clone https://github.com/NeurodataWithoutBorders/api-python nwb_api-python
 ```
 
-In the above code variable “fname” stores the name of the NWB file being created and start_time is the starting time of the session.  (Parameter start_time is optional.  If not specified, the current time is used).
+(The last parameter is optional.  Providing it, will cause the software to be stored in a directory named "nwb_api-python" rather than 'api-python').
 
-The call to function nwb_file returns a “h5gate File” object.  This is a Python object that controls the creation of an hdf5 file using the format specified by the specification language file.  In the above call to nwb_file, since only the file name is provided, the software uses the nwb_core.py file for the format specification.  Function nwb_file has additional optional parameters that make it possible to specify other format specification files or multiple format specifications.  This functionality allows extending the format by writing a specification for new format features and providing those in the call to nwb_file.  The extensions can be shared between labs and also stored in a central repository to allow forming a collection of commonly used extensions, some of which could be incorporated into the NWB “core” format.  These optional parameters are described in section 4 (Using Extensions).
+After you get the latest software, to install it using:
+
+```
+python setup.py install
+```
+
+Then, in the future, (to incorporate any further updates), issue the command:
+
+```
+git pull origin
+```
+
+then re-run ```python setup.py install``` to install the updates.
+
+Try running the examples in directory examples/create_scripts directory and also the unit tests in the unittest directory.
+
+## 3. Using the API.
+
+See the scripts in examples/create_scripts directory for examples of using the API.
+
+
+### 3.1 Initialization.
+
+The following imports are required:
+
+``` python
+	from nwb import nwb_file
+	from nwb import nwb_utils as utils
+```
+
+
+The initialization of a NWB file is performed using function nwb_file.open.  It has the following signature:
+
+
+``` python
+def open(file_name, start_time=None, mode="w-", identifier=None, description=None,
+    core_spec="nwb_core.py", extensions=[], default_ns="core",
+    keep_original=False, auto_compress=True):
+    """ Open NWB file.  Initialize identifier and description if "write" mode.
+    Returns h5gate File object which is used by API to add content to the file.
+    Inputs are:
+
+    **file_name** - Name of file to create or open.  Text. Required.
+
+    **start_time** - Starting time for the experiment.  Is used only if writing
+    a file (mode="w").  If not specified, the current time is used.
+
+    **mode** - Mode of file access.  One of:
+        'r'  - Readonly, file must exist.  (currently only used for validation).
+        'r+' - Read/write, file must exist.
+        'w'  - Create file, replacing if exists. (Default)
+        'w-' - Create file, fail if exists.
+        'a'  - Read/write if exists, create otherwise.
+
+    **identifier** - Unique identifier for the file.  Required if "w" mode.  Not
+    used otherwise.
+
+    **description** - A one or two sentence description of the experiment and what
+    the data inside represents.  Required if "w" mode.  Not used otherwise.
+
+    **core_spec** - Name of file containing core specification of NWB format.
+    If "-", load saved spec from NWB file (used when opening an existing file).
+
+    **extensions** - List of files containing extensions to the format that may
+    be used.  Empty list if no extensions or if extension specifications should be
+    loaded from NWB file.
+
+    **default_ns** - Namespace of specification to use as default if no namespace
+    specified when creating groups or datasets.  Normally, the default value ("core")
+    should be used, since that is the namespace used in the default core_spec
+    ("nwb_core.py")
+
+    **keep_original** - If True and mode is "w" or "r+" or "a" (modes that can change
+    and exiting file), a backup copy of any original file will be saved with the name
+    "<filename>.prev".
+
+    **auto_compress** - If true, data is compressed automatically through the API.
+    Otherwise, the data is not automatically compressed.
+    """
+```
+
+An example of calling nwb_file.open is given below;
+
+
+``` python
+	from nwb import nwb_file
+	from nwb import nwb_utils as utils
+
+	settings = {}
+	settings["file_name"] = "filename.nwb"
+	settings["identifier"] = utils.create_identifier("some string; will be added to unique identifier")
+	settings["mode"] = "w"
+	settings["start_time"] = "2016-04-07T03:16:03.604121"
+	settings["description"] = "Description of the file"
+
+	# specify an extension (Could be more than one).
+	settings['extensions'] = ["extension_foo.py"]
+	f = nwb_file.open(**settings)
+```
+
+
+The call to function nwb_file.open returns a “h5gate File” object.  This is a Python object that controls the creation of an hdf5 file using the format specified by the specification language files (for the core nwb format and any extensions).  The "extensions" parameter allows specifying extensions to the core format specification.  The use of extensions is described in section 4.
 
 
 ### 3.2 Referencing groups and datasets
 
-The NWB Python API works by allowing the user to sequentially create hdf5 groups and datasets that conform to the specification of the format.  To reference a group or dataset in a call to the API, the name of the group or dataset as given in the file format specification is used.  Some groups and datasets have a name which is variable, that is, which is specified in the call to the API rather than in the format specification.  (For example, group “electrode_X” in the general/intracellular_ephys group.)  In the API calls, groups or datasets that have a variable name are referenced by enclosing the identifier associated with them in angle brackets, e.g. “<electrode_X>”.  Another example are NWB “Modules” which are stored in hdf5 groups.  To create a module, a call to make_group is used, e.g. f.make_group("<module>", "shank-1").
+The NWB Python API works by allowing the user to sequentially create hdf5 groups and datasets that conform to the specification of the format.  To reference a group or dataset in a call to the API, the name of the group or dataset as given in the file format specification is used.  Some groups and datasets have a name which is variable, that is, which is specified in the call to the API rather than in the format specification.  (For example, group “electrode_X” in the general/intracellular_ephys group.)  In the API calls, groups or datasets that have a variable name are referenced by enclosing the identifier associated with them in angle brackets, e.g. ```<electrode_X>```.  Another example are NWB “Modules” which are stored in hdf5 groups.  To create a module, a call to make_group is used, e.g. ```f.make_group("<module>", "shank-1")```.
 
 ### 3.3 h5gate File and Group objects.
 
@@ -444,6 +515,8 @@ In the above “tsg” specifies a previously created time series to add to the 
 
 ## 4. Using extensions
 
+*NOTE: Some information in this and the following sections is outdated.  See examples id directory "examples/create_scripts" and "examples/create_scripts/extensions" for examples of using extensions.*
+   
 The Specification Language used for the NWB format can be used to create extensions to the format.  Creating extensions requires understanding the specification language, which is described more completely in another document.   This section gives a summary of what extensions are and the API for using them.
 
 The specification language that is used to define the NWB format is also used for extensions.  The language is written using Python dictionaries in a syntax that is similar to JSON.  Each top-level key to the dictionary is a string specifying a “namespace”.  The value associated with the key is the specification for the namespace.  The namespaces provide a way to group related specifications (into the same namespace) and avoid name conflicts in a manner similar to how namespaces are used with XML.  Schematically, the structure of specification language namespace and definition are shown below:
