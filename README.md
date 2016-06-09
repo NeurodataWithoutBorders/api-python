@@ -35,7 +35,7 @@ Try running the examples in directory examples/create_scripts directory and also
 
 ## 3. Using the API.
 
-See the scripts in examples/create_scripts directory for examples of using the API to create NWB files.  See scripts in examples/utility_scripts directory for examples showing other functionality of the API and included tools.  This includes: 
+See the scripts in examples/create_scripts directory for examples of using the API to create NWB files.  See scripts in examples/utility_scripts directory for examples showing other functionality of the API and associated tools.  These includes: 
 
 * *Validate an NWB file:*
 
