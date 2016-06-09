@@ -35,12 +35,36 @@ Try running the examples in directory examples/create_scripts directory and also
 
 ## 3. Using the API.
 
-See the scripts in examples/create_scripts directory for examples of using the API.
+See the scripts in examples/create_scripts directory for examples of using the API to create NWB files.  See scripts in examples/utility_scripts directory for examples showing other functionality of the API and included tools.  This includes: 
+
+* *Validate an NWB file:*
+
+  ```python -m nwb.nwb_validate filename.nwb```
+
+  See "validate_all.sh" script in examples/utility_scripts for specific examples.
+
+
+* *Generate documentation for the NWB format:*
+
+  ```python -m nwb.make_doc > doc.html```
+
+
+* *Generate documentation for the NWB format and an extension:*
+
+  ```python -m mwb.make_doc extension.py > doc.html```
+
+  See "make_docs.sh" in examples/utility_scrips for specific examples.
+
+* *Compare two HDF5 files displaying differences in detail:*
+
+  ```python -m nwb.h5diffci file1.nwb file2.nwb```
+
+  (The .nwb extension is used for NWB files, which are in hdf5 format.)
 
 
 ### 3.1 Initialization.
 
-The following imports are required:
+To create an NWB file using the API, the following imports are required:
 
 ``` python
 	from nwb import nwb_file
@@ -48,7 +72,7 @@ The following imports are required:
 ```
 
 
-The initialization of a NWB file is performed using function nwb_file.open.  It has the following signature:
+Function nwb_file.open is used to create or open an NWB file.  It has the following signature:
 
 
 ``` python
