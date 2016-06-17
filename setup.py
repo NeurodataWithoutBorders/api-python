@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name = 'nwb',
-    version = '1.0.3_beta',
+    version = '1.0.4_beta',
     url='https://github.com/NeurodataWithoutBorders/api-python',
     author='Jeff Teeters and Keith Godfrey',
     author_email='jteeters@berkeley.edu',

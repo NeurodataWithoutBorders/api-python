@@ -1058,13 +1058,16 @@ class File(object):
         if errmsg != "":
             idp = id.rstrip('/')
             type = "group" if id.endswith('/') else 'dataset'
-            print "\n**** ERROR: Id '%s' (%s) not found in name space '%s'. (%s)" % (
+            msg = "Id '%s' (%s) not found in name space '%s'. (%s)" % (
                 idp, type, ns, errmsg)
             possible_matches = self.check_for_misspellings(quid, 
                 self.idlookups[self.default_ns].keys())
-            self.show_possible_matches(possible_matches, id)
+            # self.show_possible_matches(possible_matches, id)
+            pm_msg = self.make_possible_matches_message(possible_matches, id)
+            if pm_msg:
+               msg += "\n" + pm_msg
+            raise SchemaIdError(msg)
             # import pdb; pdb.set_trace()
-            error_exit()
         return None
         
         
@@ -1100,16 +1103,17 @@ class File(object):
             return (possible_matches, 'spelling')
         return None
         
-    
-    def show_possible_matches(self, possible_matches, id):
-        """ Display a list of possible matches if there are any.
+    def make_possible_matches_message(self, possible_matches, id):
+        """ Make message listing possible matches if there are any.
         possible_matches is a tuple, first element is a list of
         possible matches, second element is the method by which they
         were found, either 'case' (for case change) or 'spelling'
         (for spelling change).  type is the type of the misspelled
-        id (group or dataset).  id is the original (misspelled) id."""
+        id (group or dataset).  id is the original (misspelled) id.
+        Return is a message (string) or None
+        """
         if not possible_matches:
-            return
+            return None
         pm, method = possible_matches
         pm = [m.rstrip('/') for m in pm]  # removing any trailing slash, they are not used in calls
         meth_msg = " (Ids are case sensitive)" if method == 'case' else ""
@@ -1118,12 +1122,12 @@ class File(object):
                 id_type = "group" if id.endswith("/") else "dataset"
                 possible_call = ("set_dataset(\"%s\", ...)" % id if id_type == "group" 
                     else "make_group(\"%s\", ...)" % id) 
-                print "Could you have meant to call: %s" % possible_call
+                pm_msg = "Could you have meant to call: %s" % possible_call
             else:
-                print "Could you have meant \'%s\'? %s\n" % (pm[0], meth_msg)
+                pm_msg = "Could you have meant \'%s\'? %s\n" % (pm[0], meth_msg)
         elif len(pm) > 1:
-            print "Could you have meant one of: %s?\n" % pm
-        
+            pm_msg = "Could you have meant one of: %s?\n" % pm
+        return pm_msg
              
     def retrieve_qty(self, df, default_qty):
         """ Retrieve quantity specified by key '_qty' or 'qty' from dict df.  Return
@@ -1307,25 +1311,6 @@ class File(object):
                 error_exit()
             path_sl = idlocs[0]
         return path_sl
-        
-#     def deduce_path_old(self, id, ns, path):
-#         """Deduce location based on id, namespace and specified_path
-#         and using locations section of namespace, which is stored in
-#         id_lookups.  Return actual path, or abort if none."""
-#         locations = self.id_lookups[ns][id]
-#         if path != '':
-#             if path not in locations.keys():
-#                 print "** Error"
-#                 print "Specified path '%s' not in name space '%s' locations for id '%s'" % (path, ns, id)
-#                 error_exit()
-#         else:
-#             if len(locations) > 1:
-#                 print "** Error"
-#                 print "Path not specified for '%s', but must be since" %id
-#                 print " there are multiple locations:" + ", ".join(locations.keys())
-#                 error_exit()
-#             path = locations.keys()[0]
-#         return path
         
     def extract_link_info(self, val, link, node_type):
         """ Gets info about any specified link.
@@ -3843,7 +3828,13 @@ class File(object):
             # print "-- calling merge_def with qud=", qid
             sdef = self.get_sdef(qid, initial_ns, "Referenced in merge")
             self.merge_def(expanded_def, sdef, to_include, id_sources, loc, descriptions)
-            
+
+
+class SchemaIdError(Exception):
+    # SchemaIdError is raised when attempting to create a group or dataset that
+    # does not have an identifier in the schema.  e.g. make_group("invalid_id")
+    pass
+
 
 class Node(object):
     """ node (either group or dataset) in created file """
@@ -5185,38 +5176,17 @@ class Group(Node):
             # print "found definition for %s in mstats, mstats=" % id
             # pp.pprint(self.mstats)
             return sgd
-        else:
-            # see if parent group is specified in locations; if so, check for id in 
-            # locations list of members of parent group.  Example for nwb format is are
-            # "UnitTimes/" inside <module>/.  <module> is parent group
-            pid = self.sdef['id']  # parent id, e.g. "<module>"
-            ns = self.sdef['ns']
-            if pid in self.file.ddef[ns]['locations']:
-                if id in self.file.ddef[ns]['locations'][pid]:
-                    type = 'group' if id.endswith('/') else 'dataset'
-                    # add id to mstats so can register creation of group
-                    # df not needed in mstats because definition for node being created 
-                    # is stored in new node sdef key, obtained by call to get_sdef below
-                    self.mstats[id] = {'ns':ns, 'created': [], 'qty': '+', 'type': type} 
-                    sgd = self.file.get_sdef(id, ns, "referenced in make_subgroup")
-                    # print "id %s in %s location ns %s structures" % (id, pid, ns)
-                    # example output: id UnitTimes/ in <module>/ location ns core structures
-                    # traceback.print_stack()
-                    return sgd
-                else:
-                    print "found parent %s in locations, but %s not inside" % (pid, id)
-                    print "locations contains:"
-                    pp.pprint(self.file.ddef[ns]['locations'][pid])
-            else:
-                print "did not find parent %s in locations for namespace %s" % (pid, ns)
-        print "** Error, attempting to create '%s' (name='%s') inside group:" % (id, name)
-        print self.full_path
-        print "But '%s' is not a member of the structure for the group" % id
-        print "Valid options are:", self.mstats.keys()
+        msg = []
+        msg.append("Attempting to create '%s' (name='%s') inside group:" % (id, name))
+        msg.append(self.full_path)
+        msg.append("But '%s' is not a member of the structure for the group" % id)
+        msg.append("Valid options are: %s" % self.mstats.keys())
         # print "Extra information (for debugging):  Unable to find definition for node %s" % id
         # print "mstats="
         # pp.pprint(self.mstats)
-        error_exit()
+        msg = "\n".join(msg)
+        raise SchemaIdError(msg)
+        # error_exit()
 
         
     def set_dataset(self, id, value, name='', attrs={}, dtype=None, compress=False):
