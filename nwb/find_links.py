@@ -1146,7 +1146,11 @@ def compute_autogen(f, a):
         # Get all names matching agtarget
         names = []
         for node in agtarget_nodes:
-            names.append(node.name)
+            name = node.name
+            # encoding unicode now done in h5gate create_dataset
+            # if isinstance(name, unicode):
+            #      name = name.encode('utf8')
+            names.append(name)
         names =  natural_sort(names)
         a['agvalue'] = names
     elif a['agtype'] == 'values':

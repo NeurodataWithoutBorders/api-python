@@ -529,6 +529,12 @@ class File(object):
                 # http://docs.h5py.org/en/latest/strings.html
                 sdata = np.void(data)
                 dtype = None
+            elif isinstance(data, list) and len(data) > 0 and isinstance(data[0], unicode) and dtype is None:
+                # assume data is a list of elements type unicode.  Convert to list of strings as described in
+                # https://github.com/h5py/h5py/issues/289
+                # other option is to specify dtype, described in: http://docs.h5py.org/en/latest/strings.html
+                # dtype = h5py.special_dtype(vlen=unicode)  # does not work for unicode type
+                sdata = [s.encode('utf8') if isinstance(s, unicode) else s for s in data]
 #             elif 'int' in str(dtype) and np.issubdtype(type(data), np.float) and np.isnan(data):
 #                 # attempting to save float (nan) but dtype is int.  Change dtype to None
 #                 # this happend when saving a nan to an integer.  Need to leave type as float

@@ -52,10 +52,10 @@ def open(file_name, start_time=None, mode="w-", identifier=None, description=Non
     """
     # check for required fields
     errors = []
-    if not file_name or not isinstance(file_name, str):
-        errors.append("file_name must be specified and be a sting")
+    if not file_name or not isinstance(file_name, (str, unicode)):
+        errors.append("file_name must be specified and be type string or unicode")
     if not core_spec or not isinstance(core_spec, str):
-        errors.append("core_spec must be specified and be a sting")
+        errors.append("core_spec must be specified and be a string")
     valid_modes = ("r", "r+", "w", "w-", "a")
     if mode not in valid_modes:
         errors.append("Invalid mode.  Must be one of: %s" % valid_modes)
@@ -67,9 +67,9 @@ def open(file_name, start_time=None, mode="w-", identifier=None, description=Non
         if creating_file:
             # must be creating a new file.  identifier and description required.
             if not identifier or not isinstance(identifier, str):
-                errors.append("When creating a file, 'identifier' must be specified and be a sting")
+                errors.append("When creating a file, 'identifier' must be specified and be a string")
             if not description or not isinstance(description, str):
-                errors.append("When creating a file, 'description' must be specified and be a sting")
+                errors.append("When creating a file, 'description' must be specified and be a string")
         if not isinstance(extensions, (list, tuple)) or (len(extensions) > 0 and
             not all(isinstance(item, str) for item in extensions)):
             errors.append("extensions must be a list or tuple, either empty or containing only strings")
