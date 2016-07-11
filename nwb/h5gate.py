@@ -13,6 +13,7 @@ import os.path
 import imp
 import ast
 import shutil
+import array
 import find_links
 import combine_messages as cm
 
@@ -239,7 +240,14 @@ class File(object):
                     'in parameter "spec_files" then format specifications will not be read '
                     'from the hdf5 file.'),
                 'default': '/general/specifications' # used in NWB format
-            }               
+            },
+            'verbosity': {
+                'description': ('Controls how much is displayed in validation report.'),
+                'values': {
+                    'none': 'Display nothing.  (Useful for unit tests).',
+                    'summary': 'Display summary of validation report.',
+                    'all': 'Display everything.'},
+                'default': 'all' },
         }
         errors = []
         for opt, value in self.options.iteritems():
@@ -247,7 +255,7 @@ class File(object):
                 errors.append("Invalid option specified (%s)" % opt)
             elif 'values' in all_options[opt] and value not in all_options[opt]['values']:
                 errors.append(("Invalid value specified for option (%s), should be"
-                    " one of:\n%s") % (opt, all_options[opt].keys()))
+                    " one of:\n%s") % (opt, all_options[opt]['values'].keys()))
             elif opt == 'custom_node_identifier':
                 # validate 'custom_node_identifier' separately
                 if not (isinstance(value, (list, tuple)) and len(value) == 2 
@@ -544,6 +552,9 @@ class File(object):
 #                 sdata = data
             else:
                 sdata = data
+            if isinstance(dtype, str) and dtype == '':
+                # fix for matlab calls in which dtype is empty string
+                dtype = None
             self.file_pointer.create_dataset(path, data=sdata, dtype=dtype, 
                 compression=compress, maxshape=maxshape)
         elif self.options['storage_method'] == 'commands':
@@ -650,6 +661,14 @@ class File(object):
         """ open file """
         if self.options['storage_method'] == 'hdf5':
             file_to_open = self.get_file_to_open()
+            if os.path.isfile(file_to_open) and self.options['mode'] == 'w':
+                # remove existing file so can open in matlab if was open before
+                try:
+                    os.remove(file_to_open)
+                except IOError:
+                    print "Unable to remove previously existing file '%s'\nbefore opening with mode '%s'\n" % (
+                        file_to_open, self.options['mode'])
+                    error_exit() 
             try:
                 fp = h5py.File(file_to_open, self.options['mode'])
             except IOError:
@@ -658,7 +677,7 @@ class File(object):
                 error_exit()
             # remember file pointer
             self.file_pointer = fp
-            print "Opened file '%s'" % file_to_open
+            # print "Opened file '%s'" % file_to_open
         elif self.options['storage_method'] == 'commands':
             # save command for later processing.  Must be creating new file
             self.h5commands.append(("create_file", self.file_name))
@@ -686,6 +705,19 @@ class File(object):
             self.save_temporary_file()
         elif self.options['storage_method'] == 'commands':
             self.h5commands.append(("close_file", ))
+            
+    def __del__(self):
+        """ Close file if not already closed.  This called when the File object is
+        deleted.  File might not have been closed if an error was found.
+        """
+        print "python __del__ called"
+        if self.file_pointer:
+            try:
+                file_pointer.close()
+                print "python __del__ closed file"
+            except (RuntimeError):
+                pass
+        
             
     def process_merge_into(self):
         """ Go through all id's defined in all extensions and look for groups containing
@@ -1188,7 +1220,7 @@ class File(object):
         if ns not in self.ddef.keys():
             error_exit("Namespace '%s' referenced, but not defined" % ns)
     
-    def make_group(self, qid, name='', path='', attrs={}, link='', abort=True):
+    def make_group(self, qid, name='', path='', attrs={}, link='', abort=True, attrs_shape=None):
         """ Creates groups that are in the top level of the definition structures.
             qid - qualified id of structure.  id, with optional namespace (e.g. core:<...>).
             name - name of group in case name is not specified by id (id is in <angle brackets>)
@@ -1201,7 +1233,13 @@ class File(object):
             link - specified link, of form link:path or extlink:file,path.  Only needed
                 if name must be used to specify local name of group
             abort - If group already exists, abort if abort is True, otherwise return previously
-                existing group."""
+                existing group.
+            attrs_shape - specifies shapes of 1-d attrs values passed in from matlab.  This
+                only used for matlab bridge.
+                """
+        if attrs_shape:
+            # convert attribute values passed in by matlab from 1-d to original shape
+            self.deflatten_attrs(attrs, attrs_shape)
         # (ns, id) = self.parse_qid(qid, self.default_ns)
         if ':' in qid:
             (ns, id) = self.parse_qid(qid, self.default_ns)
@@ -1480,24 +1518,81 @@ class File(object):
             name = ''
         return (sdef, name, path)
             
-    def make_custom_group(self, qid, name='', path='', attrs={}):
+    def make_custom_group(self, qid, name='', path='', attrs={}, attrs_shape=None):
         """ Creates custom group.
             qid - qualified id of structure or name of group if no matching structure.
                 qid is id with optional namespace (e.g. core:<...>).  Path can
                 also be specified in id (path and name are combined to produce full path)
             name - name of group in case id specified is in <angle brackets>
             path - specified path of where group should be created.  If not given
-                or if relative pateOnly needed if
-                location ambiguous
-            attrs - attribute values for group that are specified in API call"""
+                created in group with dataset named "__custom" specified in schema.
+            attrs - attribute values for group that are specified in API call.
+            attrs_shape - specifies shapes of 1-d attrs values passed in from matlab.  This
+                only used for matlab bridge.
+            """
+        if attrs_shape:
+            # convert attribute values passed in by matlab from 1-d to original shape
+            self.deflatten_attrs(attrs, attrs_shape)
         gslash = "/"
         sdef, name, path = self.get_custom_node_info(qid, gslash, name, path) 
-        parent = self.get_parent_group(path)
+        # parent = self.get_parent_group(path)
+        parent = self.get_parent_group(path, self.default_ns, self.default_ns)
         grp = Group(self, sdef, name, path, attrs, parent)
         return grp
         
+    def deflatten(self, value, shape):
+        """Convert value from type array.array to numpy array and reshape if shape
+        specified.  This included to convert values passed in from matlab
+        (which have type array.array, and cannot have more than one dimension)
+        to numpy array types that are handled by h5py.  Background: matlab
+        does not pass multidimensional arrays into Python, only 1-d arrays.
+        To solve this, the multidimensional array is converted to a 1-d array,
+        then converted back to a multidimensional array (done here).
+        """
+        assert isinstance(value, (array.array, tuple)), "deflatten value (%s) is unexpected type: '%s'" % (
+            value, type(value))
+        if isinstance(value, tuple) and len(value) == 0:
+            npval = []  # set to empty list so will generate empty 1-D array in HDF5
+            return npval
+        else:
+            npval = np.array(value)
+        if isinstance(shape, (tuple, list, array.array)):
+            # reverse shape to switch ordering from matlab (column major) to python (row major)
+            # rshape = list(reversed(shape))
+            # print "before reshape to shape %s, vals=%s" % (shape, npval[0:15])
+            npval = npval.reshape(shape)
+        return npval
+        
+    def deflatten_attrs(self, attrs, attrs_shape):
+        """ Convert attribute values passed in from matlab from 1-d array back to
+        original array size.  This done because multidimensional arrays cannot be
+        passed from matlab to python, only 1-d arrays.  So multidimensional arrays
+        are converted to 1-d in matlab (by function flatten_attrs) and converted
+        back to the original shape by this function."""
+#         print "in deflatten_attrs, attrs="
+#         print attrs
+#         print "attrs_shape="
+#         print attrs_shape
+        for i in range(len(attrs_shape)):
+            cvs_shape = attrs_shape[i]
+            if cvs_shape:
+                # this attribute may need to be converted
+                if cvs_shape.endswith(',') and cvs_shape.count(',') == 1:
+                    # this is either empty, scalar or 1-d.  Shape not needed in
+                    # deflatten.  But must call deflatten to convert value type
+                    # e.g. from tuple or array.array to numpy array.
+                    shape = ''
+                else:
+                    # this is a multidimensional array.  Need to provide shape 
+                    # (which is encoded as a cvs string, e.g. "3,4") to
+                    # the deflatten function as a list of integer values
+                    shape = [int(x) for x in cvs_shape.split(',')]
+                ival = (i*2)+1
+                attrs[ival] = self.deflatten(attrs[ival], shape)
+                
 
-    def set_dataset(self, qid, value, name='', path='', attrs={}, dtype=None, compress=False):
+    def set_dataset(self, qid, value, name='', path='', attrs={}, dtype=None, compress=False,
+         shape=None, attrs_shape = None):
         """ Creates datasets that are in the top level of the definition structures.
             qid - qualified id of structure.  id, with optional namespace (e.g. core:<...>).
             value - value to store in dataset, or Dataset object (to link to another dataset,
@@ -1508,7 +1603,18 @@ class File(object):
             attrs - attributes (dictionary of key-values) to assign to dataset
             dtype - if provided, included in call to h5py.create_dataset
             compress - if True, compression provided in call to create_dataset
+            shape - only used when called from matlab.  Specifies shape that 1-d value
+                should be converted ot.  (matlab can only pass in 1-d arrays).
+            attrs_shape - specifies shapes of 1-d attrs values passed in from matlab.  This
+                only used for matlab bridge.
         """
+        if attrs_shape:
+            # convert attribute values passed in by matlab from 1-d to original shape
+            self.deflatten_attrs(attrs, attrs_shape) 
+#         print "called f.set_dataset, qid='%s', name='%s', dtype='%s', shape='%s'" % (
+#                 qid, name, dtype, shape)
+        if isinstance(value, (array.array, tuple)):
+            value = self.deflatten(value, shape)
         # (ns, id) = self.parse_qid(qid, self.default_ns)
         if ':' in qid:
             (ns, id) = self.parse_qid(qid, self.default_ns)
@@ -1572,7 +1678,8 @@ class File(object):
 #         # print "created dataset, qid=%s, name=%s" % (qid, ds.name)
 #         return ds
        
-    def set_custom_dataset(self, qid, value, name='', path='', attrs={}, dtype=None, compress=False):
+    def set_custom_dataset(self, qid, value, name='', path='', attrs={}, dtype=None, 
+        compress=False, shape=None, attrs_shape=None):
         """ Creates custom datasets that are in the top level of the definition structures.
             qid - qualified id of structure.  id, with optional namespace (e.g. core:<...>).
             name - name of dataset in case name is unspecified (id is in <angle brackets>)
@@ -1580,7 +1687,16 @@ class File(object):
             attrs - attributes (dictionary of key-values) to assign to dataset
             dtype - if provided, included in call to h5py.create_dataset
             compress - if True, compression provided in call to create_dataset
+            shape - only used when called from matlab.  Specifies shape that 1-d value
+                should be converted ot.  (matlab can only pass in 1-d arrays).
+            attrs_shape - specifies shapes of 1-d attrs values passed in from matlab.  This
+                only used for matlab bridge.
         """
+        if attrs_shape:
+            # convert attribute values passed in by matlab from 1-d to original shape
+            self.deflatten_attrs(attrs, attrs_shape) 
+        if isinstance(value, (array.array, tuple)):
+            value = self.deflatten(value, shape)
         gslash = ""
         sdef, name, path = self.get_custom_node_info(qid, gslash, name, path)
         # parent = self.get_parent_group(path) 
@@ -1594,8 +1710,8 @@ class File(object):
         nodes referenced in id_lookup structure (built from 'locations' section
         of specification language) and also by checking the tree of all nodes
         that are included in the "node_tree" array. """
-        print "\n******"
-        print "Validation messages follow."
+#         print "\n******"
+#         print "Validation messages follow."
         # find_links.show_links(self.links)
         # find_links.show_autogen(self)
         find_links.validate_autogen(self)
@@ -1685,21 +1801,24 @@ class File(object):
             # + len(vi['schema_id_errors'])
 #             + len(vi['node_identification_errors'])
             )
-        self.display_report_heading(total_errors, "error", zero_msg="Good")
-        self.print_message_list(self.error, "Miscellaneous errors", zero_msg="Good")
-        self.report_problems(vi['missing_nodes'], "missing", zero_msg="Good")
-        self.print_message_list(vi['missing_attributes'], "attributes missing", zero_msg="Good")
-        self.print_message_list(vi['incorrect_attribute_values'], 
-            "Incorrect attribute values", zero_msg="Good")
-        if self.options['identify_custom_nodes']:
-            aid, val = self.options['custom_node_identifier']
-            cni_msg = "custom missing attribute %s=%s" % (aid, val)
-            self.report_problems(vi['custom_nodes_missing_flag'], cni_msg, zero_msg="Good")
-        if self.options['identify_extension_nodes']:
-            aid = self.options['extension_node_identifier']
-            eni_msg = "defined in extension, but missing attribute %s" % aid
-            self.report_problems(vi['extension_nodes_missing_flag'], eni_msg, zero_msg="Good")            
-#         schema_id_attr = self.options['schema_id_attr']
+        if self.options['verbosity'] == 'all':
+            print "\n******"
+            print "Validation messages follow."
+            self.display_report_heading(total_errors, "error", zero_msg="Good")
+            self.print_message_list(self.error, "Miscellaneous errors", zero_msg="Good")
+            self.report_problems(vi['missing_nodes'], "missing", zero_msg="Good")
+            self.print_message_list(vi['missing_attributes'], "attributes missing", zero_msg="Good")
+            self.print_message_list(vi['incorrect_attribute_values'], 
+                "Incorrect attribute values", zero_msg="Good")
+            if self.options['identify_custom_nodes']:
+                aid, val = self.options['custom_node_identifier']
+                cni_msg = "custom missing attribute %s=%s" % (aid, val)
+                self.report_problems(vi['custom_nodes_missing_flag'], cni_msg, zero_msg="Good")
+            if self.options['identify_extension_nodes']:
+                aid = self.options['extension_node_identifier']
+                eni_msg = "defined in extension, but missing attribute %s" % aid
+                self.report_problems(vi['extension_nodes_missing_flag'], eni_msg, zero_msg="Good")            
+    #         schema_id_attr = self.options['schema_id_attr']
 #         cnms_msg = "added missing attribute '%s=Custom'" % schema_id_attr
 #         self.report_problems(vi['added_nodes_missing_flag'], cnms_msg, zero_msg="Good")
 #         self.print_message_list(vi['schema_id_errors'], 
@@ -1715,41 +1834,44 @@ class File(object):
             + len(vi['recommended_attributes_empty'])
             + len(vi['required_attributes_empty'])
             + len(vi['added_attributes_not_described_by_extension']))
-        self.display_report_heading(total_warnings, "warning", zero_msg="Good")
-        self.print_message_list(self.warning, "Miscellaneous warnings", zero_msg="Good")
-        self.report_problems(vi['missing_recommended'], "missing", 
-             zero_msg="Good", qualifier="recommended")
-        self.print_message_list(vi['recommended_attributes_missing'],
-            "recommended attributes missing", zero_msg="Good")
-        self.print_message_list(vi['recommended_attributes_empty'],
-            "recommended attributes empty", zero_msg="Good")
-        self.print_message_list(vi['required_attributes_empty'],
-            "required_attributes_empty", zero_msg="Good")
-        self.print_message_list(vi['added_attributes_not_described_by_extension'], 
-            'added attributes not described by extension', zero_msg="Good")
-        # Information about added items:
+        if self.options['verbosity'] == 'all':
+            self.display_report_heading(total_warnings, "warning", zero_msg="Good")
+            self.print_message_list(self.warning, "Miscellaneous warnings", zero_msg="Good")
+            self.report_problems(vi['missing_recommended'], "missing", 
+                 zero_msg="Good", qualifier="recommended")
+            self.print_message_list(vi['recommended_attributes_missing'],
+                "recommended attributes missing", zero_msg="Good")
+            self.print_message_list(vi['recommended_attributes_empty'],
+                "recommended attributes empty", zero_msg="Good")
+            self.print_message_list(vi['required_attributes_empty'],
+                "required_attributes_empty", zero_msg="Good")
+            self.print_message_list(vi['added_attributes_not_described_by_extension'], 
+                'added attributes not described by extension', zero_msg="Good")
+            # Information about added items:
         total_added_correctly = (len(vi['identified_custom_nodes']['group'])
             + len(vi['identified_custom_nodes']['dataset'])
             + len(vi['identified_extension_nodes']['group'])
             + len(vi['identified_extension_nodes']['dataset'])
             + len(vi['added_attributes_described_by_extension']))
-        self.display_report_heading(total_added_correctly, "addition")
-        if self.options['identify_custom_nodes']:
-            caid, cval = self.options['custom_node_identifier']
-            self.report_problems(vi['identified_custom_nodes'], 
-                "custom and identifieed by attribute %s=%s" % (caid, cval))
-        if self.options['identify_extension_nodes']:
-            eaid = self.options['extension_node_identifier']
-            self.report_problems(vi['identified_extension_nodes'], 
-                "defined by extension and identified by attribute %s" % eaid)           
-        self.print_message_list(vi['added_attributes_described_by_extension'], 
-            "added attributes described by extension")
-        print "** Summary"
-        print "%i errors, %i warnings, %i additions" %(total_errors, total_warnings, total_added_correctly)
-        if total_errors == 0:
-            print "passed validation check (no errors)"
-        else:
-            print "failed validation check (at least one error)"        
+        if self.options['verbosity'] == 'all':
+            self.display_report_heading(total_added_correctly, "addition")
+            if self.options['identify_custom_nodes']:
+                caid, cval = self.options['custom_node_identifier']
+                self.report_problems(vi['identified_custom_nodes'], 
+                    "custom and identifieed by attribute %s=%s" % (caid, cval))
+            if self.options['identify_extension_nodes']:
+                eaid = self.options['extension_node_identifier']
+                self.report_problems(vi['identified_extension_nodes'], 
+                    "defined by extension and identified by attribute %s" % eaid)           
+            self.print_message_list(vi['added_attributes_described_by_extension'], 
+                "added attributes described by extension")
+            print "** Summary"
+        if self.options['verbosity'] in ('all', 'summary'):
+            print "%i errors, %i warnings, %i additions" %(total_errors, total_warnings, total_added_correctly)
+            if total_errors == 0:
+                print "passed validation check (no errors)"
+            else:
+                print "failed validation check (at least one error)"        
         
 
     def display_report_heading(self, count, name, zero_msg = None):
@@ -2135,70 +2257,69 @@ class File(object):
         else:
             return None
             
-            
-    def get_parent_group_scratch(self, path_to_parent):
-        """ Return node for parent group (specified by path to parent).  If parent
-        group does not exist (in node_tree), create sequence of groups (nodes) that
-        goes from root group to the parent.  This done to create groups
-        in node_tree so the parent group exists.
-        Definitions are all assumed to be in ddef default namespace structure.
-        Merged in there by "process_merge_into".
-        This is scratch code.  May be made into new version later.
-        """
-        path_to_parent_no_slash = path_to_parent.strip('/')  # remove slash at end of path_to_parent
-        if path_to_parent_no_slash in self.path2node:
-            return self.path2node[path_to_parent_no_slash]
-        path_parts = path_to_parent_no_slash.split('/')
-        parent = self.node_tree  # root node
-        path = ""
-        # Use an empty attrs dict for all created groups.  
-        attrs = {}
-        ns = self.default_namespace  # use default_namespace for everything
-        for i in range(len(path_parts)):
-            id = path_parts[i]
-            full_path = path + "/" + id
-            if full_path in self.path2node:
-                parent = self.path2node[full_path]
-            else:
-                # check for definition of parent group in namespace ns or default_ns
-                pdef_ns = None
-                full_path_g = full_path + "/"  # add slash at end to indicate group
-                if full_path_g in self.ddef[ns]['structures']:
-                    pdef_ns = ns
-                elif ns != default_ns and full_path_g in self.ddef[default_ns]['structures']:
-                    pdef_ns = default_ns
-                if pdef_ns:
-                    # found definition in one of the name spaces
-                    pdef = self.ddef[pdef_ns]['structures'][full_path_g]
-                else:
-                    pdef = None       
-                # check for definition inside mstats
-                mstats_df = None
-                gid = id + "/"
-                if gid in parent.mstats:
-                    mstats_df = parent.mstats[gid]['df']
-                    mstats_ns = parent.mstats[gid]['ns']
-                if mstats_df and pdef:
-                    print "Conflicting definitions found for '%s'" % gid
-                    print "Defined in namespace '%s' path: '%s'" % (pdef_ns, full_path_g)
-                    print "and also in namespace '%s' as member of group '%s'" % (mstats_ns, parent.full_path)
-                    error_exit()
-                if pdef:
-                    sdef = {'id': gid, 'type': 'group', 'qid': None, 'ns':pdef_ns, 'df':pdef}
-                elif mstats_df:
-                    sdef = {'id': gid, 'type': 'group', 'qid': None, 'ns':mstats_ns, 'df':mstats_df}
-                else:
-                    # parent not defined.  Must be a custom location.
-                    # make new node, saves it in node_tree.  'location':True indicates
-                    # group created only to complete path to location of parent 
-                    sdef = {'id': gid, 'type': 'group', 'qid': None, 'ns':None, 'df':{}, 'location':True}
-                name = ""  # name always empty.  It's only used to specify name for variable named group
-                if path == "":
-                    path = "/"
-                parent = Group(self, sdef, name, path, attrs, parent)
-#                 print "made parent group: path='%s', gid='%s'" % (path, gid)
-            path = full_path
-        return parent
+#     def get_parent_group_scratch(self, path_to_parent):
+#         """ Return node for parent group (specified by path to parent).  If parent
+#         group does not exist (in node_tree), create sequence of groups (nodes) that
+#         goes from root group to the parent.  This done to create groups
+#         in node_tree so the parent group exists.
+#         Definitions are all assumed to be in ddef default namespace structure.
+#         Merged in there by "process_merge_into".
+#         This is scratch code.  May be made into new version later.
+#         """
+#         path_to_parent_no_slash = path_to_parent.strip('/')  # remove slash at end of path_to_parent
+#         if path_to_parent_no_slash in self.path2node:
+#             return self.path2node[path_to_parent_no_slash]
+#         path_parts = path_to_parent_no_slash.split('/')
+#         parent = self.node_tree  # root node
+#         path = ""
+#         # Use an empty attrs dict for all created groups.  
+#         attrs = {}
+#         ns = self.default_namespace  # use default_namespace for everything
+#         for i in range(len(path_parts)):
+#             id = path_parts[i]
+#             full_path = path + "/" + id
+#             if full_path in self.path2node:
+#                 parent = self.path2node[full_path]
+#             else:
+#                 # check for definition of parent group in namespace ns or default_ns
+#                 pdef_ns = None
+#                 full_path_g = full_path + "/"  # add slash at end to indicate group
+#                 if full_path_g in self.ddef[ns]['structures']:
+#                     pdef_ns = ns
+#                 elif ns != default_ns and full_path_g in self.ddef[default_ns]['structures']:
+#                     pdef_ns = default_ns
+#                 if pdef_ns:
+#                     # found definition in one of the name spaces
+#                     pdef = self.ddef[pdef_ns]['structures'][full_path_g]
+#                 else:
+#                     pdef = None       
+#                 # check for definition inside mstats
+#                 mstats_df = None
+#                 gid = id + "/"
+#                 if gid in parent.mstats:
+#                     mstats_df = parent.mstats[gid]['df']
+#                     mstats_ns = parent.mstats[gid]['ns']
+#                 if mstats_df and pdef:
+#                     print "Conflicting definitions found for '%s'" % gid
+#                     print "Defined in namespace '%s' path: '%s'" % (pdef_ns, full_path_g)
+#                     print "and also in namespace '%s' as member of group '%s'" % (mstats_ns, parent.full_path)
+#                     error_exit()
+#                 if pdef:
+#                     sdef = {'id': gid, 'type': 'group', 'qid': None, 'ns':pdef_ns, 'df':pdef}
+#                 elif mstats_df:
+#                     sdef = {'id': gid, 'type': 'group', 'qid': None, 'ns':mstats_ns, 'df':mstats_df}
+#                 else:
+#                     # parent not defined.  Must be a custom location.
+#                     # make new node, saves it in node_tree.  'location':True indicates
+#                     # group created only to complete path to location of parent 
+#                     sdef = {'id': gid, 'type': 'group', 'qid': None, 'ns':None, 'df':{}, 'location':True}
+#                 name = ""  # name always empty.  It's only used to specify name for variable named group
+#                 if path == "":
+#                     path = "/"
+#                 parent = Group(self, sdef, name, path, attrs, parent)
+# #                 print "made parent group: path='%s', gid='%s'" % (path, gid)
+#             path = full_path
+#         return parent
  
              
     def get_parent_group(self, path_to_parent, ns, default_ns):
@@ -2793,7 +2914,8 @@ class File(object):
         node_tree and id_lookups and dictionary from each path to node in path2nodes. """
         num_groups = self.links['count']['group']
         num_datasets = self.links['count']['dataset']
-        print "Reading %i groups and %i datasets" % (num_groups, num_datasets)
+        if self.options['verbosity'] in ('all', ):
+            print "Reading %i groups and %i datasets" % (num_groups, num_datasets)
         np = (self.file_pointer["/"], "/")  # np == 'node, path'
         groups_to_visit = [ np,]
         while groups_to_visit:
@@ -4371,13 +4493,17 @@ class Dataset(Node):
                 # set dtype to binary to flag, save string value using h5py np.void(),
                 # as described at: http://docs.h5py.org/en/latest/strings.html
                 dtype = 'binary'
-            elif (isinstance(value, (str, unicode)) or
-                # following added because sometimes strings are np.ndarray, (example,
-                # virus_text from Svboda lab oe example).  Try to convert to np.string_
-                (isinstance(value, (np.ndarray)) and str(value.shape) == "(1,)"
-                    and str(value.dtype) == 'object')):
+            elif (isinstance(value, (str, unicode))):
                 # convert string value to numpy string, so string in hdf5 file will be fixed length
                 # see: http://docs.h5py.org/en/latest/strings.html
+                # before converting encode using utf-8 to prevent 
+                # UnicodeEncodeError: 'ascii' codec can't encode characters 
+                # value = np.string_(value.encode('utf-8'))
+                value = np.string_(value)
+            elif (isinstance(value, (np.ndarray)) and str(value.shape) == "(1,)"
+                    and str(value.dtype) == 'object'):
+                # this added because sometimes strings are np.ndarray, (example,
+                # virus_text from Svboda lab ssc-1).  Try to convert to np.string_
                 value = np.string_(value)
             elif not dtype and self.file.options['use_default_size']:
                 dtype = self.get_default_dtype()
@@ -4468,6 +4594,7 @@ class Dataset(Node):
                 if '*unlimited*' in dims:
                     # return special dtype for variable length strings
                     dtype = h5py.special_dtype(vlen=bytes)
+                    # print "get_default_dtype returning h5py.special_dtype(vlen=bytes)"
                     return dtype
             # not special case of text and unlimited dimensions
             # this should perhaps be enhanced to allow variable length arrays of other types
@@ -4731,7 +4858,8 @@ def error_exit(msg = None):
     print("-------------------")
     traceback.print_stack()
     sys.exit(1)
-    
+
+  
 class Group(Node):
     """ hdf5 group object """
     def __init__(self, file, sdef, name, path, attrs, parent, link_info=None):
@@ -5124,7 +5252,7 @@ class Group(Node):
         pp.pprint (self.mstats)
 
 
-    def make_group(self, id, name='', attrs={}, link='', abort=True ):
+    def make_group(self, id, name='', attrs={}, link='', abort=True, attrs_shape=None):
         """ Create a new group inside the current group.
         id - identifier of group
         name - name of group in case name is not specified by id (id is in <angle brackets>)
@@ -5134,7 +5262,13 @@ class Group(Node):
         link - specified link, of form link:path or extlink:file,path.  Only needed
             if name must be used to specify local name of group
         abort - If group already exists, abort if abort is True, otherwise return previously
-            existing group."""           
+            existing group.
+        attrs_shape - specifies shapes of 1-d attrs values passed in from matlab.  This
+            only used for matlab bridge.
+        """
+        if attrs_shape:
+            # convert attribute values passed in by matlab from 1-d to original shape
+            self.file.deflatten_attrs(attrs, attrs_shape)         
         gid = id + "/"
         sgd = self.get_sgd(gid, name)
         path = self.full_path
@@ -5148,7 +5282,7 @@ class Group(Node):
         # self.mstats[gid]['created'].append(grp)
         return grp
 
-    def make_custom_group(self, qid, name='', path='', attrs={}):
+    def make_custom_group(self, qid, name='', path='', attrs={}, attrs_shape=None):
         """ Creates custom group.
             qid - qualified id of structure or name of group if no matching structure.
                 qid is id with optional namespace (e.g. core:<...>).  Path can
@@ -5156,7 +5290,13 @@ class Group(Node):
             name - name of group in case id specified is in <angle brackets>
             path - specified path of where group should be created.  If not given
                 or if relative path.  Only needed if location ambiguous
-            attrs - attribute values for group that are specified in API call"""
+            attrs - attribute values for group that are specified in API call.
+            attrs_shape - specifies shapes of 1-d attrs values passed in from matlab.  This
+                only used for matlab bridge.
+        """
+        if attrs_shape:
+            # convert attribute values passed in by matlab from 1-d to original shape
+            self.file.deflatten_attrs(attrs, attrs_shape) 
         gslash = "/"
         parent = self
         sdef, name, path = self.file.get_custom_node_info(qid, gslash, name, path, parent)   
@@ -5195,7 +5335,8 @@ class Group(Node):
         # error_exit()
 
         
-    def set_dataset(self, id, value, name='', attrs={}, dtype=None, compress=False):
+    def set_dataset(self, id, value, name='', attrs={}, dtype=None, compress=False,
+        shape=None, attrs_shape=None):
         """ Create dataset inside the current group.
             id - id of dataset.
             name - name of dataset in case id is in <angle brackets>
@@ -5207,7 +5348,21 @@ class Group(Node):
             attrs = attributes specified for dataset
             dtype - if provided, included in call to h5py.create_dataset
             compress - if True, compression provided in call to create_dataset
+            shape - only used when called from matlab.  Specifies shape that 1-d value
+                should be converted ot.  (matlab can only pass in 1-d arrays).
+            attrs_shape - specifies shapes of 1-d attrs values passed in from matlab.  This
+                only used for matlab bridge.
         """
+#         print "called group.set_datset, id=%s" % id
+#         print "value=", value
+#         print "attrs=", attrs
+#         print "dtype=", dtype
+#         print "attrs_shape=", attrs_shape
+        if attrs_shape:
+            # convert attribute values passed in by matlab from 1-d to original shape
+            self.file.deflatten_attrs(attrs, attrs_shape)
+        if isinstance(value, (array.array, tuple)):
+            value = self.file.deflatten(value, shape)
         sgd = self.get_sgd(id, name)
         link_info = self.file.extract_link_info(value, None, Dataset)
         path = self.full_path
@@ -5216,7 +5371,8 @@ class Group(Node):
         return ds 
 
        
-    def set_custom_dataset(self, qid, value, name='', path='', attrs={}, dtype=None, compress=False):
+    def set_custom_dataset(self, qid, value, name='', path='', attrs={}, dtype=None, 
+        compress=False, shape=None, attrs_shape=None):
         """ Creates custom dataset that is inside the current group.
             qid - qualified id of structure.  id, with optional namespace (e.g. core:<...>).
             name - name of dataset in case name is unspecified (id is in <angle brackets>)
@@ -5224,7 +5380,16 @@ class Group(Node):
             attrs - attributes (dictionary of key-values) to assign to dataset
             dtype - if provided, included in call to h5py.create_dataset
             compress - if True, compression provided in call to create_dataset
-        """
+            shape - only used when called from matlab.  Specifies shape that 1-d value
+                should be converted ot.  (matlab can only pass in 1-d arrays).
+            attrs_shape - specifies shapes of 1-d attrs values passed in from matlab.  This
+                only used for matlab bridge.
+            """
+        if attrs_shape:
+            # convert attribute values passed in by matlab from 1-d to original shape
+            self.file.deflatten_attrs(attrs, attrs_shape)
+        if isinstance(value, (array.array, tuple)):
+            value = self.file.deflatten(value, shape)
         gslash = ""
         parent = self
         sdef, name, path = self.file.get_custom_node_info(qid, gslash, name, path, parent)   

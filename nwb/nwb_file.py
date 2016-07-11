@@ -7,7 +7,7 @@ import nwb_init as ni
 
 def open(file_name, start_time=None, mode="w-", identifier=None, description=None,
     core_spec="nwb_core.py", extensions=[], default_ns="core",
-    keep_original=False, auto_compress=True):
+    keep_original=False, auto_compress=True, verbosity="all"):
     """
     Open NWB file.  Initialize identifier and description if "write" mode.
     Returns h5gate File object which is used by API to add content to the file.
@@ -49,6 +49,9 @@ def open(file_name, start_time=None, mode="w-", identifier=None, description=Non
     
     **auto_compress** - If true, data is compressed automatically through the API.
     Otherwise, the data is not automatically compressed.
+    
+    **verbosity** - Controls how much validation output is displayed.  Options are:
+    'all' (default), 'summary', and 'none'.  'none' is mainly useful for unittests.
     """
     # check for required fields
     errors = []
@@ -84,8 +87,8 @@ def open(file_name, start_time=None, mode="w-", identifier=None, description=Non
     options = {}
     options['mode'] = mode
     options['keep_original'] = keep_original
-    if not auto_compress:
-        options['default_compress_size'] = 0
+    options['auto_compress'] = auto_compress
+    options['verbosity'] = verbosity
     # options['schema_id_attr'] = "neurodata_type"
     # options['custom_node_identifier'] = ["neurodata_type", "Custom"]
     options['custom_node_identifier'] = ["schema_id", "Custom"]

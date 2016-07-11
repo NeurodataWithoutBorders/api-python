@@ -8,7 +8,7 @@ import datetime
 def load_file(filename):
     """ Load content of a file.  Useful 
     for setting metadata to content of a text file"""
-    f = open(filename, 'r')
+    f = open(filename)
     content = f.read()
     f.close()
     return content

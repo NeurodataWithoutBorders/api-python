@@ -1,0 +1,163 @@
+Instructions for installing NWB Matlab bridge API.
+
+This directory contins the "matlab_bridge" for the NWB format.
+The matlab_bridge implements an API to the NWB format by interfacing
+MatLab to the Python NWB API.
+
+To setup the matlab_bridge, do the following:
+
+1. Install the Python NWB API.  This is required because the matlab_bridge
+   works by calling the Python NWB API from matlab.  So the Python API
+   *must* be working on your system first.
+
+2. Determine the location of the Python interpreter   that is being used
+   to run the Python NWB API.  To do this, first, verify that you have
+   the Python NWB API installed by running one of the Python NWB API
+   example scripts or unittests from the command line.  You can also
+   enter the following command into the shell:
+   
+   python -m nwb.h5diffci
+   
+   If the NWB API is correctly installed,
+   you should get an output message something like the following:
+   
+   Usage: /Users/jt/anaconda/lib/python2.7/site-packages/nwb/h5diffci.py <file1.h5> [<file2.h5>]
+
+   (The path will be different, the message should start with 'Usage:').
+
+   Once you get output like the above, type the following commands in the
+   shell:
+    python
+    import sys
+    print sys.executable
+   
+   The first command will start the Python interpreter  .  The third command
+   will display the location of the Python interpreter  .
+   Example output is shown below:
+$ python  
+Python 2.7.11 |Anaconda 2.4.1 (x86_64)| (default, Dec  6 2015, 18:57:58) 
+[GCC 4.2.1 (Apple Inc. build 5577)] on darwin
+Type "help", "copyright", "credits" or "license" for more information.
+Anaconda is brought to you by Continuum Analytics.
+Please check out: http://continuum.io/thanks and https://anaconda.org
+>>> import sys
+>>> print sys.executable
+/Users/jt/anaconda/bin/python
+>>> quit()
+
+quit() is entered to exit the Python interpreter.  From the above output, the
+location of the Python interpreter   is:
+"/Users/jt/anaconda/bin/python".
+
+
+3. Specify the location of the Python interpreter to MatLab.
+   To do this, startup MatLab, and enter "pyversion" into the MatLab
+   command window.  Output should be something like this:
+
+>> pyversion
+
+       version: '2.7'
+    executable: '/Users/jt/anaconda/bin/python'
+       library: '/Users/jt/anaconda/lib/libpython2.7.dylib'
+          home: '/Users/jt/anaconda'
+      isloaded: 1
+
+   If the location of the executable displayed by "pyversion" matches the location
+   you found in step 2, then matlab is already setup to use the correct Python
+   interpreter and you can move onto step 4.  Otherwise,  you must specify
+   the location of the Python interpreter to matlab.  Do that by entering:
+
+   pyversion '/path/to/your/python'
+
+   You should only need to do this once.  (It will be used in your future
+   matlab sessions).  More information about this can be found in the matlab
+   documentation for pyversion.
+
+
+4. Add the 'matlab_bridge_api' directory to your matlab path.  Do this by
+   clicking on the "Set Path" icon in MatLab, and navigating to directory
+   "matlab_bridge/matlab_bridge_api", and add that directory to your matlab
+   search path. 
+
+If everything is working you should be able to run the matlab unit tests
+by going to directory
+"matlab_bridge/matlab_unittest"
+
+in matlab, then entering "run_all_tests".
+Output should be like the following:
+
+>> run_all_tests
+t_annotation.m PASSED
+t_general_image.m PASSED
+t_general_top.m PASSED
+t_no_data.m PASSED
+t_starting_time.m PASSED
+t_append.m PASSEDt_general_opto.m PASSED
+t_if_add_ts.m PASSED
+t_no_time.m PASSED
+t_timeseries_link.m PASSED
+t_epoch_tag.m PASSED
+t_general_patch.m PASSED
+t_if_isi.m PASSED
+t_ref_image.m PASSED
+t_top_datasets.m PASSED
+t_general_ephys.m PASSED
+t_general_species.m PASSED
+t_modification_time.m PASSED
+t_softlink.m PASSED
+t_unittimes.m PASSED
+
+
+You should also be able to run the sample scripts in directory
+"matlab_bridge/matlab_examples/create_scripts".  Example output from
+running script "abstract_feature.m" is shown below:
+
+>> pwd
+
+ans =
+
+/Users/jt/crcns/dev/api-python/matlab_bridge/matlab_examples/create_scripts
+
+>> ls
+abstract_feature.m	analysis_e.m		crcns_alm_1.m		run_all_examples.m
+
+>> abstract_feature()
+script_name is "abstract_feature.m"
+nwb_file_name is "abstract_feature.nwb"
+
+******
+Validation messages follow.
+** No errors. -- Good
+No Miscellaneous errors. -- Good
+No groups missing. -- Good
+No datasets missing. -- Good
+No attributes missing. -- Good
+No Incorrect attribute values. -- Good
+No groups custom missing attribute schema_id=Custom. -- Good
+No datasets custom missing attribute schema_id=Custom. -- Good
+No groups defined in extension, but missing attribute schema_id. -- Good
+No datasets defined in extension, but missing attribute schema_id. -- Good
+** 6 warnings.
+No Miscellaneous warnings. -- Good
+No recommended groups missing. -- Good
+5 recommended datasets missing:
+  1. '/general/experiment_description'
+  2. '/general/experimenter'
+  3. '/general/institution'
+  4. '/general/lab'
+  5. '/general/session_id'
+1 recommended attributes missing:
+  1. /stimulus/presentation/my_drifting_grating_features - comments
+No recommended attributes empty. -- Good
+No required_attributes_empty. -- Good
+No added attributes not described by extension. -- Good
+** No additions.
+No groups custom and identifieed by attribute schema_id=Custom.
+No datasets custom and identifieed by attribute schema_id=Custom.
+No groups defined by extension and identified by attribute schema_id.
+No datasets defined by extension and identified by attribute schema_id.
+No added attributes described by extension.
+** Summary
+0 errors, 6 warnings, 0 additions
+passed validation check (no errors)
+>> 

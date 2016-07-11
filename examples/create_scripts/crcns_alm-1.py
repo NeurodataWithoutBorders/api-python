@@ -67,6 +67,23 @@ def parse_h5_obj(obj, level = 0, output = []):
         output.append([])
     return output
 
+def extract_encoded_str(uarr):
+    """ converts np.ndarray that contains a single unicode string to a utf-8 string"""
+    assert isinstance(uarr,np.ndarray)
+    assert uarr.shape == (1,)
+    assert isinstance(uarr[0], unicode)
+    return uarr[0].encode('utf-8')
+    
+def format_item(arr, options=[]):
+    """ Formats an array as a comma separated list, as a string enclosed in brackets """
+    if isinstance(arr, unicode):
+        return arr.encode('utf-8')
+    fstr = ', '.join(("'" + n.encode('utf-8') + "'") if isinstance(n, unicode) else str(n) for n in arr)
+    if 'no_brackets' in options:
+        return fstr
+    else:
+        return '[' + fstr + ']'
+     
 
 # initialize trials with basic fields and behavioral data    
 def create_trials(orig_h5, nuo):
@@ -89,7 +106,7 @@ def create_trials(orig_h5, nuo):
         stop = trial_t[i+1]
         epoch = ut.create_epoch(nuo, trial, start, stop)
         tags = []
-        if good_trials[i] == 0:
+        if good_trials[i] == 1:
             tags.append("Good trial")
         else:
             tags.append("Non-performing")
@@ -123,8 +140,9 @@ def create_trials(orig_h5, nuo):
         #         raw_file = str(raw_file_1) + " and " + str(raw_file_2)
         #     except IndexError:
         #         raw_file = ''
-        epoch.set_dataset("description", "Raw Voltage trace data files used to acuqire spike times data: " + raw_file + "\n\
-ignore intervals: mark start and stop times of bad trials when mice are not performing")
+#        epoch.set_dataset("description", "Raw Voltage trace data files used to acuqire spike times data: " + raw_file + "\n\
+# ignore intervals: mark start and stop times of bad trials when mice are not performing")
+        epoch.set_dataset("description", "Raw Voltage trace data files used to acuqire spike times data: " + raw_file)
         #epoch.set_ignore_intervals(ignore_intervals)
         # collect behavioral data
         ts = "/stimulus/presentation/auditory_cue"
@@ -224,21 +242,24 @@ print "Reading meta data"
 #general
 an_gene_copy = parse_h5_obj(meta_h5["animalGeneCopy"])[0][0]
 an_gene_bg= parse_h5_obj(meta_h5["animalGeneticBackground"])[0]
-an_gene_mod = parse_h5_obj(meta_h5["animalGeneticBackground"])[0]
-an_gene = "Animal gene modification: " + an_gene_mod +\
-";\nAnimal genetic background: " + an_gene_bg +\
+an_gene_mod = parse_h5_obj(meta_h5["animalGeneModification"])[0]
+an_gene = "Animal gene modification: " + extract_encoded_str(an_gene_mod) +\
+";\nAnimal genetic background: " + extract_encoded_str(an_gene_bg) +\
 ";\nAnimal gene copy: " + str(an_gene_copy)
+
 gg = nuo.make_group("general", abort=False)
 s = gg.make_group('subject')
-s.set_dataset("genotype", an_gene)  # jt - did require str
+s.set_dataset("genotype", an_gene)
 an_strain = parse_h5_obj(meta_h5["animalStrain"])[0]
 an_source = parse_h5_obj(meta_h5["animalSource"])[0]
 date_of_birth = meta_h5["dateOfBirth"]["dateOfBirth"].value
 subject = "Animal Strain: " + an_strain + \
 ";\nAnimal source: " + an_source + \
 ";\nDate of birth: " + date_of_birth
-nuo.set_dataset("description", subject)  # jt - did require str
+subject = extract_encoded_str(subject)
+nuo.set_dataset("description", subject)
 citation = parse_h5_obj(meta_h5["citation"])[0]
+citation = extract_encoded_str(citation)
 nuo.set_dataset('related_publications', citation)
 exp_type = map(str, parse_h5_obj(meta_h5["experimentType"])[0])
 exp_type_desc = "Experiment type: "
@@ -247,13 +268,18 @@ for i in range(len(exp_type)):
 exp_type_desc = exp_type_desc[:-2]  # strip out last ", "
 nuo.set_dataset('notes', exp_type_desc)
 experimenters = parse_h5_obj(meta_h5["experimenters"])[0]
+experimenters = extract_encoded_str(experimenters)
 nuo.set_dataset('experimenter', experimenters)
 ref_atlas = parse_h5_obj(meta_h5["referenceAtlas"])[0]
+ref_atlas = extract_encoded_str(ref_atlas)
 nuo.set_custom_dataset("reference_atlas", ref_atlas)
 sex = parse_h5_obj(meta_h5["sex"])[0]
+sex = extract_encoded_str(sex)
+print "sex='%s', type=%s" % (sex, type(sex))
 s.set_dataset("sex", sex)
 s.set_dataset("age", ">P60")
 species = parse_h5_obj(meta_h5["species"])[0]
+species = extract_encoded_str(species)
 s.set_dataset("species", species)
 #surgical_man = meta_h5["surgicalManipulation"]["surgicalManipulation"].value
 gg.set_dataset("surgery", ut.load_file(SOURCE_DATA_DIR + "surgery.txt"))
@@ -267,6 +293,7 @@ gg.set_dataset("experiment_description", ut.load_file(SOURCE_DATA_DIR + "experim
 # metadata file incomplete here. pulled data from pdf file
 s.set_dataset("weight", "Before: 20, After: 21")
 whisker_config = parse_h5_obj(meta_h5["whiskerConfig"])[0]
+whisker_config = extract_encoded_str(whisker_config)
 nuo.set_custom_dataset("whisker_configuration", whisker_config)
 
 probe = []
@@ -325,10 +352,12 @@ create_empty_acquisition_series("shank3", 3)
 
 # behavior
 task_kw = map(str,parse_h5_obj(meta_h5["behavior/task_keyword"])[0])
+print "task_keyword='%s'" % task_kw
 nuo.set_custom_dataset("task_keyword", task_kw)
 
 #virus
-inf_coord = parse_h5_obj(meta_h5["virus/infectionCoordinates"])[0]
+# inf_coord = parse_h5_obj(meta_h5["virus/infectionCoordinates"])[0]
+inf_coord = parse_h5_obj(meta_h5["virus/infectionCoordinates"])
 inf_loc = parse_h5_obj(meta_h5["virus/infectionLocation"])[0]
 inj_date = parse_h5_obj(meta_h5["virus/injectionDate"])[0]
 inj_volume = parse_h5_obj(meta_h5["virus/injectionVolume"])[0]
@@ -337,14 +366,27 @@ virus_lotNr = parse_h5_obj(meta_h5["virus/virusLotNumber"])[0]
 virus_src = parse_h5_obj(meta_h5["virus/virusSource"])[0]
 virus_tit = parse_h5_obj(meta_h5["virus/virusTiter"])[0]
 
-virus_text = " Infection Coordinates: " + str(inf_coord) +\
-"\nInfection Location: " + inf_loc +\
-"\nInjection Date: " + inj_date +\
-"\nInjection Volume: "  + str(inj_volume) +\
-"\nVirus ID: " + virus_id +\
+virus_lotNr = format_item(virus_lotNr)
+if virus_lotNr == 'virusLotNumber':
+    virus_lotNr = '*unspecified*'
+virus_text = " Infection Coordinates: " + format_item(inf_coord) +\
+"\nInfection Location: " + format_item(inf_loc) +\
+"\nInjection Date: " + format_item(inj_date) +\
+"\nInjection Volume: "  + format_item(inj_volume) +\
+"\nVirus ID: " + format_item(virus_id) +\
 "\nVirus Lot Number: " + virus_lotNr +\
-"\nVirus Source: " + virus_src +\
-"\nVirus Titer: " + str(virus_tit)
+"\nVirus Source: " + format_item(virus_src) +\
+"\nVirus Titer: " + format_item(virus_tit)
+
+# virus_text = " Infection Coordinates: " + str(inf_coord) +\
+# "\nInfection Location: " + inf_loc +\
+# "\nInjection Date: " + inj_date +\
+# "\nInjection Volume: "  + str(inj_volume) +\
+# "\nVirus ID: " + virus_id +\
+# "\nVirus Lot Number: " + virus_lotNr +\
+# "\nVirus Source: " + virus_src +\
+# "\nVirus Titer: " + str(virus_tit)
+
 
 nuo.set_dataset("virus", virus_text)
 
@@ -369,18 +411,18 @@ if len(location) > 0:
     loc_text = "Location: " + loc_text
 
 
-
-
 opto = nuo.make_group("optogenetics")
 s1 = opto.make_group("<site_X>", "site 1")
 s1.set_dataset("description", loc_text+"\n"+ident_text)
 stim_loc = parse_h5_obj(check_entry(meta_h5,"photostim/photostimLocation"))[0]
+stim_loc = format_item(stim_loc, options=['no_brackets'])
 stim_coord = parse_h5_obj(check_entry(meta_h5,"photostim/photostimCoordinates"))[1]
 stim_lambda = parse_h5_obj(check_entry(meta_h5,"photostim/photostimWavelength"))[0]
-stim_text = "Stim location: %s\nStim coordinates: %s" % (str(stim_loc), str(stim_coord))
+stim_text = "Stim location: %s\nStim coordinates: %s" % (stim_loc, format_item(stim_coord))
 s1.set_dataset("location", str(stim_text))
 s1.set_dataset("excitation_lambda", str(stim_lambda[0])+" nm")
 s1.set_dataset("device", "optogenetic-laser")
+
 
 # try:
 #     impl_date = parse_h5_obj(meta_h5["fiber/implantDate"])[0]
@@ -403,13 +445,23 @@ phst_loc = parse_h5_obj(meta_h5["photostim/photostimLocation"])[0]
 phst_wavelength = parse_h5_obj(meta_h5["photostim/photostimWavelength"])[0][0]
 stim_method = parse_h5_obj(meta_h5["photostim/stimulationMethod"])[0]
 
+# photostim_text = "Identification Method: " + phst_id_method +\
+# "\nPhotostimulation Coordinates: " + str(phst_coord) +\
+# "\nPhotostimulation Location: " + phst_loc +\
+# "\nPhotostimulation Wavelength: " + str(phst_wavelength) +\
+# "\nStimulation Method: " + stim_method
+
+phst_coord = parse_h5_obj(meta_h5["photostim/photostimCoordinates"])  # get both coordinates
 photostim_text = "Identification Method: " + phst_id_method +\
-"\nPhotostimulation Coordinates: " + str(phst_coord) +\
+"\nPhotostimulation Coordinates: " + [str(x) for x in phst_coord] +\
 "\nPhotostimulation Location: " + phst_loc +\
 "\nPhotostimulation Wavelength: " + str(phst_wavelength) +\
 "\nStimulation Method: " + stim_method
 
-nuo.set_dataset("stimulus", str(photostim_text))  # jt - had to add str, this is a 2-element array
+# photostim_text is a 2-element array of unicode values.  Convert to uft-8 string
+photostim_text = ";\n".join([x.encode('utf-8') for x in photostim_text])
+
+nuo.set_dataset("stimulus", photostim_text)
 
 #extracellular
 ad_unit = parse_h5_obj(meta_h5["extracellular/ADunit"])[0]
@@ -470,7 +522,7 @@ laser_ts.set_dataset("timestamps", lick_ts_time)
 #create_aq_ts(nuo, "aom_input_trace", "stimulus", "acquisition/timeseries/lick_trace/",\
 # rate, aom_input_trace,comments, descr[1], 1)
 aom_ts = nuo.make_group("<TimeSeries>", "aom_input_trace", path="/stimulus/presentation")
-aom_ts.set_dataset("data", lick_trace, attrs={"resolution":float('nan'), "unit":"Volts", "conversion":1.0})
+aom_ts.set_dataset("data", aom_input_trace, attrs={"resolution":float('nan'), "unit":"Volts", "conversion":1.0})
 aom_ts.set_attr("comments", comments)
 aom_ts.set_attr("description", descr[1])
 aom_ts.set_dataset("timestamps", "link:/acquisition/timeseries/lick_trace/timestamps")

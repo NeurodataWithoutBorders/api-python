@@ -238,9 +238,9 @@
             "should not be created unless there is data to store within them."),
         "autogen": { "type": "create"},
         "__custom?": {
-            "description": ("TIndicates that this group (general/) is the default location for custom"
+            "description": ("Indicates that this group (general/) is the default location for custom"
                 " nodes.  This dataset in the format specification is just a flag. "
-                " There is no actual data stored in the HDF5 file for this data sets."),
+                " There is no actual data stored in the HDF5 file for this dataset."),
             "data_type": "int"},
 		"session_id^": {
 			"data_type": "text",

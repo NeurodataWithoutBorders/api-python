@@ -1194,7 +1194,14 @@ def compute_autogen(f, a):
                 # import pdb; pdb.set_trace()
                 sys.exit(1)
         else:
-            length = len(val)
+            try:
+                length = len(val)
+            except TypeError, e:
+                msg = "%s: autogen unable to determine length of '%s' error is: '%s'" % (
+                    a['node_path'], path, e)
+                f.warning.append(msg)
+                # leave value unspecified
+                return
         a['agvalue'] = length
     else:
         sys.exit("invalid autogen specification type: %s" % a['agtype'])
