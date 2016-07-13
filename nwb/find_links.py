@@ -1460,7 +1460,15 @@ def report_autogen_problem(f, a, msg):
         f.error.append("'%s': autogen attribute [%s] %s" % (a['node_path'], aid, msg))
     else:
         # value stored in dataset
-        f.error.append("'%s': autogen dataset %s" % (a['node_path'], msg))
+        output_msg = "'%s': autogen dataset %s" % (a['node_path'], msg)
+        if a['agtype'] == 'length':
+            # display warnings for lengths different than expected (this is
+            # done for NWB format, since length only used in one place, e.g.
+            # timeseries num_samples.  Should modify specification language
+            # to allow specifying either a warning or an error in autogen
+            f.warning.append(output_msg)
+        else:
+            f.error.append(output_msg)
 
 
 def update_autogen(f, a):

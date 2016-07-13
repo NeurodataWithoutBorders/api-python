@@ -1514,6 +1514,8 @@
             "See description of <a href=\"#BehavioralEpochs\">BehavioralEpochs</a> "
             "for more details.") ,
         "include": {"<TimeSeries>/*": {}},
+        # to allow subclasses, replace the above include line with the following:
+        # "include": {"<TimeSeries>/*":{"_options": {"subclasses": True}}},
     },   
     "Clustering/": {
         "merge": ["<Interface>/", ],

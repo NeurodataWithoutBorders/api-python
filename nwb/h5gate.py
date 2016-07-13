@@ -1390,7 +1390,7 @@ class File(object):
     def extract_link_str(self, link):
         """ Checks if link is a string matching a pattern for a link.  If so,
         return "link_info" dictionary"""
-        if type(link) is str:
+        if isinstance(link, (str, unicode)):
             if re.match( r'^link:', link):
                 # assume intending to specify a link, now match for rest of pattern            
                 matchObj = re.match( r'^link:([^\n\t]+)$', link)
