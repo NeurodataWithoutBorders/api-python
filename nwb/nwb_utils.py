@@ -302,10 +302,9 @@ def add_roi_mask_pixels(seg_iface, image_plane, name, desc, pixel_list, weights,
     # create image out of pixel list
     img = np.zeros((height, width))
     for i in range(len(pixel_list)):
-        y = pixel_list[i][0]
-        x = pixel_list[i][1]
-        # img[y][x] = weights[i]
-        img[x][y] = weights[i]
+        x = pixel_list[i][0]
+        y = pixel_list[i][1]
+        img[y][x] = weights[i]
     add_masks(seg_iface, image_plane, name, desc, pixel_list, weights, img, start_time)
         
         
