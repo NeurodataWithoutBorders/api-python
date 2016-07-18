@@ -699,12 +699,13 @@ class File(object):
         else:
             # file opened in read mode.  No need to build links dicts (was already built)
             find_links.process_autogen(self)
-        self.validate_file()
+        validation_result = self.validate_file()
         if self.options['storage_method'] == 'hdf5':
             self.file_pointer.close()
             self.save_temporary_file()
         elif self.options['storage_method'] == 'commands':
             self.h5commands.append(("close_file", ))
+        return validation_result
             
     def __del__(self):
         """ Close file if not already closed.  This called when the File object is
@@ -1871,7 +1872,11 @@ class File(object):
             if total_errors == 0:
                 print "passed validation check (no errors)"
             else:
-                print "failed validation check (at least one error)"        
+                print "failed validation check (at least one error)"
+        # return dict giving number of total errors, warnings and added
+        validation_result = {'errors':total_errors, 'warnings':total_warnings,
+            'added': total_added_correctly}
+        return validation_result   
         
 
     def display_report_heading(self, count, name, zero_msg = None):
