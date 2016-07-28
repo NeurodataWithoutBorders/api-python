@@ -1,5 +1,5 @@
-import h5py
 import sys
+import os
 
 # Function to display Python and hdf5 version from both Python
 # and Python called from matlab
@@ -16,18 +16,23 @@ import sys
 # correct version of Python to Matlab as described in the
 # matlab_bridge 0_INSTALL.txt file.
 
+    
 
 def display_versions():
-    python_version = sys.version
-    python_executable = sys.executable
-    hdf5_api_version = h5py.version.api_version
-    hdf5_version = h5py.version.hdf5_version
-
-    print "Versions are:"
-    print "Python:", python_version
-    print "Python executable:", python_executable
-    print "HDF5 API:", hdf5_api_version
-    print "HDF5:", hdf5_version
+    print "** environment variables:"
+    for key in sorted(os.environ.keys()):
+        print key, os.environ[key]
+    print "** Versions:"
+    print "Python:", sys.version
+    print "Python executable:", sys.executable
+    try:
+        import h5py
+    except:
+        e = sys.exc_info()[0]
+        print "unable to import hd5f:", e
+    else:
+        print "HDF5 API:", h5py.version.api_version
+        print "HDF5:", h5py.version.hdf5_version
     
 def matlab():
     print "\n**** called from MatLab"
