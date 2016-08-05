@@ -722,7 +722,7 @@ class File(object):
             
     def process_merge_into(self):
         """ Go through all id's defined in all extensions and look for groups containing
-        a "merge_info" directive, or groups that have the same id as a group in the 
+        a "merge_into" directive, or groups that have the same id as a group in the 
         default namespace.  If found, append the extension id to the "merge" directive
         in the default namespace so that the extensions will be added to the structures
         defined in the default namespace.  This should be done before calling mk_idlookups
@@ -1983,11 +1983,32 @@ class File(object):
             elif type == 'group':
                 # check if any nodes required in this group are missing using local qty info
                 # first, get list of id's that are referenced in "_required" specification
-                required_referenced = self.get_required_referenced(node)
+                required_info = self.get_required_info(node)
+                required_referenced = required_info['id_status'] if required_info else {}
+                exclude_info = self.get_exclude_info(node)
                 for id in sorted(node.mstats.keys()):
-                    qty = node.mstats[id]['qty']
-                    type = node.mstats[id]['type']
-                    created = node.mstats[id]['created']
+                    idinfo = node.mstats[id]
+                    qty = idinfo['qty']
+                    type = idinfo['type']
+                    created = idinfo['created']
+                    is_excluded = exclude_info and id in exclude_info['ids']
+                    if is_excluded:
+                        if not created:
+                            # is excluded and was not created.  Good.
+                            continue
+                        else:
+                            # is excluded but was created.  That may be an error or warning
+                            ex_qty = exclude_info['ids'][id]
+                            assert ex_qty in ('?', '!', '^')
+                            if ex_qty == '?':
+                                # creating is optional, so no error or warning
+                                continue
+                            msg = "%s - should not be present in location: '%s'" % (
+                                created[0].full_path, is_excluded)
+                            if ex_qty == '!':
+                                f.error.append(msg)
+                            else:
+                                f.warning.append(msg)
                     if id.rstrip('/') not in required_referenced and not custom and len(created) == 0:
                         # this id not referenced in "_required" spec
                         # if it was, don't create error / warning here; let function check_required validate 
@@ -2137,16 +2158,30 @@ class File(object):
                 found_dtype, siz, min_size)
             self.error.append(msg)
             
-    def get_required_referenced(self, node):
-        """ Return list of id's that are referenced in the "_required" specification
-        of this node.  This list is used to prevent checking for required based
+    def get_required_info(self, node):
+        """ Return information about _required specification for this node.
+        required_info is:
+        { 'spec': { <required_specification> }
+          'id_status': { 'id1': <status1>, 'id2': <status2>, ... }}
+        where
+          'spec' are the _required specification elements that are not excluded (see below)
+          '<statusN>  == True if id is present, False otherwise
+        The list of id's is used to prevent checking for required based
         on local specification (e.g. qty == "!" or "^", or "?") and instead, let
         the check_required function test for required based on the 'global'
-        i.e. presence / absences of other members in the group"""
+        i.e. presence / absences of other members in the group.
+        If all variables in a condition_string are excluded (by a
+        exclude_in specification), don't return these variables and the specification for
+        them (e.g. condition_string, message) since these variables should not be present).
+        If there is no required_spec, return None
+        """
         if not hasattr(node, 'required'):
             # no 'required' specification.
-            return []
-        r_ref = []
+            return None
+        exclude_info = self.get_exclude_info(node)
+        excluded_ids = set(exclude_info['ids'].keys()) if exclude_info else set()
+        r_ref = set()
+        spec = {}
         pattern = re.compile(r'([^\d\W][^/\W]*/?)') # finds identifiers
         ops = set(['AND', 'and', 'XOR', '^', 'OR', 'or', 'NOT', 'not'])
         for rid in node.required.keys():
@@ -2156,42 +2191,129 @@ class File(object):
             error_message = cm[1]
             # get each identifier in condition string
             ids_and_ops = set(re.findall(pattern, condition_string))
-            ids = list(ids_and_ops - ops)
-            r_ref.extend(ids)
-        return r_ref
+            ids = ids_and_ops - ops
+            if ids != excluded_ids:
+                # copy spec
+                spec[rid] = cm
+                r_ref.update(ids)
+        if len(r_ref) == 0:
+            assert excluded_ids, "did not find any ids in _required spec, and none were excluded: %s" % node.required
+            return None
+        id_status = {}
+        for id in list(r_ref):
+            if id not in node.mstats:
+                print ("%s identifier (%s) in _required specification not found "
+                        "in group") %(node.full_path, id)
+                print "valid options are:\n%s" % node.mstats.keys()
+                error_exit()
+            present = len(node.mstats[id]['created']) > 0
+            id_status[id] = present
+        required_info = { "spec": spec, "id_status": id_status }
+        return required_info
+        
+#     def get_required_var_status(self, node):
+#         """ Checks if node (which should be a group) has a '_required' specification.
+#         If so returns a dictionary mapping each variable in the required spec
+#         to True if the member is present, or False if it's not.
+#         If there is no required specification, return an empty dictionary"""
+#         r_ref = self.get_required_referenced(node)
+#         var_status = {}
+#         for var in r_ref:
+#             if var not in node.mstats:
+#                 print ("%s identifier (%s) in _required specification not found "
+#                         "in group") %(node.full_path, var)
+#                 print "valid options are:\n%s" % node.mstats.keys()
+#                 error_exit()
+#             present = len(node.mstats[var]['created']) > 0
+#             var_status[var] = 'True' if present else 'False'
+#         return var_status
+
 
     def check_required(self, node):
         """ Check _required specification for required members.
         The "_required" specification allows specifying combinations of members
         in a groups that are required.  Append any error message to file.error"""
-        if not hasattr(node, 'required'):
+        required_info = self.get_required_info(node)
+        if not required_info:
             # no 'required' specification.  Do nothing.
             return
+        required_spec = required_info['spec']
+        id_status = required_info['id_status']
+        ce = self.eval_required(required_spec, id_status)
+        if ce:
+            [condition_string, error_message] = ce
+            msg = "%s: %s - %s" % (node.full_path, condition_string, error_message)
+            # vi['required_err']['group'].append(msg)
+            self.error.append(msg)    
+            
+        
         # requirement specification has [ [condition, error_message], ...].  i.e.looks like:
         # "_required": { # Specifies required member combinations",
         #     [ ["starting_time XOR timestamps",
         #         "Only one of starting_time and timestamps should be present"],
         #       ["(control AND control_description) OR (NOT control AND NOT control_description)",
         #         "If either control or control_description are present, then both must be present"]],
-        pattern = re.compile(r'([^\d\W][^/\W]*/?)') # finds identifiers
-        for rid in node.required.keys():
-        # for cm in node.required:
-            cm = node.required[rid]
+#         pattern = re.compile(r'([^\d\W][^/\W]*/?)') # finds identifiers
+#         for rid in node.required.keys():
+#         # for cm in node.required:
+#             cm = node.required[rid]
+#             condition_string = cm[0]
+#             error_message = cm[1]
+#             subs = {'AND': 'and', 'XOR': '^', 'OR': 'or', 'NOT': 'not'}
+#             # get each identifier in condition string, make dictionary mapping to 'True'
+#             # (if item is present) or 'False' (item not present)
+#             for id in re.findall(pattern, condition_string):
+#                 if id not in subs:
+#                     if id not in node.mstats:
+#                         print ("%s identifier (%s) in _required specification not found "
+#                         "in group") %(node.full_path, id)
+#                         print "valid options are:\n%s" % node.mstats.keys()
+#                         error_exit()
+#                     present = len(node.mstats[id]['created']) > 0
+#                     ps = 'True' if present else 'False'
+#                     subs[id] = ps
+#             result = self.eval_required(condition_string, subs)
+#             
+#             # use subs array to build boolean expression
+# #             text = condition_string + " " # condition string binary, add space to end for re.sub
+# #             for key in subs:
+# #                 pat = r'\b%s(?=[\) ])' % key  # (pattern requires space or closing ")" after each id
+# #                 text = re.sub(pat, subs[key], text)
+# #             # now try to evaluate condition string
+# #             try:
+# #                 result = eval(text)
+# #             except SyntaxError:
+# #                 print "%s Invalid expression for _required clause:" % node.full_path
+# #                 print condition_string
+# #                 print "evaluated as: '%s'" % text
+# #                 error_exit()
+#             if not result:
+#                 msg = "%s: %s - %s" % (node.full_path, condition_string, error_message)
+#                 # vi['required_err']['group'].append(msg)
+#                 self.error.append(msg)          
+# #             else:
+# #                 print "%s: required OK: %s" %(node.full_path, condition_string)
+
+    
+
+    def eval_required(self, required_spec, var_status):
+        """ evaluate the condition strings in required_spec to determine if the all the
+        condition strings evaluate to True given the state of variables in var_status.
+        required_spec is the '_required' specification in the format specification for
+        the group.  var_status is a dictionary mapping each variable referenced in the
+        required_spec to either True (if the variable is present) or False if it's not.
+        Returns None if all the conditions evaluate to True (e.g. no error) or returns
+        a tuple with (condition_string, error_message) if any conditions evaluate to 
+        False (indicating an error).
+        """
+        subs = {'AND': 'and', 'XOR': '^', 'OR': 'or', 'NOT': 'not'}
+        # convert var_status from having boolean values to strings "True" or "False"
+        sv_status = {key: ("True" if var_status[key] else "False") for key in var_status}
+        subs.update(sv_status)
+        for rid in required_spec.keys():
+            cm = required_spec[rid]
             condition_string = cm[0]
             error_message = cm[1]
-            subs = {'AND': 'and', 'XOR': '^', 'OR': 'or', 'NOT': 'not'}
-            # get each identifier in condition string, make dictionary mapping to 'True'
-            # (if item is present) or 'False' (item not present)
-            for id in re.findall(pattern, condition_string):
-                if id not in subs:
-                    if id not in node.mstats:
-                        print ("%s identifier (%s) in _required specification not found "
-                        "in group") %(node.full_path, id)
-                        print "valid options are:\n%s" % node.mstats.keys()
-                        error_exit()
-                    present = len(node.mstats[id]['created']) > 0
-                    ps = 'True' if present else 'False'
-                    subs[id] = ps
             # use subs array to build boolean expression
             text = condition_string + " " # condition string binary, add space to end for re.sub
             for key in subs:
@@ -2206,13 +2328,74 @@ class File(object):
                 print "evaluated as: '%s'" % text
                 error_exit()
             if not result:
-                msg = "%s: %s - %s" % (node.full_path, condition_string, error_message)
-                # vi['required_err']['group'].append(msg)
-                self.error.append(msg)          
-#             else:
-#                 print "%s: required OK: %s" %(node.full_path, condition_string)
+                return (condition_string, error_message)
+        # no errors, return None
+        return None
+        
+    def get_exclude_info(self, node):
+        """ Return info about ids referenced in the "exclude_in" specification
+        of this node for a location matching the node location.  If found, returns
+        exclude_info:
+        { 'path': "/path/excluded"
+          'ids': { 'id1': <qty1>, 'id2': <qty2>, ...}}
+        where <qty> is either:
+            '!' - must not be present (error if it is).  Default
+            '^' - recommended not be present (warning if it is)
+            '?' - optional (can be present or not)
+        If no exclude_in found, returns None
+        """
+        if not hasattr(node, 'exclude_in'):
+            # no 'exclude_in' specification.
+            return None
+        ex_spec = node.exclude_in
+        for path in ex_spec:
+            assert path.startswith('/'), '_exclude_in path must start with "/": %s in %s' % (
+                path, ex_spec)
+            if node.full_path.startswith(path):
+                # found matching path
+                ids = {}
+                for id in ex_spec[path]:
+                    qty = id[-1]
+                    if qty in ('!', '^', '?'):
+                        id = id[:-1]
+                    else:
+                        qty = "!"
+                    ids[id] = qty
+                exclude_info = { "path": path, "ids": ids }
+                return exclude_info
+        # no match exclude_info found
+        return None
 
-            
+        
+#     def is_excluded(self, df, loc):
+#         """ Checks to see if the node with definition "df" is excluded from location
+#         specified by absolute path "loc".  Details: first check to see if definition "df"
+#         has an "exclude_in" specification.  If so, check to see if any of the path's
+#         specified in the "exclude_in" specification match loc.  Returns one of:
+#         False - not excluded
+#         Tuple of: (rec_char, location)
+#             rec_char is either:
+#                 "^" - excluded as a recommendation
+#                 "!" - excluded as a requirement
+#         """
+#         ex_key = "exclude_in"
+#         if ex_key not in df:
+#             # no exclude_in specification
+#             return False
+#         ex_spec = df[ex_key]
+#         for pspec in ex_spec:
+#             assert len(pspec) > 1, "_exclude specification is too short: %s" % df
+#             last_char = pspec[-1]
+#             if last_char in ('!', '^'):
+#                 pspec = pspec[:-1]
+#             else:
+#                 last_char = "!"
+#             if (pspec.startswith('/') and loc.startswith(pspec)) or pspec in loc:
+#                 return (last_char, pspec)
+#         # did not find matching path spec
+#         return False
+    
+    
     def print_message_list(self, messages, description, quote="", zero_msg=None):
         """Prints description and messages.  "messages" is a list of messages.
         quote is set to a quote character used to enclose each message.
@@ -2926,7 +3109,7 @@ class File(object):
         while groups_to_visit:
             np = groups_to_visit.pop(0)
             h5_group, path = np
-#             if h5_group.name == '/stimulus/presentation':
+#             if h5_group.name == '/processing/brain_observatory_pipeline/BehavioralTimeSeries/running_speed_index/indexed_timeseries':
 #                 import pdb; pdb.set_trace()
             node = self.load_node(h5_group, path, 'group')
             if node.link_info:
@@ -3608,13 +3791,15 @@ class File(object):
 #                 loc, mid)
         qmid = "%s:%s" % (ns, mid)
         if qmid not in self.subclasses:
-            print "%s: include subclasses did not find subclasses for %s" % (loc, qmid)
-#             import pdb; pdb.set_trace()
-            error_exit()
+            # no subclasses for this.  Sometimes this happens and is ok.  Don't generate an error
+            return
+#             print "%s: include subclasses did not find subclasses for %s" % (loc, qmid)
+# #             import pdb; pdb.set_trace()
+#             error_exit()
         subclasses = self.subclasses[qmid]
         for sid in subclasses:
-                sns, smid = self.parse_qid(sid, ns)
-                self.save_include(includes, smid, smid, sns, qty, 'subclass', loc, base=mid)
+            sns, smid = self.parse_qid(sid, ns)
+            self.save_include(includes, smid, smid, sns, qty, 'subclass', loc, base=mid)
             
 
     # following moved from member of group to member of file so can call from doc_tools
@@ -4754,7 +4939,8 @@ class Dataset(Node):
             self.file.warning.append(msg)  
         # make sure everything defined in dataset definition is valid
         for key in df.keys():
-            if (key in ('dimensions', 'data_type', 'attributes', 'autogen', '_source_id', '_qty') or
+            if (key in ('dimensions', 'data_type', 'attributes', 'autogen',
+                '_source_id', '_qty') or
                 key in atags or key in dsinfo['dimensions']):
                 continue
             print "** Error, invalid key (%s) in dataset definition" % key
@@ -5104,6 +5290,10 @@ class Group(Node):
             if id == "_required":
                 # don't save _required specification in mstats, save it with object
                 self.required = self.expanded_def[id]
+                continue
+            if id == "_exclude_in":
+                # don't save _exclude_in specification in mstats, save it with object
+                self.exclude_in = self.expanded_def[id]
                 continue
             if id in ('_source_id', '_qty'):
                 # _source_id and _qty are not real members.  Ignore.

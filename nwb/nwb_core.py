@@ -758,7 +758,8 @@
                         "COMMENT: All timestamps in the file are stored in seconds. "
                         "Specifically, this is the number of seconds since the start of the "
                         "experiment (i.e., since session_start_time)"),
-                    "data_type": "text", "value": "Seconds"} }
+                    "data_type": "text", "value": "Seconds"} },
+            # "exclude_in": ["/stimulus/templates", ],
         },
         "_required": { # Specifies required member combinations",
             "start_time" :
@@ -768,6 +769,9 @@
                 ["(control AND control_description) OR (NOT control AND NOT control_description)",
                     ("If either control or control_description are present, then "
                     "both must be present.")]},
+        "_exclude_in": {
+            # specifies path where members must (!) or should (^) not be present, or are optional (?)
+            "/stimulus/templates": [ "starting_time!",  "timestamps!", "num_samples?"] },
         "starting_time?": {
             "description": ("The timestamp of the first sample. "
                 "COMMENT: When timestamps are uniformly spaced, the timestamp of the first "
@@ -786,6 +790,7 @@
                         "experiment (i.e., since session_start_time)"),
                     "data_type": "text",
                     "value": "Seconds"}},
+            # "exclude_in": ["/stimulus/templates", ],
         },       
         "num_samples": {
             "description": ("Number of samples in data, or number of image frames. "
@@ -795,6 +800,7 @@
             "autogen": {
                     "type": "length",
                     "target":"timestamps"},
+            # "exclude_in": ["/stimulus/templates", ],
         },
         "control?": {
             "description": ("Numerical labels that apply to each element in data[]. "
@@ -946,7 +952,7 @@
             "references": "indexed_timeseries/data.num_times"},
         "indexed_timeseries/": {
             "description": "HDF5 link to TimeSeries containing images that are indexed.",
-            "link": {"target_type": "<ImageSeries>/", "allow_subclasses": False } },
+            "link": {"target_type": "<ImageSeries>/", "allow_subclasses": True } },
         "indexed_timeseries_path": {
             "description": "Path to linked TimeSeries",
             "data_type": "text",
@@ -955,7 +961,7 @@
                 "target":"indexed_timeseries/",
                 "trim": False,
                 "qty": "!",
-                "format": "path is $t"}},
+                "format": "$t"}},
     },
     "<IntervalSeries>/": {
         "description": ("Stores intervals of data. The timestamps field stores the beginning "
@@ -1373,7 +1379,7 @@
                 "target":"masked_imageseries/",
                 "trim": False,
                 "qty": "!",
-                "format": "path is $t"}},
+                "format": "$t"}},
     },    
     "<TwoPhotonSeries>/": {
         "description": "A special case of optical imaging.",
@@ -1483,7 +1489,8 @@
                 "data_type":"text",
                 "value":"Position data, whether along the x, xy or xyz axis",
                 "const": True}},
-        "include": {"<TimeSeries>/*": {}, },
+        # "include": {"<TimeSeries>/*": {}},
+        "include": {"<TimeSeries>/*": {"_options": {"subclasses": True}}},
     },
     "BehavioralEpochs/": {
         "merge": ["<Interface>/", ],
@@ -1506,16 +1513,16 @@
                 "data_type":"text",
                 "value":"General container for storing behavorial epochs",
                 "const": True}},
-        "include": {"<IntervalSeries>/*": {}},
+        "include": {"<IntervalSeries>/*": {"_options": {"subclasses": True}}},
     },
     "BehavioralTimeSeries/": {
         "merge": ["<Interface>/", ],
         "description": ("TimeSeries for storing Behavoioral time series data."
             "See description of <a href=\"#BehavioralEpochs\">BehavioralEpochs</a> "
             "for more details.") ,
-        "include": {"<TimeSeries>/*": {}},
+        # "include": {"<TimeSeries>/*": {}},
         # to allow subclasses, replace the above include line with the following:
-        # "include": {"<TimeSeries>/*":{"_options": {"subclasses": True}}},
+        "include": {"<TimeSeries>/*":{"_options": {"subclasses": True}}},
     },   
     "Clustering/": {
         "merge": ["<Interface>/", ],
@@ -1598,7 +1605,7 @@
                 "target":"clustering_interface/",
                 "trim": False,
                 "qty": "!",
-                "format": "path is $t"}},
+                "format": "$t"}},
     },       
     "CompassDirection/": {
         "merge": ["<Interface>/", ],
@@ -1614,7 +1621,8 @@
                 "indicate which direction corresponds to zero and what is the direction of positive "
                 "rotation"),
                 "const": True}},
-        "include": {"<SpatialSeries>/*": {} }, # One of possibly many SpatialSeries storing direction. Name should be informative
+        #  "include": {"<SpatialSeries>/*": {} }, # One of possibly many SpatialSeries storing direction. Name should be informative
+           "include": {"<SpatialSeries>/*": {"_options": {"subclasses": True}}}
     },
     "DfOverF/": {
         "merge": ["<Interface>/", ],
@@ -1627,7 +1635,8 @@
                 "value":("Df/f over time of one or more ROIs. TimeSeries names should correspond "
                     "to imaging plane names"),
                 "const": True}},
-        "include": {"<RoiResponseSeries>/*": {} }, # One of possibly many RoiResponseSeries, one for each 
+        # "include": {"<RoiResponseSeries>/*": {} }, # One of possibly many RoiResponseSeries, one for each 
+        "include": {"<RoiResponseSeries>/*": {"_options": {"subclasses": True}} }
             #imaging plane. Name should match entry in /general/optophysiology
     },
     "EventDetection/": {
@@ -1663,7 +1672,7 @@
                 "target": "source_electricalseries/",
                 "trim": False,
                 "qty": "!",
-                "format": "path is $t"}},
+                "format": "$t"}},
         },
     "EventWaveform/" : {
         "merge": ["<Interface>/", ],
@@ -1674,7 +1683,8 @@
                 "data_type":"text",
                 "value":("Waveform of detected extracellularly recorded spike events"),
                 "const": True}},
-        "include": {"<SpikeEventSeries>/*": {} },
+        # "include": {"<SpikeEventSeries>/*": {} },
+        "include": {"<SpikeEventSeries>/*": {"_options": {"subclasses": True}} },
     },
     "EyeTracking/" : {
         "merge": ["<Interface>/", ],
@@ -1684,7 +1694,8 @@
                 "data_type":"text",
                 "value": ("Eye-tracking data, representing direction of gaze"),
                 "const": True}},
-        "include": {"<SpatialSeries>/*": {} },
+        # "include": {"<SpatialSeries>/*": {} },
+        "include": {"<SpatialSeries>/*": {"_options": {"subclasses": True}} }
     },
     "FeatureExtraction/" : {
         "merge": ["<Interface>/", ],
@@ -1731,7 +1742,8 @@
                     "for gamma or theta oscillations (LFP has its own interface). Filter properties should "
                     "be noted in the ElectricalSeries"),
                 "const": True}},
-        "include": {"<ElectricalSeries>/+": {} },
+        # "include": {"<ElectricalSeries>/+": {} },
+        "include": {"<ElectricalSeries>/+": {"_options": {"subclasses": True}} },
     },
     "Fluorescence/" : {
         "merge": ["<Interface>/", ],
@@ -1744,7 +1756,8 @@
                 "value": ("Fluorescence over time of one or more ROIs. TimeSeries names should correspond "
                     "to imaging plane names"),
                 "const": True}},
-        "include": {"<RoiResponseSeries>/+": {} }
+        # "include": {"<RoiResponseSeries>/+": {} }
+        "include": {"<RoiResponseSeries>/+": {"_options": {"subclasses": True}} }
     },
     "ImageSegmentation/" : {
         "merge": ["<Interface>/", ],
@@ -1976,7 +1989,8 @@
                 "value": ("LFP data from one or more channels. Filter properties should be "
                     "noted in the ElectricalSeries"),
                 "const": True}},
-        "include": {"<ElectricalSeries>/+": {}, },
+        # "include": {"<ElectricalSeries>/+": {}, },
+        "include": {"<ElectricalSeries>/+": {"_options": {"subclasses": True}} }
     },
     "MotionCorrection/": {
         "merge": ["<Interface>/", ],
@@ -2036,7 +2050,8 @@
                 "data_type":"text",
                 "value":"Position data, whether along the x, xy or xyz axis",
                 "const": True}},
-        "include": {"<SpatialSeries>/+": {} },
+        # "include": {"<SpatialSeries>/+": {} },
+        "include": {"<SpatialSeries>/+": {"_options": {"subclasses": True}}}
     },
     "PupilTracking/": {
         "merge": ["<Interface>/", ],

@@ -792,7 +792,7 @@ def validate_link(f, source, target):
                 # see if match to a subclass
                 subclasses = target.merged if hasattr(target, 'merged') else []
                 if expected_target_type not in subclasses:
-                    error.append("%s - link target_type (%s) does not match target type (%s) or subclasses (%s) at: %s" %
+                    error.append("%s - link expected target_type (%s) does not match found target type (%s) or ancestors %s at: %s" %
                         (source.full_path, expected_target_type, target_type, subclasses, target.full_path))
                 else:
                     # is OK, matches subclass
@@ -1235,19 +1235,75 @@ def process_ag_create(f, a, enclosing_node):
     # create the group
     enclosing_node.make_group(gid)
 
-
 def process_ag_missing(f, a, enclosing_node):
     """ process autogen "missing" type.  This returns a list datasets
-    that are specified as required and do not exist.
+    that are specified as required or recommended and do not exist.
     """
+    if enclosing_node.full_path == "/processing/brain_observatory_pipeline/MotionCorrection/2p_image_series/corrected":
+        import pdb; pdb.set_trace()
     missing = []
+    # get list of nodes referenced in any _required specification
+    required_info = f.get_required_info(enclosing_node)
+    required_id_status = required_info['id_status'] if required_info else {}
+    exclude_info = f.get_exclude_info(enclosing_node)
+    if required_info:
+        # has a '_required' specification.  See if it evaluates to False
+        required_spec = required_info['spec']
+        ce = f.eval_required(required_spec, required_id_status)
+        # ce will be a tuple if an error, or None if no error
+        required_has_error = not (ce is None)
     for mid in enclosing_node.mstats:
         minfo = enclosing_node.mstats[mid]
-        if minfo['qty'] in ('!', '^', '+') and not minfo['created']:
+        exists = len(minfo['created']) > 0
+        if exists:
+            # this was created, it's not missing
+            continue
+        df = minfo['df']
+        loc = enclosing_node.full_path
+        excluded = exclude_info and mid in exclude_info['ids']
+        if excluded:
+            # location is in the _exclude_in specification for the enclosing node.
+            # so it should not be present (it's not missing)
+            continue
+        if mid in required_id_status:
+            # this mid is referenced in the _required spec.  If the required spec is
+            # not detecting an error, then it's not missing
+            if not required_has_error:
+                continue
+            # There is an error detected by required spec, see if adding this variable would
+            # remove the error.  If so, then it's missing.  If not, assume it's not missing.
+            assert required_id_status[mid] == False, ("required_var_status for '%s' should be"
+                " False since it's not created") % mid
+            required_id_status[mid] = True
+            ce = f.eval_required(required_spec, required_id_status)
+            required_id_status[mid] = False
+            if ce:
+                # still have an error, assume not missing
+                continue
+            # error was removed, it is missing
+            missing.append(mid)
+            continue
+        # finally, check quantity info
+        if minfo['qty'] in ('!', '^', '+'):
             # member was required but does not exists
             missing.append(mid)
-    if missing:
-        a['agvalue'] = sorted(missing)
+    a['agvalue'] = sorted(missing)
+#     if missing:
+#         a['agvalue'] = sorted(missing)
+#         print "set agvalue to '%s'" % a['agvalue']
+
+# def process_ag_missing_old(f, a, enclosing_node):
+#     """ process autogen "missing" type.  This returns a list datasets
+#     that are specified as required or recommended and do not exist.
+#     """
+#     missing = []
+#     for mid in enclosing_node.mstats:
+#         minfo = enclosing_node.mstats[mid]
+#         if minfo['qty'] in ('!', '^', '+') and not minfo['created']:
+#             # member was required but does not exists
+#             missing.append(mid)
+#     if missing:
+#         a['agvalue'] = sorted(missing)
 
 def process_ag_extern(f, a, enclosing_node):
     """ Process autogen "extern" type.  This returns a list of
@@ -1405,7 +1461,6 @@ def validate_autogen(f):
 #                     "but is empty") % (a['node_path'], aid))
         else:
             # value is stored in value of a dataset
-            # TODO: change to buffer value in node so can work with MATLAB
             if a['node_path'] in f.file_pointer:
             # data set exists
                 ds = f.file_pointer[a['node_path']]
@@ -1432,44 +1487,63 @@ def compare_autogen_values(f, a, value):
     a - row of f.autogen
     value - value in (or being stored in) hdf5 file for autogen field
     """
+    if value is None and not a['agvalue'] and not a['include_empty']:
+        # was no value and should not be since agvalue is False
+        # and include_empty is None
+        # So don't bother comparing (it's ok because nothing was stored and nothing
+        # should be stored).
+        return
     if values_match(value, a['agvalue']):
         # value match, check for value required but missing
         if value is None and a['qty'] == '!':
             msg = "value required but is empty."
             report_autogen_problem(f, a, msg)
         return
-    # values do not match, check if match when values are sorted
+    # values do not match
+    # check for link_path missing leading '/'
+    if a['agtype'] == 'link_path' and (isinstance(a['agvalue'], str) and
+        isinstance(value, str) and a['agvalue'].startswith('/') and
+        a['agvalue'][1:] == value):
+        # link path's match except for leading slash, make a warning
+        msg = 'path correct, but missing leading "/": \'%s\'' % value
+        report_autogen_problem(f, a, msg, 'warning')
+        return
+    # check if match when values are sorted
     if isinstance(value, (list, np.ndarray)):
         sorted_value = natural_sort(value)
         if values_match(sorted_value, a['agvalue']):
             # sorted values match
             if a['sort']:
                 msg = "values are correct, but not sorted."
-                report_autogen_problem(f, a, msg)
+                report_autogen_problem(f, a, msg, 'warning')
             return
     # neither original or sorted values match
     msg = ("values incorrect.\nexpected:%s (type %s)\n"
         "found:%s (type %s)") % (a['agvalue'], type(a['agvalue']), value, type(value))
-    report_autogen_problem(f, a, msg)
+    if a['agtype'] == 'length' and isinstance(value, int):
+        # display warnings for lengths different than expected (this is
+        # done for NWB format, since length only used in one place, e.g.
+        # timeseries num_samples.  Should modify specification language
+        # to allow specifying either a warning or an error in autogen
+        severity = 'warning'
+    else:
+        severity = 'error'
+    report_autogen_problem(f, a, msg, severity)
     
     
-def report_autogen_problem(f, a, msg):
+def report_autogen_problem(f, a, msg, severity):
+    assert severity in ('warning', 'error')
     if a['aid']:
         # value stored in attribute
         aid = a['aid']
-        f.error.append("'%s': autogen attribute [%s] %s" % (a['node_path'], aid, msg))
+        output_msg = "'%s': autogen attribute [%s] %s" % (a['node_path'], aid, msg)
     else:
         # value stored in dataset
         output_msg = "'%s': autogen dataset %s" % (a['node_path'], msg)
-        if a['agtype'] == 'length':
-            # display warnings for lengths different than expected (this is
-            # done for NWB format, since length only used in one place, e.g.
-            # timeseries num_samples.  Should modify specification language
-            # to allow specifying either a warning or an error in autogen
-            f.warning.append(output_msg)
-        else:
-            f.error.append(output_msg)
-
+    if severity == 'warning':
+        f.warning.append(output_msg)
+    else:
+        f.error.append(output_msg)
 
 def update_autogen(f, a):
     """Update values that are stored in autogen fields.  This processes one
@@ -1487,7 +1561,15 @@ def update_autogen(f, a):
         if not values_match(value, a['agvalue']):
             # values do not match, update them
             ats['nv'] = a['agvalue']
-            f.set_attribute(a['node_path'], aid, a['agvalue'])
+            if not a['agvalue'] and not a['include_empty']:
+                # value is something that evaluates as False (empty) and it should not be
+                # included as an attribute because 'include_empty' is False
+                if aid in f.file_pointer[a['node_path']].attrs:
+                    # delete attribute if it's present
+                    del f.file_pointer[a['node_path']].attrs[aid]
+            else:
+                # attribute value should be saved in hdf5 file
+                f.set_attribute(a['node_path'], aid, a['agvalue'])
     else:
         if a['node_path'] in f.path2node:
         # dataset exists
