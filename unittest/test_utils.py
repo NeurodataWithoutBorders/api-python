@@ -11,7 +11,7 @@ def print_error(context, err_string):
     print("**** Failed unit test %s" % inspect.stack()[0][1])
     print("**** Error in function '%s'" % func)
     print("Context: " + context)
-    print("Error: " + err_string)
+    print("Error: " + str(err_string))
     print("Stack:")
     traceback.print_stack()
     print("----------------------------------------")
@@ -101,10 +101,11 @@ def verify_timeseries(hfile, name, location, ts_type):
     missing = None
     if "missing_fields" in ts.attrs:
         missing = ts.attrs["missing_fields"]
+    in_templates = location == "stimulus/templates"
     try:
         samp = ts["num_samples"].value
     except Exception as e:
-        if not search_for_substring(missing, "num_samples"):
+        if not in_templates and not search_for_substring(missing, "num_samples"):
             error("Reading number of samples", e)
     try:
         samp = ts["data"].value
@@ -115,7 +116,7 @@ def verify_timeseries(hfile, name, location, ts_type):
         samp = ts["timestamps"].value
     except Exception as e:
         if "starting_time" not in ts:
-            if not search_for_substring(missing, "timestamps"):
+            if not in_templates and not search_for_substring(missing, "timestamps"):
                 error("Reading timestamps", e)
     f.close()
             

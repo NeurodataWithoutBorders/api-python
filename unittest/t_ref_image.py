@@ -28,14 +28,11 @@ def test_refimage_series():
 
 def create_refimage(fname, name):
     settings = {}
-    # settings["filename"] = fname
     settings["file_name"] = fname
-    # settings["identifier"] = nwb.create_identifier("reference image test")
     settings["identifier"] = utils.create_identifier("reference image test")
-    # settings["overwrite"] = True
     settings["mode"] = "w"
     settings["description"] = "reference image test"
-    # neurodata = nwb.NWB(**settings)
+    settings["verbosity"] = "none"
     f = nwb_file.open(**settings)
     
     # neurodata.create_reference_image([1,2,3,4,5], name, "raw", "test")

@@ -54,6 +54,7 @@ class File(object):
 #         print "done for now"
 #         sys.exit(0)
         self.find_subclasses()
+        self.initialize_subclassed_node_list()
         self.reading_file = True
         self.create_scratch_group()
         self.reading_file = False
@@ -699,6 +700,7 @@ class File(object):
         else:
             # file opened in read mode.  No need to build links dicts (was already built)
             find_links.process_autogen(self)
+        self.prune_unused_subclasses()
         validation_result = self.validate_file()
         if self.options['storage_method'] == 'hdf5':
             self.file_pointer.close()
@@ -998,6 +1000,59 @@ class File(object):
         abstract = ("_properties" in df and "abstract" in df['_properties'] and
             df['_properties']['abstract'])
         return abstract
+        
+    def initialize_subclassed_node_list(self):
+        """ Initialize list of nodes that have members added by either include with
+        _options, "subclasses": True, e.g.:
+        "include":  {"<TimeSeries>/*":{"_options": {"subclasses": True}}}
+        or with a "merge+", e.g.:  "merge+": ["<ImageSeries>/", ]
+        Both of the above result in entries for the base class and subclasses
+        being added to the node "mstats" dictionary.  The list of nodes is
+        saved so that the unused members can be removed before validating the
+        file, so the added entries will not cause spurious errors (required
+        or recommended member missing) when doing the validation."""
+        self.subclassed_nodes = {"include": [], "merge": []}
+        
+    def prune_unused_subclasses(self):
+        """ Remove unused mstats entries that are created by subclass includes and
+        subclass merges.  This done so they do not cause spurious errors
+        during validation"""
+        # prune "include" subclasses
+        for node in self.subclassed_nodes["include"]:
+            # Build cu dict, mapping base class(s) to {'created': [...], 'unused': [...]}
+            # where each [...] is respectively the list of created and unused subclasses
+            cu = {}
+            for id in node.mstats:
+                if 'include_info' not in node.mstats[id]:
+                    continue
+                inc_info = node.mstats[id]['include_info']
+                # include_info dict made in function File.save_include
+                if inc_info['source'] != "subclass":
+                    continue
+                base_class = inc_info["base"]
+                if base_class not in cu:
+                    cu[base_class] = {'created': [], 'unused': []}
+                cu_idx = 'created' if len(node.mstats[id]["created"]) > 0 else 'unused'
+                cu[base_class][cu_idx].append(id)
+            # prune unused members for each base_class
+            # If no members were used, keep the base_class member
+            # otherwise remove all unused members
+            for base_class in cu:
+                keep_base_class = len(cu[base_class]['created']) == 0
+                for id in cu[base_class]['unused']:
+                    if not keep_base_class or id != base_class:
+                        del node.mstats[id]
+        # prune "merge" subclasses
+        for node in self.subclassed_nodes["merge"]:
+            if not hasattr(node, 'subclass_merge_ids'):
+                # subclasses were already removed by function prune_subclass_merges
+                continue
+            # remove all except the base subclass
+            for id in node.subclass_merge_ids[1:]:
+                created = len(node.mstats[id]["created"]) > 0
+                assert not created, "prune unused subclass found id actually used: %s %s" % (
+                    node.full_path, id)
+                del node.mstats[id]           
     
     def make_qualified_ids(self, ids, ns):
         # ids is a list of ids, ns is a name space
@@ -1933,13 +1988,20 @@ class File(object):
             node = to_check.pop(0)
             custom = 'custom' in node.sdef and node.sdef['custom']
             type = node.sdef['type']
-#             if node.full_path == "/general/aibs_specimen_id":
+#             if node.full_path == "/stimulus/templates/locally_sparse_noise_image_stack":
 #                 import pdb; pdb.set_trace()
             if custom:
                 if (self.options['identify_custom_nodes']):
                     caid, cval = self.options['custom_node_identifier']
                     if not (caid in node.h5attrs and cval == node.h5attrs[caid]):
-                        vi['custom_nodes_missing_flag'][type].append(node.full_path)
+                        if type not in ('group', 'dataset'):
+                            # type must be external link.  Ignore here. Warning will be
+                            # displayed elsewhere
+                            # print "TMP: %s, type='%s', sdef=" % (node.full_path, type)
+                            # pp.pprint(node.sdef)
+                            pass 
+                        else:
+                            vi['custom_nodes_missing_flag'][type].append(node.full_path)
                     else:
                         vi['identified_custom_nodes'][type].append(node.full_path)
             elif node.sdef['ns'] != self.default_ns and self.options['identify_extension_nodes']:
@@ -2032,8 +2094,6 @@ class File(object):
         """ Check for any attributes that are required or recommended but do not
         have a value *or* are const and have an incorrect value.  Also record
         any described by an extension"""
-#         if "my_drifting_grating_features" in node.full_path:
-#             import pdb; pdb.set_trace()
         if not hasattr(node, "attributes"):
             # this node does not have any attributes
             return
@@ -2061,41 +2121,44 @@ class File(object):
                 vi['added_attributes_not_described_by_extension'].append(msg)
                 continue
             assert qty in ('?', '!', '^'), "attribute qty must be one of: '!', '^', '?' or 'custom'"
-            # Attribute is required or recommended.  Check if present
             const = 'const' in ats[aid] and ats[aid]['const']
             if const:
                 assert 'nv' not in ats[aid], "%s: attribute [%s] is type const, but nv specified" % (
                     node.full_path, aid)
-                eval = ats[aid]['value']
+                const_val = ats[aid]['value']
             val_present = aid in node.h5attrs
+            if val_present:
+                aval = node.h5attrs[aid]  # actual value
+            # check if described by extension
             last_source_ns = ats[aid]['source'][-1].split(':')[0] if 'source' in ats[aid] else None
             if val_present and last_source_ns and last_source_ns != self.default_ns:
                 msg = "%s: (%s) %s" %(node.full_path, node.sdef['type'], aid)
                 vi['added_attributes_described_by_extension'].append(msg)
-            if qty == '?':
-                # this attribute is optional.  Don't check if it's present
-                continue                
-            if not val_present:
-                if aid in added_nodes_identifiers:
-                    # this attribute id is one used for identifying added nodes (custom or extension)
-                    # don't flag the value missing here.  Assume that will be done in routine "validate_node"
+            # if attribute is required or recommended, check if present
+            if qty in ('!', '^'):           
+                if not val_present:
+                    if aid in added_nodes_identifiers:
+                        # this attribute id is one used for identifying added nodes (custom or extension)
+                        # don't flag the value missing here.  Assume that will be done in routine "validate_node"
+                        continue
+                    if const:
+                        msg = "%s: (expected %s='%s')" %(node.full_path, aid, eval)
+                    else:
+                        msg = "%s - %s" % (node.full_path, aid)
+                    elist = 'missing_attributes' if qty == "!" else 'recommended_attributes_missing'
+                    vi[elist].append(msg)
                     continue
-                if const:
-                    msg = "%s: (expected %s='%s')" %(node.full_path, aid, eval)
-                else:
+                if find_links.values_match(node.h5attrs[aid], ""):
+                    # is present but empty; generate a warning or error.
                     msg = "%s - %s" % (node.full_path, aid)
-                elist = 'missing_attributes' if qty == "!" else 'recommended_attributes_missing'
-                vi[elist].append(msg)
-            elif find_links.values_match(node.h5attrs[aid], ""):
-                # attribute is present but empty; generate a warning or error.
-                msg = "%s - %s" % (node.full_path, aid)
-                elist = 'required_attributes_empty' if qty == "!" else 'recommended_attributes_empty'
-                vi[elist].append(msg)
-            elif const: 
-                aval = node.h5attrs[aid]
-                if not find_links.values_match(aval, eval):
-                    msg = "%s: %s found '%s', expected '%s'" % (node.full_path, aid, aval, eval)
-                    vi['incorrect_attribute_values'].append(msg)
+                    elist = 'required_attributes_empty' if qty == "!" else 'recommended_attributes_empty'
+                    vi[elist].append(msg)
+                    continue
+            # either qty == '?' or value is present or both
+            # if value is present and const, check to see if it matches expected value
+            if val_present and const and not find_links.values_match(aval, const_val):
+                msg = "%s: %s\nexpected: '%s'\nfound: '%s', " % (node.full_path, aid, const_val, aval)
+                vi['incorrect_attribute_values'].append(msg)
                 
     def validate_dataset(self, node):
         """ Check dataset in hdf5 file conforms to specification definition.
@@ -2192,7 +2255,7 @@ class File(object):
             # get each identifier in condition string
             ids_and_ops = set(re.findall(pattern, condition_string))
             ids = ids_and_ops - ops
-            if ids != excluded_ids:
+            if not (ids <= excluded_ids):
                 # copy spec
                 spec[rid] = cm
                 r_ref.update(ids)
@@ -2632,8 +2695,10 @@ class File(object):
         to expand structures in order to figure out which nodes in the file
         correspond to nodes in the specification language definition.  These
         methods are called from function get_expanded_def.
-        Special id ("////scratch_group") is detected in node method "save_node"
+        id value '////scratch_group' is detected in node method "save_node"
         so that the node is not saved to the node_tree or in path2nodes.
+        Attribute "scratch_group" is used to prevent saving subclass merges
+        and subclass includes during calls to methods of the scratch_group.
         When calling this function, file.read_mode must be true so calls to
         save the node in a data file are not not performed."""
         name = ''
@@ -2642,6 +2707,7 @@ class File(object):
         parent = None
         scratch_sdef = {'type': 'group', 'id':'////scratch_group', 'qid':None, 'ns':None, 'df':{} }
         self.scratch_group = Group(self, scratch_sdef, name, path, attrs, parent)
+        self.scratch_group.scratch_group = True
           
         
     #####################################################        
@@ -2829,19 +2895,23 @@ class File(object):
         the matching algorithm (in function find_matching_id) made more sophisticated."""
         # Part 1. Remove top level sig attributes that have a value common to more than one sig
         # First, setup av (attr_values) to be:
-        #  { "key1-type" : { val_1: [id1, id2...], val_2: [id3, ] },
-        #    "key2-type" { .... } }
+        #  { "key1-type-name" : { val_1: [id1, id2...], val_2: [id3, ] },
+        #    "key2-type-name" { .... } }
         # key is attribute name, type is type of id (group or dataset)
+        # name if the fixed name, or empty string if no name
+        # (name added for merge_subclass which results in more than one id with the
+        # same name).
         av = {}
         for id in idsigs:
             sig = idsigs[id]
-            if sig['name']:
-                # fixed name, do not remove any attributes of this node
-                continue
+            sig_name = sig['name'] if sig['name'] else ''
+#             if sig['name']:
+#                 # fixed name, do not remove any attributes of this node
+#                 continue
             type = sig['type']
             for key in sig['attrs']:
-                kt = "%s-%s" % (key, type)
-                value = sig['attrs'][key]
+                kt = "%s-%s-%s" % (key, type, sig_name)
+                value = sig['attrs'][key]['value']
                 val_hash = hash(str(value))
                 if kt not in av:
                     av[kt] = {val_hash: [id,]}
@@ -2854,7 +2924,7 @@ class File(object):
             for val_hash in av[kt]:
                 if len(av[kt][val_hash]) > 1:
                     # this key has same value in multiple id's.  Remove it
-                    key, type = kt.rsplit('-', 1)
+                    key = kt.split('-', 1)[0]
                     for id in av[kt][val_hash]:
                         del idsigs[id]['attrs'][key]
         # Part 2.  Remove any member nodes with fixed names
@@ -2908,7 +2978,7 @@ class File(object):
                 type = msig['type']
                 # now check attributes in msig
                 for key in msig['attrs']:
-                    value = msig['attrs'][key]
+                    value = msig['attrs'][key]['value']
                     val_hash = hash(str(value))
                     kt = "%s-%s" % (key, type)
                     if kt not in av:
@@ -3068,7 +3138,11 @@ class File(object):
     def get_sig_name(self, id):
         """ idsig name is simply the id (without any trailing slash) if not a variable
         name, otherwise None"""
-        id_noslash = id.rstrip('/')        # removing trailing slash in case it's a group  
+        id_noslash = id.rstrip('/')        # removing trailing slash in case it's a group
+        if '-' in id_noslash:
+            # dash in id signifies subclass
+            # id is actually the part before it
+            id_noslash = id_noslash.split('-')[0] 
         v_id = re.match( r'^<[^>]+>$', id_noslash) # True if variable_id (in < >)
         sig_name = None if v_id else id_noslash
         return sig_name
@@ -3082,10 +3156,11 @@ class File(object):
         if 'attributes' in df:
             attrs = df['attributes']
             for key in attrs:
-                value_info = attrs[key]
-                if 'value' in value_info:
+                avi = attrs[key]  # avi == attribute value info
+                if 'value' in avi:
+                    const = 'const' in avi and avi['const'] and avi['qty'] == '!'
                     # found an attribute with a specified value
-                    sig_attrs[key] = value_info['value']
+                    sig_attrs[key] = {'value': avi['value'], 'const':const}
         return sig_attrs
         
     def make_ordered_name_spaces(self):
@@ -3109,7 +3184,7 @@ class File(object):
         while groups_to_visit:
             np = groups_to_visit.pop(0)
             h5_group, path = np
-#             if h5_group.name == '/processing/brain_observatory_pipeline/BehavioralTimeSeries/running_speed_index/indexed_timeseries':
+#             if h5_group.name == '/processing/shank_0/LFP':
 #                 import pdb; pdb.set_trace()
             node = self.load_node(h5_group, path, 'group')
             if node.link_info:
@@ -3179,8 +3254,8 @@ class File(object):
         and path2nodes.  type is 'group', 'dataset' or 'extlink'.  'extlink'
         indicates that node is an external link that is not available and actual
         type (group or dataset) is not known.  In that case, h5_node should be None."""
-        # full_path = h5_node.name  # this cannot be used because it fails with external links
-#         if h5_node.name == "/processing/Shank_01":
+        # for debugging, h5_node.name == '...' cannot be used because it fails with external links
+#         if full_path == '/acquisition/timeseries/whisker_video/timestamps':
 #             import pdb; pdb.set_trace()
         assert (h5_node is None) == (type == 'extlink'), "h5_node and type don't match in load_node"
         parent_path, node_mname  = full_path.rsplit('/',1)
@@ -3194,7 +3269,6 @@ class File(object):
 #         if full_path == "/stimulus/presentation/rec_stim_1/data":
 #             print "in load_node, found %s" % full_path
 #             import pdb; pdb.set_trace()
-        # sdef = self.deduce_sdef(h5_node, node_mname, type, parent)
         sdef = self.deduce_sdef(h5_node, full_path, type, parent)
         if type == 'extlink':
             # type was unknown because node was extlink.  Get type now from sdef
@@ -3211,8 +3285,6 @@ class File(object):
         if type == 'group':
             node = Group(self, sdef, name, parent_path, attrs, parent, link_info)
         else:
-#             if h5_node.name == "/stimulus/presentation/my_drifting_grating_features/feature":
-#                 import pdb; pdb.set_trace()
             value = self.make_value_info(h5_node) if h5_node else None
             dtype = None
             compress = False
@@ -3265,7 +3337,6 @@ class File(object):
         pshape = re.sub('[,]', '', str(shape))[1:-1]  # slice removes ( )
         vi = 'value_info: type="%s", shape="[%s]"' % (dt_name, pshape)
         return vi
-  
          
     def deduce_sdef(self, h5node, full_path, type, parent):
         """ Deduce the sdef (structure definition information) from the h5py node
@@ -3304,12 +3375,12 @@ class File(object):
             location - set "True" if this is a group that is in a path in locations
                 and if it does not match any structures.  Otherwise not present.
             top - set true if this node is in the top of the defined structures,
-                not present otherwise."""        
+                not present otherwise."""
         parent_path, node_mname  = full_path.rsplit('/',1)
         if node_mname  == '':
             node_mname  = '/'  # at root node
         # import pdb; pdb.set_trace()
-        assert (h5node is None) == (type == "extlink"), "h5node and extlink do not match in deduce_sdef" 
+        assert (h5node is None) == (type == "extlink"), "h5node and extlink do not match in deduce_sdef"
         h5nsig = self.make_h5nsig(h5node, node_mname) if h5node else self.make_minimal_msig(node_mname)
 #         if h5node.name == "/stimulus/presentation/Sweep_0":
 #             import pdb; pdb.set_trace()
@@ -3484,9 +3555,9 @@ class File(object):
                 # did not find required number matches yet.  Check members
                 # hopefully there will not be many members.  A more efficient way
                 # of doing this should be developed.
-                for msig1 in idsigs[id]['msigs']:
-                    for msig2 in h5nsig['msigs']:
-                        if self.match_sigs(msig1, msig2) > 0:
+                for msig1 in h5nsig['msigs']:
+                    for msig2 in idsigs[id]['msigs']:
+                        if self.match_sigs(msig1, msig2) > 0:  
                             # count any match with member as one match, even if is 2
                             # There might be other methods, such as find num of maximal matches
                             # it's not clear those would be any better
@@ -3501,7 +3572,7 @@ class File(object):
         if len(matches) > 1:
             print "Found more than one match to node. (%s)" % matches
             print "Perhaps specification is ambigious."
-#             import pdb; pdb.set_trace()
+            import pdb; pdb.set_trace()
             error_exit()
         if len(matches) == 1:
             return matches[0]
@@ -3556,7 +3627,9 @@ class File(object):
          -1 Definitely not a match.  Either types or fixed names do not match).
           0 Types match only (for non-named nodes)
           1 Either name or an attribute match
-          2 Both name and an attribute match"""  
+          2 Both name and an attribute match
+        h5nsig['type'] will be None for external_link, otherwise 'group' or 'dataset'
+        """  
         if (h5nsig['type'] and idsig['type'] != h5nsig['type']) or (idsig['name'] and 
             idsig['name'] != h5nsig['name']):
             return -1
@@ -3564,13 +3637,24 @@ class File(object):
         if idsig['name'] and idsig['name'] == h5nsig['name']:
             # name is specified for idsig and matches name in h5 node
             match_count = 1
-        # Try to find an attribute that matches
+        # Try to find an attribute that matches and check for const attributes that don't match
+        # note that h5nsig attributes are like: {key1: value1, ... }
+        # but idsig attributes are like: {key1: {'value: value1, 'const': True}}
+        # ('const' may or may not be present)
+        found_matching_attribute = 0
         for key in idsig['attrs']:
-            if (key in h5nsig['attrs'] and
-                find_links.values_match(idsig['attrs'][key], h5nsig['attrs'][key])):
-                # found match
-                match_count = match_count + 1
-                break;  # only need one match
+            const = 'const' in idsig['attrs'][key] and idsig['attrs'][key]['const']
+            if key in h5nsig['attrs']:
+                vals_match = find_links.values_match(idsig['attrs'][key]['value'],
+                    h5nsig['attrs'][key])
+                if vals_match:
+                    found_matching_attribute = 1
+                    continue
+            if const and h5nsig['type']:
+                # h5node exists (not external link) and either does not have the
+                # const value, or the constant values don't match, so definitely not a match
+                return -1
+        match_count += found_matching_attribute
         return match_count  
               
             
@@ -3605,8 +3689,6 @@ class File(object):
                 msigs.append(msig)
             sig['msigs'] = msigs
         return sig
-        
-        
         
     def make_h5nsig2(self,h5node, node_mname):
         """Gets name, type and attributes from a h5node.  node_mname is the name
@@ -3783,20 +3865,14 @@ class File(object):
                 source = 'explicit'
                 self.save_include(includes, mid, id, ins, qty, source, loc, extra, 
                     source_id=source_id)
+    
 
     def save_subclass_includes(self, includes, mid, ns, qty, loc):
         """ Add list of subclasses of mid to self.includes
         """
-#         assert mid in self.subclasses, "%s include subclasses did not find subclasses for %s" % (
-#                 loc, mid)
         qmid = "%s:%s" % (ns, mid)
-        if qmid not in self.subclasses:
-            # no subclasses for this.  Sometimes this happens and is ok.  Don't generate an error
-            return
-#             print "%s: include subclasses did not find subclasses for %s" % (loc, qmid)
-# #             import pdb; pdb.set_trace()
-#             error_exit()
-        subclasses = self.subclasses[qmid]
+        # if no subclasses, just use class by itself as list of subclasses
+        subclasses = self.subclasses[qmid] if qmid in self.subclasses else [qmid,]
         for sid in subclasses:
             sns, smid = self.parse_qid(sid, ns)
             self.save_include(includes, smid, smid, sns, qty, 'subclass', loc, base=mid)
@@ -3861,7 +3937,6 @@ class File(object):
                         # just regular assignment
                         dest[aid]['value'] = val
                     # TODO: check if data type specified in destination matches value       
-                    continue
                 else:
                     print ("** Error, merging attribute '%s' but value not specified in source"
                         " or destination") % aid
@@ -3874,12 +3949,11 @@ class File(object):
                 else:
                     # value specified in dest but not source.  Just leave value in dest
                     pass
-#                     print ("** Warning, node at:\n%s\nmerging attribute '%s'" 
-#                         " but value to merge not specified.") % (self.full_path, aid)
-#                     print "source attributes:"
-#                     pp.pprint(source)
-#                     print "dest attributes:"
-#                     pp.pprint(dest)                         
+            # copy const if present
+            if 'const' in source[aid]:
+                dest[aid]['const'] = source[aid]['const']
+            
+                     
 #   
 
 
@@ -3947,7 +4021,7 @@ class File(object):
             id_sources is set to a dictionary mapping each id (stored as key in mstats)
         to a list of sources for that key (series of subclasses or extensions
         overwriting the previous versions).  Each element of the list is a
-        'qualified sdef id' (qsid).  Valud is: (ns:id) ns == sdef['ns'],
+        'qualified sdef id' (qsid).  Value is: (ns:id) ns == sdef['ns'],
         id == sdef['id']).  Last element gives the final source which includes
         the namespace associated with the id for displaying in documentation.
         Also allows displaying when this was formed by overriding a previous value.
@@ -5072,6 +5146,8 @@ class Group(Node):
             contains key "node".  If linking to external file, contains key: "extlink"
             and value is file,path (file, comma, then path). 
         """
+        # if this id was part of a subclass_merge, prune the others and possibly change id
+        sdef['id'] = self.prune_subclass_merges(parent, sdef['id'])
         super(Group, self).__init__(file, sdef, name, path, attrs, parent, link_info)
         # change for reading file.  Now if link_info, do nothing.
         # All information is in target link
@@ -5268,8 +5344,91 @@ class Group(Node):
             # self.attributes.update(self.expanded_def['attributes']) # instead of this, make call below so qty processed
             # self.file.merge_attribute_defs(self.attributes, self.expanded_def['attributes'])
             del self.expanded_def['attributes']
+        self.generate_subclass_merges()
               
+    def generate_subclass_merges(self):
+        """Check for any member group having a "subclass merge" (e.g. "merge+").  If so
+        replace the group definition with a series of group definitions, one for each
+        subclass.  The extra definitions are removed when a particular subclass is
+        chosen."""
+        # string used in specification language to indicate subclass_merge
+        msc = "merge+"
+        df = self.expanded_def
+        for key in df.keys():
+            if key.endswith('/') and isinstance(df[key], dict) and msc in df[key]:
+                assert len(df[key][msc]) == 1, ("%s: must be only one element in list when"
+                    " using \"%s\": %s") % (self.full_path, msc, df[key][msc])
+                orig_df = df[key]
+                assert 'merge' not in orig_df, ('%s: cannot have "merge" and "%s" ' %
+                    'at same time: %s') % (self.full_path, msc, orig_df)
+                base_class = orig_df[msc][0]
+                q_base_class = self.file.make_qid(base_class, self.sdef['ns'])
+                assert q_base_class in self.file.subclasses, ("%s: %s base class (%s) "
+                    "qualified (%s) has no subclasses") % (
+                    self.full_path, msc, base_class, q_base_class)
+                subclasses = self.file.subclasses[q_base_class]
+                # Generate new group definitions by replacing merge+ with merge of
+                # all subclasses
+                id_base = key.rstrip('/')
+                sources = self.id_sources[key]
+                subclass_ids = [key,]
+                for subclass in subclasses:
+                    [ns, ssc] = subclass.split(':')
+                    if ssc == base_class:
+                        # don't add new entry for base class, modify orig_df
+                        continue
+                    new_df = copy.deepcopy(orig_df)
+                    del new_df[msc]
+                    new_df['merge'] = [subclass,]
+                    new_id = "%s-%s" % (id_base, ssc)
+                    self.expanded_def[new_id] = new_df
+                    subclass_ids.append(new_id)
+                    # add entry to id_sources
+                    self.id_sources[new_id] = sources
+                # modify original def, replacing msc with normal merge
+                orig_df['merge'] = orig_df[msc]
+                del orig_df[msc]
+                # save list of subclass_id in node
+                self.subclass_merge_ids = subclass_ids
+                # scratch_group only used for preparation.  So if scratch_group don't save
+                if not hasattr(self,'scratch_group'):
+                    # save node for possible
+                    # cleanup in function file.prune_unused_subclasses
+                    # print "saving subclass-merge: %s" % self.full_path
+                    self.file.subclassed_nodes['merge'].append(self)
+        return
         
+    def prune_subclass_merges(self, parent, id):
+        """ Check if id is for an mstats entry generated because of a subclass merge.
+        If so, delete all entries not being used, and if necessary, rename the entry that
+        is used to the original name.  Return the id name (same as entry if no change,
+        or the new name if changed). """
+        if not hasattr(parent, 'subclass_merge_ids') or id not in parent.subclass_merge_ids:
+            # this id was not used in a subclass_merge
+            return id
+        id_base = parent.subclass_merge_ids[0]
+        # delete subclasses that are not used from mstats and expanded_ids
+        for subclass_id in parent.subclass_merge_ids:
+            if subclass_id != id:
+                del parent.mstats[subclass_id]
+                del parent.expanded_def[subclass_id]
+        # if needed, rename subclass that is used to id_base
+        if id != id_base:
+            parent.mstats[id_base] = parent.mstats[id]
+            del parent.mstats[id]
+            parent.expanded_def[id_base] = parent.expanded_def[id]
+            del parent.expanded_def[id]
+            id = id_base
+        # remove attribute for subclass_merge_ids
+        del parent.subclass_merge_ids
+        # add attribute to flag that this node was created using a subclass_merge
+        # this is used by doc_tools "add_group_doc" function to add the text
+        # "(or subclass)" when generating documentation about this node
+        self.subclass_merge_base = id_base
+        return id
+        
+        
+
     def get_member_stats(self):
         """Build dictionary mapping key for each group member to information about the member.
            Also processes includes.  Save in self.mstats """
@@ -5323,6 +5482,10 @@ class Group(Node):
                     pp.pprint(self.expanded_def)
 #                     import pdb; pdb.set_trace()
                     error_exit()
+            if id not in self.id_sources:
+                print "id %s not found in id_sources:" % id
+                pp.pprint(self.id_sources)
+                import pdb; pdb.set_trace()
             assert id in self.id_sources, ("%s: id '%s' not found it id_sources when "
                 "makeing mstats") % (self.sdef['id'], id)
             id_source = self.id_sources[id]
@@ -5342,11 +5505,15 @@ class Group(Node):
 
     def add_includes_to_mstats(self):
         """ Add self.includes to member stats"""
+        subclass_include_count = 0
         for mid in self.includes:
             inc_info = self.includes[mid]
             iid = inc_info['id']
             ins = inc_info['ns']
             qty = inc_info['qty']
+            if inc_info['source'] == "subclass":
+                # keep track of number of subclass includes
+                subclass_include_count += 1
             sdef = self.file.get_sdef(iid, ins, "Referenced in include")
             ns = sdef['ns']
             assert ns == ins, "add_includes_to_mstats, ns (%s) != ins (%s)" % (ns, ins)
@@ -5425,6 +5592,10 @@ class Group(Node):
             self.mstats[id] = { 'ns': ns, 'qty': qty,
                 'df': df, 'created': [], 'type': type,
                 'source': [source], 'include_info': inc_info } # was shorter: iinfo }
+        if subclass_include_count > 1 and not hasattr(self,'scratch_group'):
+            # more than one subclass include member in this node, save node for possible
+            # cleanup in function file.prune_unused_subclasses
+            self.file.subclassed_nodes["include"].append(self)
         # print "after processing all includes, mstats is:"
         # pp.pprint(self.mstats)
         
@@ -5465,6 +5636,8 @@ class Group(Node):
             # convert attribute values passed in by matlab from 1-d to original shape
             self.file.deflatten_attrs(attrs, attrs_shape)         
         gid = id + "/"
+        # if this id was part of a subclass_merge, prune the others and possibly change id
+        # gid = self.prune_subclass_merges(gid)
         sgd = self.get_sgd(gid, name)
         path = self.full_path
         link_info = self.file.extract_link_info(name, link, Group)

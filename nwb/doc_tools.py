@@ -138,7 +138,12 @@ def make_group_members(f, node):
         node = to_check.pop(0)
         mstats = node.mstats
         includes = node.includes
-        for mid in mstats:
+        member_ids = mstats.keys()
+        if hasattr(node, 'subclass_merge_ids'):
+            # remove keys made by subclass merge from member_ids list so don't create them
+            subclass_ids = node.subclass_merge_ids[1:]
+            member_ids = [id for id in member_ids if id not in subclass_ids]
+        for mid in member_ids:
             if (mstats[mid]['type'] == 'dataset' or 'link' in mstats[mid]['df']):
                 # either is a dataset, or is a link.  don't create it
                 continue
@@ -889,6 +894,7 @@ class Table(object):
         self.cmt_str = "COMMENT:"
         self.filter = filter  # group, dataset or none
         self.required_messages = []
+        self.exclude_ids = None
         # self.more_info_str = "MORE_INFO:"
         
     def add(self, id, id_str, type, description, required, ns=None, override=None):
@@ -908,6 +914,9 @@ class Table(object):
         
     def save_required_message(self, ids, message):
         self.required_messages.append((ids, message))
+        
+    def save_exclude_ids(self, exclude_ids):
+        self.exclude_ids = exclude_ids
         
     def get_has_comment(self):
         if self.has_comment is None:
@@ -965,6 +974,20 @@ class Table(object):
                     msgs.append(ids_msg[1])
             return add_css('; '.join(msgs))
         return ''
+        
+    def get_exclude_message(self, id):
+        """ returns message describing exclusion if id is in any _exclude_in specification"""
+        if not self.exclude_ids or id not in self.exclude_ids:
+            return ''
+        phrases = { '!':'must not be present', '^':'should not be present', '?':'optional'}
+        msgs = []
+        for pq in self.exclude_ids[id]:
+            [path, qty] = pq
+            msg = "%s under '%s'" % (phrases[qty], path)
+            msgs.append(msg)
+        msgs = '; '.join(msgs) + "."
+        msgs = msgs[0].upper() + msgs[1:] # capitalize first character
+        return msgs
     
     def get_id_css(self, id_str, ns, override):
         """ if either an extension namespace or subclass override is specified
@@ -994,8 +1017,10 @@ class Table(object):
                 tmp_row['Id'] = css_style
             id = row['id']
             required_message = self.get_required_message(id)
-            if required_message:
-                tmp_row['Description'] = tmp_row['Description'] + " <b>%s</b>" % required_message
+            exclude_message = self.get_exclude_message(id)
+            qualifier_message = " ".join([m for m in [required_message, exclude_message] if m])
+            if qualifier_message:
+                tmp_row['Description'] = tmp_row['Description'] + " <b>%s</b>" % qualifier_message
             if self.has_comment:
                 description = tmp_row['Description']
                 description, comment = self.get_description_comment(description)
@@ -1639,9 +1664,12 @@ def add_group_doc(f, id, id_info, tbl, level, ids_documented, mode="stand_alone"
         tt_link = "<a href=\"#%s\">%s</a>" % (safe_tt, safe_tt)
         type = "link; target type=%s" % tt_link
         if link_spec['allow_subclasses']:
-            type = type + " (or subclass)"
+            type = type + " (or subtype)"
     elif 'merge' in df and level > 0:
         # type of this group is group being merged in
+#         print "found merge in group, id=%s, df=" % id
+#         pp.pprint(df)
+#         import pdb; pdb.set_trace()
         mlist = df['merge']
         assert len(mlist) == 1, "For generated doc, merge in group can only be length 1, is: %s" % (
             mlist)
@@ -1650,7 +1678,11 @@ def add_group_doc(f, id, id_info, tbl, level, ids_documented, mode="stand_alone"
         mtype = mtarget if ':' not in mtarget else mtarget.split(':')[1]
         safe_tt = cgi.escape(remove_trailing_slash(mtype))
         tt_link = "<a href=\"#%s\">%s</a>" % (safe_tt, safe_tt)
-        type = tt_link + " (group)"
+        # if this was made by a "subclass merge" add text "(or subclass)"
+        # attribute 'subclass_merge_base' is set in h5gate function "prune_subclass_merges"
+        node = id_info['created'][0]
+        subclass_txt = " (or subtype)" if hasattr(node, 'subclass_merge_base') else ''
+        type = tt_link + subclass_txt + " (group)"
     else:
         type = 'group'
 #     te = "<tr><td>%s%s</td><td>%s</td><td>%s</td><td style=\"text-align:center\">%s</td></tr>" % (
@@ -1689,6 +1721,9 @@ def add_group_doc(f, id, id_info, tbl, level, ids_documented, mode="stand_alone"
             continue
         if mkey == "_required":
             process_required_clause(tbl, df[mkey])
+            continue
+        if mkey == "_exclude_in":
+            process_exclude_in_clause(tbl, df[mkey])
             continue
         if mkey == "_properties":
             # properties not displayed.  They are used to flag that a group is "abstract"
@@ -1780,14 +1815,22 @@ def add_group_doc(f, id, id_info, tbl, level, ids_documented, mode="stand_alone"
             # this is the base class of an include with _option subclasses
             # replace type, id and description with info for subclass references
             abstract = f.is_abstract(mdf)
-            sub_links = ", ".join([inc_info['subclasses'][x] 
-                for x in sorted(inc_info['subclasses'].keys())])
+            # import pdb; pdb.set_trace()
+            if len(inc_info['subclasses']) > 1:
+                sub_links = ", ".join([inc_info['subclasses'][x] 
+                    for x in sorted(inc_info['subclasses'].keys()) if x != mqid])
+            else:
+                sub_links = None
             if abstract:
                 id_str = "%s%s subtype" % (indent, mlink)
-                mdescription = "Any subtype of %s.  These include: %s" % (mlink, sub_links)
+                mdescription = "Any subtype of %s." % mlink
+                if sub_links:
+                    mdescription += " These include: %s" % sub_links
             else:
                 id_str = "%s%s or subtype" % (indent, mlink)
-                mdescription = "%s or any subtype.  Subtypes include: %s" % (mlink, sub_links)
+                mdescription = "%s or any subtype." % mlink
+                if sub_links:
+                    mdescription += " Subtypes include: %s" % (sub_links)
         else:
             id_str = "%s%s" % (indent, mlink)
         tbl.add(mlink, id_str, mtype, mdescription, mrequired, mns)
@@ -1946,7 +1989,34 @@ def process_required_clause(tbl, required_clause):
         # split into list of variables
         c_vars = c_vars.split(" ")
         tbl.save_required_message(c_vars, message)
+        
 
+def process_exclude_in_clause(tbl, exclude_clause):
+    """Process 'exclude_in' specification, which is a list of paths and variables
+    excluded from those paths.  "exclude_in" spec has a form like:
+    { '/stimulus/templates': ['starting_time!', 'timestamps!', 'num_samples?'] }
+    Before saving it in tbl, convert to form that has variable as the index:
+    { 'starting_time': [('/stimulus/templates', '!'), (...), ...],
+      'timestamps':  [('/stimulus/templates', '!'), ... ],
+      'num_samples': [('/stimulus/templates', '?'), ... ]}
+    """
+    exclude_ids = {}
+    for path in exclude_clause:
+        if path == "_source":
+            # ignore source
+            continue
+        for id in exclude_clause[path]:
+            qty = id[-1]
+            if qty in ('?', '^', '!'):
+                id = id[:-1]
+            else:
+                qty = '!'  # default is must not be present
+            pq = (path, qty)
+            if id not in exclude_ids:
+                exclude_ids[id] = [pq,]
+            else:
+                exclude_ids.append(pq)
+    tbl.save_exclude_ids(exclude_ids)
 
 def get_link_spec(df):
     if 'link' not in df:

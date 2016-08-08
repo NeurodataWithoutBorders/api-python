@@ -32,14 +32,11 @@ def test_general_subject():
 
 def create_general_subject(fname):
     settings = {}
-    # settings["filename"] = fname
     settings["file_name"] = fname
-    # settings["identifier"] = nwb.create_identifier("general top test")
     settings["identifier"] = utils.create_identifier("general top test")
-    # settings["overwrite"] = True
     settings["mode"] = "w"
     settings["description"] = "test top-level elements in /general"
-    # neurodata = nwb.NWB(**settings)
+    settings["verbosity"] = "none"
     f = nwb_file.open(**settings)
     
     

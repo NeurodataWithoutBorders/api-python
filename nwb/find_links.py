@@ -1239,8 +1239,8 @@ def process_ag_missing(f, a, enclosing_node):
     """ process autogen "missing" type.  This returns a list datasets
     that are specified as required or recommended and do not exist.
     """
-    if enclosing_node.full_path == "/processing/brain_observatory_pipeline/MotionCorrection/2p_image_series/corrected":
-        import pdb; pdb.set_trace()
+#     if enclosing_node.full_path == "/processing/brain_observatory_pipeline/MotionCorrection/2p_image_series/corrected":
+#         import pdb; pdb.set_trace()
     missing = []
     # get list of nodes referenced in any _required specification
     required_info = f.get_required_info(enclosing_node)
@@ -1363,7 +1363,6 @@ def values_match(x, y):
     # explicit checks for None used to prevent warnings like:
     # FutureWarning: comparison to `None` will result in an elementwise object comparison in the future.
     # eq = x==y
-
     if x is None:
         if y is None:
             return True
@@ -1371,6 +1370,20 @@ def values_match(x, y):
             return False
     if y is None:
         return False
+    # compare arrays so corresponding NaN values are treated as a match
+    if (isinstance(x, np.ndarray) and isinstance(y, np.ndarray)
+        and np.issubdtype(x.dtype, np.float) and np.issubdtype(y.dtype, np.float)):
+        # from: http://stackoverflow.com/questions/10710328/comparing-numpy-arrays-containing-nan
+        try:
+            np.testing.assert_equal(x,y)
+        except AssertionError:
+            return False
+        return True
+    # check for two scalar NaN.  If found, treat as match
+    if (np.issubdtype(type(x), np.float) and np.issubdtype(type(y), np.float)
+        # and x.shape == () and y.shape == ()
+        and np.isnan(x) and np.isnan(y)):
+        return True
     try:
         eq = x==y
     except ValueError:
@@ -1379,6 +1392,15 @@ def values_match(x, y):
     if isinstance(eq, bool):
         return eq
     return eq.all()
+    
+    
+    
+def val_is_int(val):
+    """return True if value is type int or numpy int"""
+    is_int = (isinstance(val, int)
+        or (type(val).__module__ == 'numpy' and np.issubdtype(val, np.integer)))
+    return is_int
+    
   
 #     if x is y:
 #         return True
@@ -1487,6 +1509,8 @@ def compare_autogen_values(f, a, value):
     a - row of f.autogen
     value - value in (or being stored in) hdf5 file for autogen field
     """
+#     if a['node_path'] == '/processing/brain_observatory_pipeline/DfOverF/imaging_plane_1/num_samples':
+#         import pdb; pdb.set_trace()
     if value is None and not a['agvalue'] and not a['include_empty']:
         # was no value and should not be since agvalue is False
         # and include_empty is None
@@ -1514,13 +1538,14 @@ def compare_autogen_values(f, a, value):
         if values_match(sorted_value, a['agvalue']):
             # sorted values match
             if a['sort']:
-                msg = "values are correct, but not sorted."
+                msg = ("values are correct, but not sorted:\n"
+                    "expected:%s (type %s)\n"
+                    "found:%s (type %s)") % (a['agvalue'], 
+                    type(a['agvalue']), value, type(value))
                 report_autogen_problem(f, a, msg, 'warning')
             return
     # neither original or sorted values match
-    msg = ("values incorrect.\nexpected:%s (type %s)\n"
-        "found:%s (type %s)") % (a['agvalue'], type(a['agvalue']), value, type(value))
-    if a['agtype'] == 'length' and isinstance(value, int):
+    if a['agtype'] == 'length' and val_is_int(value):
         # display warnings for lengths different than expected (this is
         # done for NWB format, since length only used in one place, e.g.
         # timeseries num_samples.  Should modify specification language
@@ -1528,6 +1553,9 @@ def compare_autogen_values(f, a, value):
         severity = 'warning'
     else:
         severity = 'error'
+    edesc = "unexpected" if severity == "warning" else "incorrect"
+    msg = ("values %s.\nexpected:%s (type %s)\n"
+        "found:%s (type %s)") % (edesc, a['agvalue'], type(a['agvalue']), value, type(value))
     report_autogen_problem(f, a, msg, severity)
     
     
@@ -1576,9 +1604,11 @@ def update_autogen(f, a):
             ds = f.file_pointer[a['node_path']]
             value = ds.value
             if not values_match(value, a['agvalue']):
-                f.error.append(("%s autogen dataset values do not match.  Unable to update.\n"
-                    "  expected:%s\nfound:%s") % (a['node_path'], 
-                    str(a['agvalue']), str(value)))
+                # don't generate error or warning now.  Let validate_autogen do that
+                pass
+                # f.error.append(("%s autogen dataset values do not match.  Unable to update.\n"
+                #    "  expected:%s\nfound:%s") % (a['node_path'], 
+                #    str(a['agvalue']), str(value)))
         else:
             # data set does not exist.  Create it using autogen value
             enclosing_path, name = a['node_path'].rsplit('/',1)

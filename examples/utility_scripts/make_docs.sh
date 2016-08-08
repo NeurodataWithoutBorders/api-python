@@ -21,6 +21,7 @@ echo
 echo "Making core doc with two extensions by doing:"
 cmd="python -m nwb.make_docs ../create_scripts/extensions/e-intracellular.py,../create_scripts/extensions/e-general.py > \
 ../text_output_files/doc/core_intra_gen.html"
+echo "$cmd"
 python -m nwb.make_docs ../create_scripts/extensions/e-intracellular.py,../create_scripts/extensions/e-general.py > \
 ../text_output_files/doc/core_intra_gen.html
 

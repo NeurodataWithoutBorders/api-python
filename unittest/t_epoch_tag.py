@@ -19,7 +19,8 @@ else:
 f = nwb_file.open(fname,
     mode="w",
     identifier=utils.create_identifier("Epoch tags"),
-    description="softlink test")
+    description="softlink test",
+    verbosity="none")
 
 tags = ["tag-a", "tag-b", "tag-c"]
 

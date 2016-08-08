@@ -32,7 +32,7 @@ def create_refimage(fname, name):
     settings["mode"] = "w"
     settings["description"] = "wxy"
     settings["start_time"] = "xyz"
-    # neurodata = nwb.NWB(**settings)
+    settings["verbosity"] = "none"
     f = nwb_file.open(**settings)
     # neurodata.close()
     f.close()

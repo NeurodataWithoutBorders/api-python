@@ -56,3 +56,8 @@ docs/_build/
 
 # PyBuilder
 target/
+
+# created nwb files
+*.nwb
+
+

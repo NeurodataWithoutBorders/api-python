@@ -48,14 +48,11 @@ def test_general_intra():
 
 def create_general_intra(fname):
     settings = {}
-    # settings["filename"] = fname
     settings["file_name"] = fname
-    # settings["identifier"] = nwb.create_identifier("general intracellular test")
     settings["identifier"] = utils.create_identifier("general intracellular test")
-    # settings["overwrite"] = True
     settings["mode"] = "w"
     settings["description"] = "test elements in /general/intracellular_ephys"
-    # neurodata = nwb.NWB(**settings)
+    settings["verbosity"] = "none"
     f = nwb_file.open(**settings)
     
     

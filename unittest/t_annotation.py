@@ -33,6 +33,7 @@ def create_annotation_series(fname, name, target):
     settings["mode"] = "w"
     settings["start_time"] = "Sat Jul 04 2015 3:14:16"
     settings["description"] = "Test file with AnnotationSeries"
+    settings["verbosity"] = "none"
     # neurodata = nwb.NWB(**settings)
     f = nwb_file.open(**settings)
     #   annot = neurodata.create_timeseries("AnnotationSeries", name, target)

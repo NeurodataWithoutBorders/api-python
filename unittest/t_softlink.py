@@ -34,6 +34,7 @@ def create_softlink_reader(fname, name, src_fname, src_name, target):
     settings["identifier"] = utils.create_identifier("softlink reader")
     settings["mode"] = "w"
     settings["description"] = "softlink test"
+    settings["verbosity"] = "none"
     f = nwb_file.open(**settings)
     
 #     source = neurodata.create_timeseries("TimeSeries", name, target)
@@ -58,7 +59,7 @@ def create_softlink_source(fname, name, target):
     settings["mode"] = "w"
     settings["description"] = "time series no data test"
     settings["start_time"] = "Sat Jul 04 2015 3:14:16"
-    # neurodata = nwb.NWB(**settings)
+    settings["verbosity"] = "none"
     f = nwb_file.open(**settings)
     # source = neurodata.create_timeseries("TimeSeries", name, target)
     source = f.make_group("<TimeSeries>", name, path=target)

@@ -39,14 +39,11 @@ def test_general_optogen():
 
 def create_general_optogen(fname):
     settings = {}
-    # settings["filename"] = fname
     settings["file_name"] = fname
-    # settings["identifier"] = nwb.create_identifier("metadata optogenetic test")
     settings["identifier"] = utils.create_identifier("metadata optogenetic test")
-    # settings["overwrite"] = True
     settings["mode"] = "w"
     settings["description"] = "test elements in /general/optogentics"
-    # neurodata = nwb.NWB(**settings)
+    settings["verbosity"] = "none"
     f = nwb_file.open(**settings)
     
     

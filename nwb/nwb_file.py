@@ -90,8 +90,8 @@ def open(file_name, start_time=None, mode="w-", identifier=None, description=Non
     options['auto_compress'] = auto_compress
     options['verbosity'] = verbosity
     # options['schema_id_attr'] = "neurodata_type"
-    # options['custom_node_identifier'] = ["neurodata_type", "Custom"]
-    options['custom_node_identifier'] = ["schema_id", "Custom"]
+    options['custom_node_identifier'] = ["neurodata_type", "Custom"]
+    # options['custom_node_identifier'] = ["schema_id", "Custom"]
     spec_files = extensions + [core_spec] if core_spec != '-' else []
     # open file
     f = g.File(file_name, spec_files, default_ns, options)

@@ -65,6 +65,7 @@ def create_linked_series(fname, root):
     settings["mode"] = "w"
     settings["description"] = "time series link test"
     settings["start_time"] = "Sat Jul 04 2015 3:14:16"
+    settings["verbosity"] = "none"
     # neurodata = nwb.NWB(**settings)
     f = nwb_file.open(**settings)
     #

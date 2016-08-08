@@ -31,15 +31,12 @@ def test_notime_series():
 
 def create_notime_series(fname, name, target):
     settings = {}
-    # settings["filename"] = fname
     settings["file_name"] = fname
-    # settings["identifier"] = nwb.create_identifier("notime example")
     settings["identifier"] = utils.create_identifier("notime example")
-    # settings["overwrite"] = True
     settings["mode"] = "w"
     settings["start_time"] = "Sat Jul 04 2015 3:14:16"
     settings["description"] = "Test no time"
-    # neurodata = nwb.NWB(**settings)
+    settings["verbosity"] = "none"
     f = nwb_file.open(**settings)
     
     

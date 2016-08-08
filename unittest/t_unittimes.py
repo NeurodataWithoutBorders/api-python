@@ -66,7 +66,7 @@ def create_empty_file(fname):
     settings["mode"] = "w"
     settings["start_time"] = "Sat Jul 04 2015 3:14:16"
     settings["description"] = "Test file with spike times in processing module"
-    # neurodata = nwb.NWB(**settings)
+    settings["verbosity"] = "none"
     f = nwb_file.open(**settings)
     return f
 

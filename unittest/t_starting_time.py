@@ -1,3 +1,4 @@
+
 #!/usr/bin/python
 # import nwb
 import test_utils as ut
@@ -31,7 +32,7 @@ def create_startingtime_series(fname, name, target):
     settings["mode"] = "w"
     settings["description"] = "time series starting time test"
     settings["start_time"] = "Sat Jul 04 2015 3:14:16"
-    # neurodata = nwb.NWB(**settings)
+    settings["verbosity"] = "none"
     f = nwb_file.open(**settings)
     
     #

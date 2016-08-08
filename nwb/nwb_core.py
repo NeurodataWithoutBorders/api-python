@@ -11,8 +11,8 @@
 
 "info": {
     "name": "NWB file format specification",
-    "version": "1.0.4_beta",
-    "date": "June 8, 2016",
+    "version": "1.0.5_beta",
+    "date": "Aug 8, 2016",
     "author": "Keith Godfrey.  Converted to format specification by Jeff Teeters.",
     "contact": "jteeters@berkeley.edu, keithg@alleninstitute.org",
     "description": "Specification for the core NWB (Neurodata Withoug Borders) format."
@@ -790,7 +790,6 @@
                         "experiment (i.e., since session_start_time)"),
                     "data_type": "text",
                     "value": "Seconds"}},
-            # "exclude_in": ["/stimulus/templates", ],
         },       
         "num_samples": {
             "description": ("Number of samples in data, or number of image frames. "
@@ -800,7 +799,6 @@
             "autogen": {
                     "type": "length",
                     "target":"timestamps"},
-            # "exclude_in": ["/stimulus/templates", ],
         },
         "control?": {
             "description": ("Numerical labels that apply to each element in data[]. "
@@ -1487,10 +1485,10 @@
         "attributes": {
             "help?": {
                 "data_type":"text",
-                "value":"Position data, whether along the x, xy or xyz axis",
+                "value":"General container for storing event series",
                 "const": True}},
         # "include": {"<TimeSeries>/*": {}},
-        "include": {"<TimeSeries>/*": {"_options": {"subclasses": True}}},
+        "include": {"<TimeSeries>/+": {"_options": {"subclasses": True}}},
     },
     "BehavioralEpochs/": {
         "merge": ["<Interface>/", ],
@@ -1513,7 +1511,7 @@
                 "data_type":"text",
                 "value":"General container for storing behavorial epochs",
                 "const": True}},
-        "include": {"<IntervalSeries>/*": {"_options": {"subclasses": True}}},
+        "include": {"<IntervalSeries>/+": {"_options": {"subclasses": True}}},
     },
     "BehavioralTimeSeries/": {
         "merge": ["<Interface>/", ],
@@ -1522,7 +1520,7 @@
             "for more details.") ,
         # "include": {"<TimeSeries>/*": {}},
         # to allow subclasses, replace the above include line with the following:
-        "include": {"<TimeSeries>/*":{"_options": {"subclasses": True}}},
+        "include": {"<TimeSeries>/+":{"_options": {"subclasses": True}}},
     },   
     "Clustering/": {
         "merge": ["<Interface>/", ],
@@ -1622,7 +1620,7 @@
                 "rotation"),
                 "const": True}},
         #  "include": {"<SpatialSeries>/*": {} }, # One of possibly many SpatialSeries storing direction. Name should be informative
-           "include": {"<SpatialSeries>/*": {"_options": {"subclasses": True}}}
+           "include": {"<SpatialSeries>/+": {"_options": {"subclasses": True}}}
     },
     "DfOverF/": {
         "merge": ["<Interface>/", ],
@@ -1636,7 +1634,7 @@
                     "to imaging plane names"),
                 "const": True}},
         # "include": {"<RoiResponseSeries>/*": {} }, # One of possibly many RoiResponseSeries, one for each 
-        "include": {"<RoiResponseSeries>/*": {"_options": {"subclasses": True}} }
+        "include": {"<RoiResponseSeries>/+": {"_options": {"subclasses": True}} }
             #imaging plane. Name should match entry in /general/optophysiology
     },
     "EventDetection/": {
@@ -1684,7 +1682,7 @@
                 "value":("Waveform of detected extracellularly recorded spike events"),
                 "const": True}},
         # "include": {"<SpikeEventSeries>/*": {} },
-        "include": {"<SpikeEventSeries>/*": {"_options": {"subclasses": True}} },
+        "include": {"<SpikeEventSeries>/+": {"_options": {"subclasses": True}} },
     },
     "EyeTracking/" : {
         "merge": ["<Interface>/", ],
@@ -1695,7 +1693,7 @@
                 "value": ("Eye-tracking data, representing direction of gaze"),
                 "const": True}},
         # "include": {"<SpatialSeries>/*": {} },
-        "include": {"<SpatialSeries>/*": {"_options": {"subclasses": True}} }
+        "include": {"<SpatialSeries>/+": {"_options": {"subclasses": True}} }
     },
     "FeatureExtraction/" : {
         "merge": ["<Interface>/", ],
@@ -1771,7 +1769,7 @@
             "help?": {
                 "data_type":"text",
                 "value": ("Stores groups of pixels that define regions of interest from one or more "
-                    "imaging planes",),
+                    "imaging planes"),
                 "const": True}},
         "<image_plane>/*" : {
             "_description": "Group name is human-readable description of imaging plane",
@@ -1817,7 +1815,7 @@
                 "<image_name>/+": {
                     "description": ("One or more image stacks that the masks apply "
                         "to (can be one-element stack)"),
-                    "merge": ["<ImageSeries>/",] }}
+                    "merge+": ["<ImageSeries>/",] }}
         },
     },
     "ImagingRetinotopy/": {
@@ -2038,7 +2036,7 @@
             "corrected/": {
                 "description": "Image stack with frames shifted to the common coordinates.",
                 #{ "include": {"<ImageSeries>/*": {} } }
-                "merge": ["<ImageSeries>/", ]
+                "merge+": ["<ImageSeries>/", ]
             }
         },
     },
@@ -2480,16 +2478,14 @@
         format.  Extensibility is handled by allowing users to store additional
         data as necessary using new datasets, attributes or groups.  There are
         two ways to document these additions.  The first is to add an attribute
-        "schema_id" with value the string "Custom" to the additional groups
+        "neurodata_type" with value the string "Custom" to the additional groups
         or datasets, and provide documentation to describe the extra data if
         it is not clear from the context what the data represent.  This method
         is simple but does not include a consistant way to describe
         the additions.  The second method is to write an
         <i>extension</i> to the format.  With this method, the additions are
         describe by the extension and attribute "schema_id" is set to
-      the string "<i>namespace</i>:<i>id</i>" where <i>namespace</i>
-      is the namespace of the extension, and <i>id</i>
-      is the identifier of the structure within the namespace.
+      the schema_id associated with the extension.
       Extensions to the format are written
         using the same specification language that is used to define the
         core format.  Creating an extension allows adding the new data to the file
@@ -2524,12 +2520,20 @@ advice.</p>
         "location": {"id":"Acknowledgements", "position": "after"},
         "level": 0,
         "content": """
-<p style="margin-bottom: 0in">1.0.3-Beta June 2016</p>
+        
+<p style="margin-bottom: 0in">1.0.5_beta Aug 2016</p>
+<p>Allow subclasses to be used for merges instead of base class (specified by
+'merge+' in format specification file).<br />
+Use 'neurodata_type=Custom' to flag additions that are not describe
+by a schema.<br />
+Exclude TimeSeries timestamps and starting time from under
+/stimulus/templates<br />
+<p style="margin-bottom: 0in"><br/>
+        
+<p style="margin-bottom: 0in">1.0.4_beta June 2016</p>
 <p>Generate documentation directly from format specification file."<br />
-Change ImageSeries external_file to an array.  Added attribute
-starting_frame.<br />
+Change ImageSeries external_file to an array.<br />
 Made TimeSeries description and comments recommended.<br />
-<p style="margin-bottom: 0in">Added IZeroClampSeries.`</p>
 <p style="margin-bottom: 0in"><br/>
 
 

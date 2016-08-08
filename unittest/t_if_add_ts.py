@@ -25,17 +25,14 @@ def test_file():
 def create_iface_series(fname, newfile):
     settings = {}
     settings["file_name"] = fname
+    settings["verbosity"] = "none"
     if newfile:
-        # settings["identifier"] = nwb.create_identifier("interface timeseries example")
         settings["identifier"] = utils.create_identifier("interface timeseries example")
-        # settings["overwrite"] = True
         settings["mode"] = "w"
         settings["start_time"] = "Sat Jul 04 2015 3:14:16"
         settings["description"] = "Test interface timeseries file"
     else:
-        # settings["modify"] = True
         settings["mode"] = "r+"
-    # neurodata = nwb.NWB(**settings)
     f = nwb_file.open(**settings)
     #
 #     mod = neurodata.create_module("test module")

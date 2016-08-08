@@ -716,8 +716,7 @@ for i in range(len(file_list)):
     on_off = np.zeros(len(time))
     on_off += -1
     on_off[::2] *= -1
-    pole_acc.set_dataset("data", on_off, attrs={"unit": "None",
-        "conversion": 1.0, "resolution":0.0})
+    pole_acc.set_dataset("data", on_off)
     pole_acc.set_attr("description", "Intervals that pole is accessible")
     pole_acc.set_dataset("timestamps", time)
     pole_acc.set_attr("source", "Intervals are as reported in Simon's data file")
@@ -730,8 +729,7 @@ for i in range(len(file_list)):
     on_off = np.zeros(len(time))
     on_off += -1
     on_off[::2] *= -1
-    aud_cue_ts.set_dataset("data", on_off, attrs={"unit": "None",
-        "conversion": 1.0, "resolution": 0.0})
+    aud_cue_ts.set_dataset("data", on_off)
     aud_cue_ts.set_attr("description", "Intervals when auditory cue presented")
     aud_cue_ts.set_dataset("timestamps", time)
     aud_cue_ts.set_attr("source", "Intervals are as reported in Simon's data file")
@@ -744,8 +742,7 @@ for i in range(len(file_list)):
     on_off = np.zeros(len(time))
     on_off += -1
     on_off[::2] *= -1
-    water_left_ts.set_dataset("data", on_off, attrs={"unit": "None",
-        "conversion": 1.0, "resolution":0.0})
+    water_left_ts.set_dataset("data", on_off)
     water_left_ts.set_attr("description", "Intervals for left water reward delivery")
     water_left_ts.set_dataset("timestamps", time)
     water_left_ts.set_attr("source", "Intervals are as reported in Simon's data file")
@@ -758,8 +755,7 @@ for i in range(len(file_list)):
     on_off = np.zeros(len(time))
     on_off += -1
     on_off[::2] *= -1
-    water_right_ts.set_dataset("data", on_off, attrs={"unit":"None",
-        "conversion": 1.0, "resolution": 0.0})
+    water_right_ts.set_dataset("data", on_off)
     water_right_ts.set_attr("description", "Intervals for right water reward delivery")
     water_right_ts.set_dataset("timestamps", time)
     water_right_ts.set_attr("source", "Intervals are as reported in Simon's data file")

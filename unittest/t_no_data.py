@@ -22,15 +22,12 @@ def test_nodata_series():
 
 def create_nodata_series(fname, name, target):
     settings = {}
-    # settings["filename"] = fname
     settings["file_name"] = fname
-    # settings["identifier"] = nwb.create_identifier("nodata example")
     settings["identifier"] = utils.create_identifier("nodata example")
-    # settings["overwrite"] = True
     settings["mode"] = "w"
     settings["description"] = "time series no data test"
     settings["start_time"] = "Sat Jul 04 2015 3:14:16"
-    # neurodata = nwb.NWB(**settings)
+    settings["verbosity"] = "none"
     f = nwb_file.open(**settings)
     
     

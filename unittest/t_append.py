@@ -31,17 +31,14 @@ def test_append():
 def create_annotation_series(fname, name, target, newfile):
     settings = {}
     settings["file_name"] = fname
+    settings["verbosity"] = "none"
     if newfile:
-        # settings["identifier"] = nwb.create_identifier("append example")
         settings["identifier"] = utils.create_identifier("append example")
-        # settings["overwrite"] = True
         settings["mode"] = "w"
         settings["start_time"] = "Sat Jul 04 2015 3:14:16"
         settings["description"] = "Test append file"
     else:
-        # settings["modify"] = True
         settings["mode"] = "r+"
-    # neurodata = nwb.NWB(**settings)
     f = nwb_file.open(**settings)
     #
     # annot = neurodata.create_timeseries("AnnotationSeries", name, target)
