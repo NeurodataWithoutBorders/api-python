@@ -1039,7 +1039,7 @@
             "data_type": "float32"},
         "segmentation_interface/":  {
             "description": "HDF5 link to image segmentation module defining ROIs.",
-            "link": {"target_type": "ImageSegmentation/", "allow_subclasses": False } },
+            "link": {"target_type": "ImageSegmentation/", "allow_subclasses": True } },
         "segmentation_interface_path": {
             "description": "Path to segmentation module.",
             "data_type": "text",
@@ -1368,7 +1368,7 @@
                 "const": True}},
         "masked_imageseries/": {
             "description": "Link to ImageSeries that mask is applied to.",
-            "link": {"target_type": "<ImageSeries>/", "allow_subclasses": False } },
+            "link": {"target_type": "<ImageSeries>/", "allow_subclasses": True } },
         "masked_imageseries_path": {
             "description": "Path to linked ImageSeries",
             "data_type": "text",
@@ -1594,7 +1594,7 @@
         "clustering_interface/": {
             "description":  ("HDF5 link to Clustering interface that was the source of "
                 "the clustered data"),
-            "link": {"target_type": "Clustering/", "allow_subclasses": False } },
+            "link": {"target_type": "Clustering/", "allow_subclasses": True } },
         "clustering_interface_path": {
             "description":  "Path to linked clustering interface",
             "data_type": "text",
@@ -1661,7 +1661,7 @@
                 "Metadata about electrodes and their position can be read from that "
                 "ElectricalSeries so it's not necessary to mandate that information be "
                 "stored here"),
-            "link": {"target_type": "<ElectricalSeries>/", "allow_subclasses": False } },
+            "link": {"target_type": "<ElectricalSeries>/", "allow_subclasses": True } },
         "source_electricalseries_path": {
             "description": "Path to linked ElectricalSeries.",
             "data_type": "text",
