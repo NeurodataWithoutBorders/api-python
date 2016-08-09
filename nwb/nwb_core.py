@@ -759,7 +759,6 @@
                         "Specifically, this is the number of seconds since the start of the "
                         "experiment (i.e., since session_start_time)"),
                     "data_type": "text", "value": "Seconds"} },
-            # "exclude_in": ["/stimulus/templates", ],
         },
         "_required": { # Specifies required member combinations",
             "start_time" :

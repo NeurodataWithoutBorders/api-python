@@ -2065,12 +2065,13 @@ class File(object):
                             if ex_qty == '?':
                                 # creating is optional, so no error or warning
                                 continue
-                            msg = "%s - should not be present in location: '%s'" % (
-                                created[0].full_path, is_excluded)
+                            verb = "must" if ex_qty == "!" else "should"
+                            msg = "%s - '%s' %s not be present within '%s'" % (
+                                created[0].full_path, id, verb, exclude_info['path'])
                             if ex_qty == '!':
-                                f.error.append(msg)
+                                self.error.append(msg)
                             else:
-                                f.warning.append(msg)
+                                self.warning.append(msg)
                     if id.rstrip('/') not in required_referenced and not custom and len(created) == 0:
                         # this id not referenced in "_required" spec
                         # if it was, don't create error / warning here; let function check_required validate 
@@ -3184,8 +3185,8 @@ class File(object):
         while groups_to_visit:
             np = groups_to_visit.pop(0)
             h5_group, path = np
-#             if h5_group.name == '/processing/shank_0/LFP':
-#                 import pdb; pdb.set_trace()
+            # if h5_group.name == '/processing/brain_observatory_pipeline/MotionCorrection/2p_image_series/corrected':
+            #     import pdb; pdb.set_trace()
             node = self.load_node(h5_group, path, 'group')
             if node.link_info:
                 # this node was a link.  No further processing
