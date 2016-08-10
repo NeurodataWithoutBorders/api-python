@@ -852,6 +852,7 @@ def check_for_autogen(dict, aid, path, ctype, f):
     qty = get_param(agspec, 'qty', "*")
     tsig = get_param(agspec, 'tsig', {})
     include_empty = get_param(agspec, 'include_empty', False)
+    allow_others = get_param(agspec, 'allow_others', False)
     format = get_param(agspec, 'format', "$t")
     # dimensions used to determine if result is an array or a single string
     # if dimensions present, then array, otherwise a single string
@@ -874,7 +875,7 @@ def check_for_autogen(dict, aid, path, ctype, f):
     else:
         a = {'node_path':path, 'aid': aid, 'agtarget':target, 'agtype':type, 'format':format,
         'trim':trim, 'sort':sort, 'qty':qty, 'tsig':tsig, 'include_empty':include_empty,
-        'ctype':ctype, 'dimensions': dimensions}
+        'ctype':ctype, 'dimensions': dimensions, 'allow_others': allow_others}
         f.autogen.append(a)
     return True
     
@@ -955,35 +956,6 @@ def update_autogens(f, op, ftype):
             update_autogen(f, a)   # singular, not plural
 
     
-
-# def compute_autogen(f):
-#     """ Computes values for each autogen saved in f.autogen.  f is the hfgate File
-#     object.  Stores the computed values in array autogen[a]['agvalue']."""
-#     # first, create any datasets that have autogen, but were not created
-# #    create_autogen_datasets(f)
-#     # now process all found autogens
-#     # first put all type "missing" at the end so these are
-#     # run after all the others.  Otherwise, they may flag as missing values filled in
-#     # by other autogen's
-#     ag_all = []
-#     ag_last = []
-#     for ag in f.autogen:
-#         if ag['agtype'] == 'missing':
-#             ag_last.append(ag)
-#         else:
-#             ag_all.append(ag)
-#     # store back in f.autogen because more may be added when running the autogens
-#     f.autogen = ag_all + ag_last
-#     # use index to go though so new ones can be added within the loop
-#     # for a in f.autogen:  # old method
-#     show_autogen(f)
-#     print "starting to compute autogen, num augogens = %i" % len(f.autogen)
-#     import pdb; pdb.set_trace()
-#     i = 0
-#     while i < len(f.autogen):
-#         a = f.autogen[i]
-#         compute_autogen_1(f, a)
-#         i = i + 1     
 
 
 def remove_prefix(text, prefix):
@@ -1353,6 +1325,16 @@ def trim_common_basename(paths, basename):
         assert suffix == basename, "Path '%s' does not have common suffix '%s'" % (path, basename)
         new_list.append(prefix)
     return new_list
+
+def get_plural(arr):
+    """ return plural or singular forms for making a message.
+    plural: identifiers are
+    singular: identifier is
+    """
+    if len(arr) > 1:
+        return ('s', 'are')
+    return ('', 'is')
+        
     
 def values_match(x, y):
     """ Compare x and y.  This needed because the types are unpredictable and sometimes
@@ -1524,6 +1506,38 @@ def compare_autogen_values(f, a, value):
             report_autogen_problem(f, a, msg)
         return
     # values do not match
+    # check for autogen "missing" type with option "allow_others"
+    if a['agtype'] == 'missing' and a['allow_others']:
+        try:
+            is_string_list = all(isinstance(item, (basestring, np.string_)) for item in value)
+        except TypeError as e:
+            is_string_list = False
+        if is_string_list:
+            value_set = set(value)
+            agv_set = set(a['agvalue'])  
+            additions = sorted(list(value_set - agv_set if value_set > agv_set else set()))
+            if additions:
+                # make sure none of the additions are actually present
+                enclosing_node = f.path2node[a['node_path']]
+                added_invalid = []
+                for id in additions:
+                    if (id in enclosing_node.mstats and enclosing_node.mstats[id]['created']) or (
+                        id+"/" in enclosing_node.mstats and enclosing_node.mstats[id]['created']):
+                        added_invalid.append(id)
+                if added_invalid:
+                    import pdb; pdb.set_trace()      
+                    plural_s, plural_are = get_plural(added_invalid)
+                    msg = ("contains identifier%s %s which %s actually present.\n"
+                        "expected:%s\n"
+                        "found:%s") % (plural_s, added_invalid, plural_are, a['agvalue'], value)
+                    report_autogen_problem(f, a, msg, 'error')
+                else:
+                    plural_s, plural_are = get_plural(additions)
+                    msg = ("contains identifier%s %s that %s not recommended or required.\n"
+                        "expected:%s\n"
+                        "found:%s") % (plural_s, additions, plural_are, a['agvalue'], value)
+                    report_autogen_problem(f, a, msg, 'warning')
+                return
     # check for link_path missing leading '/'
     if a['agtype'] == 'link_path' and (isinstance(a['agvalue'], str) and
         isinstance(value, str) and a['agvalue'].startswith('/') and
@@ -1584,8 +1598,13 @@ def update_autogen(f, a):
         aid = a['aid']
         node = f.path2node[a['node_path']]
         ats = node.attributes[aid]
-        value = ats['nv'] if 'nv' in ats else (
-            ats['value'] if 'value' in ats else None)
+        if 'nv' in ats:
+            # don't save computed autogen value because new value already specified
+            # nv is set by calling api.  Allow that to take precedence over autogen
+            return
+        # value = ats['nv'] if 'nv' in ats else (
+        #    ats['value'] if 'value' in ats else None)
+        value = ats['value'] if 'value' in ats else None
         if not values_match(value, a['agvalue']):
             # values do not match, update them
             ats['nv'] = a['agvalue']

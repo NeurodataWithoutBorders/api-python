@@ -11,8 +11,8 @@
 
 "info": {
     "name": "NWB file format specification",
-    "version": "1.0.5_beta",
-    "date": "Aug 8, 2016",
+    "version": "1.0.5a_beta",
+    "date": "Aug 10, 2016",
     "author": "Keith Godfrey.  Converted to format specification by Jeff Teeters.",
     "contact": "jteeters@berkeley.edu, keithg@alleninstitute.org",
     "description": "Specification for the core NWB (Neurodata Withoug Borders) format."
@@ -713,6 +713,8 @@
                 "description": ("List of fields that are not optional (i.e. either "
                     "required or recommended parts of the"
                     " TimeSeries) that are missing. "
+                    "The list can also include additional identifiers, as long as "
+                    "they are not present in the group, whether or not they optional."
                     "COMMENT: Only present if one or more required or recommended fields are missing. Note that "
                     "a missing required field (such as data or timestamps) should generate an error "
                     "by the API"),
@@ -720,6 +722,7 @@
                 "dimensions": ["num_missing_fields"],
                 "autogen": {
                     "type": "missing",
+                    "allow_others": True, 
                     # "target": 
                     # "trim": True,
                     "qty": "*"}},
@@ -2519,7 +2522,13 @@ advice.</p>
         "location": {"id":"Acknowledgements", "position": "after"},
         "level": 0,
         "content": """
-        
+ 
+ 
+<p style="margin-bottom: 0in">1.0.5a_beta, Aug 10, 2016</p>
+<p>Expand class of Ids allowed in TimeSeries missing_fields
+attribute to allow custom uses.<br />
+<p style="margin-bottom: 0in"><br/>
+     
 <p style="margin-bottom: 0in">1.0.5_beta Aug 2016</p>
 <p>Allow subclasses to be used for merges instead of base class (specified by
 'merge+' in format specification file).<br />

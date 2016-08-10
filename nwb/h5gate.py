@@ -61,7 +61,7 @@ class File(object):
         self.idlookups = self.mk_idlookups()
 #         print "idlookups is:"
 #         pp.pprint(self.idlookups)
-        self.loce = self.make_locations_explicit()
+    #    self.loce = self.make_locations_explicit()  # remove since locations no longer used
 #           print "loce="
 #           pp.pprint(self.loce)
 #           print "---- loce above----"
@@ -81,7 +81,7 @@ class File(object):
         if not self.creating_file:
             # reading file
             self.reading_file = True  # this prevents saving data to hdf5 file when reading
-            self.lidsigs = self.make_lidsigs()
+          #  self.lidsigs = self.make_lidsigs()  # remove since locations not used anymore
 #             print "lidsigs="
 #             pp.pprint(self.lidsigs)
 #             print "-------- lidsigs above"
@@ -1766,6 +1766,8 @@ class File(object):
         nodes referenced in id_lookup structure (built from 'locations' section
         of specification language) and also by checking the tree of all nodes
         that are included in the "node_tree" array. """
+        # explanations are used in print_message_list
+        global explanations
 #         print "\n******"
 #         print "Validation messages follow."
         # find_links.show_links(self.links)
@@ -1795,7 +1797,8 @@ class File(object):
             'identified_extension_nodes': {'group': [], 'dataset': []},
             'added_attributes_described_by_extension': [],
             'links': {},
-            'ext_links': {}
+            'ext_links': {},
+            'explanations': {}
             }
         # check "locations" section of specification(s) for missing nodes
         # 'id_lookups' has information about nodes created there
@@ -1841,7 +1844,8 @@ class File(object):
         # print "links {target: [sources]}"
         # pp.pprint(vi['links'])
         # self.print_message_list(vi['links'], "Links {target: [sources]}")
-        
+        # pass by global variable for now.
+        explanations = vi['explanations']
         # display results
         # errors
         total_errors = (len(self.error) 
@@ -2002,6 +2006,12 @@ class File(object):
                             pass 
                         else:
                             vi['custom_nodes_missing_flag'][type].append(node.full_path)
+                            if 'h5nsig' in node.sdef:
+                                # this was inside a non-custom node.  Create explanation
+                                # for why is was not detected as non-custom
+                                explanation = self.explain_why_custom(node)
+                                if explanation:
+                                    vi['explanations'][node.full_path] = explanation
                     else:
                         vi['identified_custom_nodes'][type].append(node.full_path)
             elif node.sdef['ns'] != self.default_ns and self.options['identify_extension_nodes']:
@@ -2429,6 +2439,54 @@ class File(object):
                 return exclude_info
         # no match exclude_info found
         return None
+        
+    def explain_why_custom(self, node):
+        """ Generate explanation for why node was detected as custom (e.g. not recognized).
+        Returns explanation or None (if explanation for this not implemented yet).
+        """
+        msigs = node.parent.msigs    # signature of members this node could have been
+        h5nsig = node.sdef['h5nsig'] # signature of this node
+#         print "in explain_why_custom for %s" % node.full_path
+#         print "msigs="
+#         pp.pprint(msigs)
+#         print "h5nsig="
+#         pp.pprint(h5nsig)
+        # find all id's with names matching the node
+        matching_ids = []
+        for id in msigs:
+            idsig = msigs[id]
+            if idsig['name'] == h5nsig['name']:
+                matching_ids.append(id)
+        if not matching_ids:
+            # don't give an explanation now
+            return None
+        # if reach here, must have multiple possibilities with the same
+        # name, e.g. a merge with subclasses.  Get the subclass names
+        # and constant attributes.  Subclasses will be in parent mstats, 'df' like:
+        # {'description': 'Image stack with frames shifted to the common coordinates.','merge': ['<ImageSeries>/']}
+        parent = node.parent
+        mstats = parent.mstats
+        options = []
+        for id in matching_ids:
+            # subclass = mstats[id]['df']['merge'][0]
+            attrs = msigs[id]['attrs']
+            options.append(self.get_const_attributes_option(attrs))
+        found = str(h5nsig['attrs'])
+        msg = "expected one of:\n%s\nfound attributes: %s" % ("\n".join(options), found)
+        return msg
+
+    
+    def get_const_attributes_option(self, attrs):
+        # return dict of attributes with const values
+        cattrs = {}
+        for aid in attrs:
+            if 'const' in attrs[aid] and attrs[aid]['const']:
+                value = attrs[aid]['value']
+                cattrs[aid] = value
+        option = "-- attributes: %s" % (cattrs)
+        return option
+        
+        
 
         
 #     def is_excluded(self, df, loc):
@@ -2466,6 +2524,7 @@ class File(object):
         zero_msg is append to description message for the case of no messages,
         e.g. zero_msg = "Good" to produce:  No errors.  -- Good.
         """
+        global explanations
         if not messages:
             msg = "No %s." % description
             if zero_msg:
@@ -2479,6 +2538,8 @@ class File(object):
                 print "%i %s:" % (len(messages), description)
             i = 0
             for m in cmsg:
+                if m in explanations:
+                    m += "\n" + explanations[m]
                 i = i + 1
                 mt = m.replace("\n", "\n     ")  # insert tab after new line char
                 print "%3i. %s%s%s" % (i, quote, mt, quote)
@@ -2640,36 +2701,7 @@ class File(object):
             path = full_path
         return parent
         
-            
-            
-#     def get_parent_group_old(self, path_to_parent):
-#         """ Return node for parent group (specified by path to parent).  If parent
-#         group does not exist (in node_tree), create sequence of groups (nodes) that
-#         goes from root group to the parent.  This done to create groups
-#         in node_tree so the parent group exists."""
-#         if path_to_parent in self.path2node:
-#             return self.path2node[path_to_parent]
-#         path_parts = path_to_parent.split('/')
-#         parent = self.node_tree  # root node
-#         path = ""
-#         # Use the same sdef structure for all created groups.
-#         attrs = {}
-#         while path_parts:
-#             id = path_parts.pop(0)
-#             full_path = path + "/" + id
-#             if full_path in self.path2node:
-#                 parent = self.path2node[full_path]
-#             else:
-#                 # make new node, saves it in node_tree.  'location':True indicates
-#                 # group created only to complete path to location of parent
-#                 sdef = {'type': 'group', 'id': id + '/',
-#                     'qid': None, 'ns':None, 'df':{}, 'location':True}
-#                 if path == "":
-#                     path = "/"
-#                 name = ""
-#                 parent = Group(self, sdef, name, path, attrs, parent)
-#             path = full_path
-#         return parent
+
        
     def initialize_node_tree(self):
         """ Create the initial root group in variable "node_tree".  This will
@@ -2743,116 +2775,9 @@ class File(object):
             'description':grp.description, } # 'parent_attributes': grp.parent_attributes}
         return expanded_def
 
-    def make_locations_explicit(self):
-        """Create explicit representation of locations, with information about each
-        id (quantity, group/data set) represented explicitly.  This used to have a
-        more convenient form of id's to search for entities in hdf5 file  """
-        loce = {}
-        for ns in self.ddef.keys():
-            loce[ns] = self.make_loce(ns)
-        return loce
-        
-        
-    def make_loce(self, ns):
-        """ Creates dictionary mapping each location to id's in that location, with
-            the id, store a dictionary of allowed 
-            quantity for the item ('*' - any, '?' - optional, '!' - required, 
-            '+' - 1 or more) and the type (group or data set).
-        """
-        if 'locations' not in self.ddef[ns].keys():
-            error_exit("Namespace '%s' does not contain key 'locations'" % ns)
-        loce = {}
-        for location in self.ddef[ns]['locations'].keys():
-            ids = self.ddef[ns]['locations'][location]
-            for id in ids:
-                id_str, qty_str = self.parse_qty(id, "?")
-                if id_str not in self.ddef[ns]['structures'] and id_str != '__custom':
-                    print "** Error, in namespace '%s':" % ns
-                    print "structure '%s' referenced in nwb['%s']['locations']['%s']," % (id_str, ns, location)
-                    print "but is not defined in nwb['%s']['structures']" % ns
-                    error_exit()
-                type = 'group' if id_str.endswith('/') else 'dataset'
-                if location not in loce.keys():
-                    loce[location] = {}  # initialize dictionary of ids
-                loce[location][id_str] = {'type': type, 'qty': qty_str }
-                # print "Location=%s, id=%s, id_str=%s, qty_str=%s" % (location, id, id_str, qty_str)
-        return loce
-    
-    
-    def make_lidsigs(self):
-        """ Create dictionary "lidsigs" (stands for "location id signatures") which
-        maps (for each name space) each absolute path (location) specified in the locations section
-        to a list of idsigs (id signatures) for all the id's located at that location.
-        This dictionary is used to identify the structure id corresponding to hdf5 nodes
-        (creating the node_tree) when reading a file."""
-        lidsigs = {}
-        for ns in self.loce.keys():
-            lidsigs[ns] = self.mk_lidsigs_ns(ns)
-        return lidsigs
-
-    def mk_lidsigs_ns(self, ns):
-        """ Creates loc_idsigs for namespace ns """
-        lidsigs_ns = {}
-        for loc in self.loce[ns]:
-            # only save if absolute path.  If not absolute path,
-            # loc must be an id and member signatures are stored in idsigs
-            # TESTING: try including relative nodes too, for finding in deduce_sdef
-            if True or loc[0] == '/':
-                # lidsigs_ns[loc] = self.mk_lidsigs_loc(ns, loc)
-                lidsigs_ns[loc] = self.mk_lidsigs_loc(ns, loc)
-        return lidsigs_ns
            
     
-    def mk_lidsigs_loc(self, ns, loc):
-        """ Creates lidsigs for namespace ns and location loc """
-        lidsigs_loc = {}
-        for id in self.loce[ns][loc]:
-            # don't process flag '__custom'.  That is not a real id
-            if id != '__custom':
-                lidsigs_loc[id] = self.mk_lidsig_id(ns, loc, id)
-        self.filter_sigs(lidsigs_loc)
-        return lidsigs_loc
-        
-    def mk_lidsig_id(self, ns, loc, id):
-        """ Get id signature for id in locations with namespace ns, location loc"""
-        sig_name = self.get_sig_name(id)
-        sdef = self.get_sdef(id, ns, "referenced in locations of %s" % loc)
-        type = sdef['type']
-        if type == 'dataset':
-            fixed_attrs = self.get_sig_attrs(sdef['df'])
-            idsig = {'name': sig_name, 'type': type, 'attrs': fixed_attrs}
-            return idsig
-        # type is group, need to get expanded def for attributes and also memsigs
-        name = id
-        parent_path = loc
-        expanded_def = self.get_expanded_def(sdef, name, parent_path)
-        fixed_attrs = self.get_sig_attrs(expanded_def)
-        # Now have idsig for id, need to get idsigs for members
-        mstats = expanded_def['mstats']
-        msigs = []
-        for mid in mstats:
-            mname = self.get_sig_name(mid)
-            mdf = mstats[mid]['df']
-            mtype = mstats[mid]['type']
-            mlink = 'link' in mdf
-            if mlink:
-                # is a link
-                mfixed_attrs = {}
-            elif mtype == 'dataset':
-                mfixed_attrs = self.get_sig_attrs(mdf)
-            else:
-                # is group
-                mns = mstats[mid]['ns']
-                msdef = { 'type': type, 'id':mid, 'ns':mns, 'df': mdf, }
-                name = mid
-                parent_path = self.make_full_path(loc, id)
-                mex_def = self.get_expanded_def(msdef, name, parent_path)
-                mfixed_attrs = self.get_sig_attrs(mex_def)
-            msig = {'name':mname, 'type':mtype, 'attrs': mfixed_attrs, 'link': mlink}
-            msigs.append(msig)
-        lidsig = {'name': sig_name, 'type': type, 'attrs': fixed_attrs,
-            'msigs': msigs}
-        return lidsig
+
         
     def make_idsigs(self):
         """ Create an "idsig" (stands for "id signature") for each id in the structures
@@ -2879,10 +2804,12 @@ class File(object):
         """ Creates idsigs for structures in namespace ns, that are not an absolute path """
         idsigs_ns = {}
         for id in self.ddef[ns]['structures']:
-            # if not id[0] == '/':
-            idsigs_ns[id] = self.mk_idsig(ns, id)
+            df = self.ddef[ns]['structures'][id]
+            idsigs_ns[id] = self.mk_idsig(ns, id, df)
         self.filter_sigs(idsigs_ns)
         return idsigs_ns
+        
+        
         
     def filter_sigs(self, idsigs):
         """ Filter dictionary of idsigs (id signatures) by removing attributes 
@@ -3060,32 +2987,38 @@ class File(object):
 #         pp.pprint(idsigs)
 #         print "count should be removed from <i1> m1, and <i2>  <i3> should be unchanged."
  
+
        
-    def mk_idsig(self, ns, id, mstats_df = None, path = None):
-        """Make idsig for structure with id id in namespace ns.  If id is from
-        top-level structure, mstats_df == False and path == None.  This causes
-        the definition for id to be loaded from self.ddef and also a check for
-        id in locations section for members specified there.  If id is from
-        an mstats in a group, then mstats_df contains the definition for id and
-        path contains the path to the location that id would be created in.
-        In this case checking locations section for members is not done."""
-        sig_name = self.get_sig_name(id)
+    def mk_idsig(self, ns, id, df, node = None):
+        """Make idsig for structure with id id in namespace ns and definition df.
+        If id is from top-level structure, node == None.  If id is from
+        an mstats in a group, then node is the group (h5gate.Group object) the
+        id would be created in.
+        """
         type = 'group' if id.endswith('/') else 'dataset'
-        df = self.ddef[ns]['structures'][id] if mstats_df is None else mstats_df
+        sig_name = self.get_sig_name(id)
+        # make flag if name is fixed and unique.  Only reason might not be unique
+        # is if there are subclass merges
+        gsn = sig_name + "/" if sig_name and type == 'group' else sig_name
+        name_unique = sig_name and ((node is None) or 
+            not hasattr(node, 'subclass_merge_ids') or node.subclass_merge_ids[0] != gsn)
         is_link = 'link' in df
         if is_link:
             fixed_attrs = {}
-            idsig = {'name': sig_name, 'type': type, 'attrs': fixed_attrs, 'link': is_link}
+            idsig = {'name': sig_name, 'type': type, 'attrs': fixed_attrs,
+                'link': is_link, 'name_unique':name_unique}
             return idsig
         if type == 'dataset':
             fixed_attrs = self.get_sig_attrs(df)
-            idsig = {'name': sig_name, 'type': type, 'attrs': fixed_attrs, 'link': is_link}
+            idsig = {'name': sig_name, 'type': type, 'attrs': fixed_attrs,
+                'link':is_link, 'name_unique':name_unique}
             return idsig
         # type is group, need to get expanded def for attributes and also msigs
         # make sdef to use when calling get_expanded_def
         sdef = { 'type': type, 'id':id, 'ns':ns, 'df': df, }
         name = ""  # don't specify name.  Name only used if variable named id, and know actual replacement
         # path = full_path  # either None (if called for top level id, or full_path to node, if called for mstats)
+        path = node.full_path if node else None
         expanded_def = self.get_expanded_def(sdef, name, path)
         # attrs = self.get_sig_attrs(df)   # probable bug, cause failure if no locations.  Fix below:
         attrs = self.get_sig_attrs(expanded_def)
@@ -3115,26 +3048,11 @@ class File(object):
                 mattrs = self.get_sig_attrs(mex_def)
             msig = {'name':mname, 'type':mtype, 'attrs': mattrs, 'link': mlink}
             msigs.append(msig)
-        # check for this id is used as a location in 'locations' section
-        # if so, include idsigs for members specified there
-        if not mstats_df and id in self.loce[ns]:
-            for mid in self.loce[ns][id]:
-                mname = self.get_sig_name(mid)
-                msdef = self.get_sdef(mid, ns, "referenced in locations of %s" % id)
-                mtype = msdef['type']
-                if mtype == 'dataset':
-                    mattrs = self.get_sig_attrs(msdef['df'])
-                else:
-                    # is group, need to expand to get all fixed attributes
-                    name = mid
-                    mex_def = self.get_expanded_def(msdef, name, path)
-                    mattrs = self.get_sig_attrs(mex_def)
-                msig = {'name':mname, 'type':mtype, 'attrs': mattrs}
-                msigs.append(msig)
         idsig = {'name': sig_name, 'type': type, 'attrs': attrs,
-            'msigs': msigs}
+            'msigs': msigs, 'name_unique':name_unique}
         return idsig  
 
+       
         
     def get_sig_name(self, id):
         """ idsig name is simply the id (without any trailing slash) if not a variable
@@ -3185,8 +3103,11 @@ class File(object):
         while groups_to_visit:
             np = groups_to_visit.pop(0)
             h5_group, path = np
-            # if h5_group.name == '/processing/brain_observatory_pipeline/MotionCorrection/2p_image_series/corrected':
-            #     import pdb; pdb.set_trace()
+            if 'spontaneous_stimulus/data' in h5_group.name:
+            # if h5_group.name == '/stimulus/presentation/spontaneous_stimulus/data':
+                import pdb; pdb.set_trace()
+#             if h5_group.name == '/processing/brain_observatory_pipeline/MotionCorrection/2p_image_series/corrected':
+#                 import pdb; pdb.set_trace()
             node = self.load_node(h5_group, path, 'group')
             if node.link_info:
                 # this node was a link.  No further processing
@@ -3256,8 +3177,8 @@ class File(object):
         indicates that node is an external link that is not available and actual
         type (group or dataset) is not known.  In that case, h5_node should be None."""
         # for debugging, h5_node.name == '...' cannot be used because it fails with external links
-#         if full_path == '/acquisition/timeseries/whisker_video/timestamps':
-#             import pdb; pdb.set_trace()
+        # if full_path == '/stimulus/presentation/spontaneous_stimulus/data':
+        #     import pdb; pdb.set_trace()
         assert (h5_node is None) == (type == 'extlink'), "h5_node and type don't match in load_node"
         parent_path, node_mname  = full_path.rsplit('/',1)
         if node_mname  == '':
@@ -3383,8 +3304,8 @@ class File(object):
         # import pdb; pdb.set_trace()
         assert (h5node is None) == (type == "extlink"), "h5node and extlink do not match in deduce_sdef"
         h5nsig = self.make_h5nsig(h5node, node_mname) if h5node else self.make_minimal_msig(node_mname)
-#         if h5node.name == "/stimulus/presentation/Sweep_0":
-#             import pdb; pdb.set_trace()
+        # if h5node and h5node.name == "/processing/brain_observatory_pipeline/MotionCorrection/2p_image_series/corrected":
+        #     import pdb; pdb.set_trace()
         if not parent:
             # is root node.  See if there is a definition for root in structures
             match = self.find_matching_id_in_structures(h5nsig)
@@ -3411,37 +3332,6 @@ class File(object):
                 sgd = {'id': id, 'type': type, 'ns':parent.mstats[id]['ns'], 'df': parent.mstats[id]['df']}
                 return sgd
             # Didn't find match to id in parent definition.            
-            # See if parent group is specified in locations (as an id by itself);
-            # if so, check for id in 
-            # locations list of members of parent group.  Example for nwb format is
-            # "UnitTimes/" inside <module>/.  <module> is parent group.
-            #  Below code derived from function get_sgd in (Group class) which does:
-            # "Get definition of group or dataset being created inside a group")
-            pid = parent.sdef['id']  # parent id, e.g. "<module>/"
-            ns = parent.sdef['ns']
-            if pid in self.lidsigs[ns]:
-                id = self.find_matching_id(h5nsig, self.lidsigs[ns][pid], 1)
-                if id:
-                    # found match in locations.  Use this.
-                    # Following not needed because mstats entry now created in save_node
-                    # parent.mstats[id] = {'ns':ns, 'created': [], 'qty': '+', 'type': type}
-                    sgd = self.get_sdef(id, ns, "referenced in deduce_sdef")
-                    # print "id %s in %s location ns %s structures" % (id, pid, ns)
-                    # example output: id UnitTimes/ in <module>/ location ns core structures
-                    return sgd
-            # didn't find parent group specified in locations (as an id by itself)    
-            # See if parent path is a locations
-            # this happens in nwb format, if an extension defines contents of "/analysis"
-            parent_path = parent.full_path
-            match = self.find_matching_id_in_locations(parent_path, h5nsig)
-            if match:
-                # creating top level structure inside expected location
-                id, ns = match
-                sdef = self.get_sdef(id, ns, "referenced in deduce_sdef")
-                # flag this created at top level (save_node and validate need this using id_lookups)
-                sdef['top'] = True
-                return sdef
-            # not in msigs, not in locations of parent group, so must be a custom node
             # see if creating a top-level structure (should not normally be done
             # inside a group, but if it is, it's good to detect it).
             # following derived from function get_custom_node_info
@@ -3456,30 +3346,15 @@ class File(object):
             # must be a custom node in group
             gslash = '/' if type == 'group' else ''
             id = h5nsig['name']
+            ns = parent.sdef['ns']
             sdef = { 'type': type, 'qid': None, 'id':id + gslash, 'ns':ns, 'df': {}, 'custom': True }
+            if not ('custom' in parent.sdef and parent.sdef['custom']):
+                # parent was not custom, but this is.  Save h5nsig in sdef for displaying
+                # of information about why this is detected as custom
+                sdef['h5nsig'] = h5nsig
             return sdef
         else:
             # This node is not inside a structure
-            # See if parent path is a locations
-            parent_path = parent.full_path
-            match = self.find_matching_id_in_locations(parent_path, h5nsig)
-            if match:
-                # creating top level structure inside expected location
-                id, ns = match
-                sdef = self.get_sdef(id, ns, "referenced in deduce_sdef")
-                # flag this created at top level (save_node and validate need this using id_lookups)
-                sdef['top'] = True
-                return sdef
-            # Does not match id in any pre-defined locations
-            # See if is a group that is part of a path defined in locations
-            match = self.find_matching_location_part(parent_path, h5nsig)
-            if match:
-                id, ns = match
-                # assume group is just part of a location path
-                # 'location':True indicates group created only to complete path to location 
-                sdef = {'type': 'group', 'id': id + '/', 
-                    'qid': None, 'ns':ns, 'df':{}, 'location':True}
-                return sdef
             # Must be custom.  See if is top-level structure
             match = self.find_matching_id_in_structures(h5nsig)
             if match:
@@ -3510,7 +3385,8 @@ class File(object):
 #                 if id == '<MyNewTimeSeries>/':
 #                     import pdb; pdb.set_trace()
                 ns = info['ns']
-                msigs[id] = self.mk_idsig(ns, id, info['df'], node.full_path)
+                # msigs[id] = self.mk_idsig(ns, id, info['df'], node.full_path)
+                msigs[id] = self.mk_idsig(ns, id, info['df'], node)
             else:
                 print "Did not find definition (df) in mstats entry: %s" % info
                 # import pdb; pdb.set_trace()
@@ -3526,16 +3402,7 @@ class File(object):
             id = self.find_matching_id(h5nsig, self.idsigs[ns], 2)
             if id:
                 return (id, ns)
-              
-    def find_matching_id_in_locations(self, parent_path, h5nsig):
-        """ Find id in any namespace location matching h5nsig.  If found, return
-        id, ns (id and namespace).  h5nsig is a signature of an h5node, created by
-        make_h5nsig."""
-        for ns in self.name_spaces:
-            if parent_path in self.lidsigs[ns]:
-                id = self.find_matching_id(h5nsig, self.lidsigs[ns][parent_path], 1)
-                if id:
-                    return (id, ns)   
+                
                 
     def find_matching_id(self, h5nsig, idsigs, level):
         """ Find node matching node signature.  Inputs are:
@@ -3579,34 +3446,6 @@ class File(object):
             return matches[0]
         # did not find match
         return None
-    
-    def find_matching_location_part(self, parent_path, h5nsig):
-        """Search locations part of specification for a path that
-        h5nsig is a part of.  If found, return id and namespace,
-        otherwise None."""
-        if h5nsig['type'] == 'dataset':
-            # datasets cannot be part of a path
-            return None
-        id = h5nsig['name']
-        node_path = self.make_full_path(parent_path, id)
-        node_path_parts = self.make_path_parts(node_path)
-        for ns in self.name_spaces:
-            for loc in self.loce[ns]:
-                if loc[0] == '/':
-                    # is absolute path in locations
-                    loc_path_parts = self.make_path_parts(loc)
-                    if len(node_path_parts) > len(loc_path_parts):
-                        # can't match because node path is longer than loc path
-                        continue
-                    match = True
-                    for i in range(len(node_path_parts)):
-                        if node_path_parts[i] != loc_path_parts[i]:
-                            match = False
-                            break
-                    if match:
-                        # all parts of path match
-                        return id, ns
-        return None
         
         
     def make_path_parts(self,path):
@@ -3631,12 +3470,17 @@ class File(object):
           2 Both name and an attribute match
         h5nsig['type'] will be None for external_link, otherwise 'group' or 'dataset'
         """  
+        # check for definitely not a match
         if (h5nsig['type'] and idsig['type'] != h5nsig['type']) or (idsig['name'] and 
             idsig['name'] != h5nsig['name']):
             return -1
         match_count = 0
         if idsig['name'] and idsig['name'] == h5nsig['name']:
             # name is specified for idsig and matches name in h5 node
+            # see if name is unique in idsig
+            if 'name_unique' in idsig and idsig['name_unique']:
+               # name matches and is unique, this must be a match
+               return 5
             match_count = 1
         # Try to find an attribute that matches and check for const attributes that don't match
         # note that h5nsig attributes are like: {key1: value1, ... }
@@ -4583,15 +4427,7 @@ class Node(object):
         """ save custom attribute for later reporting """
         msg = "'%s' [%s]:'%s'" % (node_path, aid, value)
         self.file.custom_attributes.append(msg)
- 
-#     def remember_custom_attribute_old(self, node_path, aid, value):
-#         """ save custom attribute for later reporting """
-# #         if node_name == "Units":
-# #             import pdb; pdb.set_trace()
-#         if node_path in self.file.custom_attributes:
-#             self.file.custom_attributes[node_path][aid]=value
-#         else:
-#             self.file.custom_attributes[node_path] = { aid: value}            
+            
        
     def check_attributes_for_autogen(self):
         """ Check attributes for any "autogen" specifications.  If any are found
