@@ -1786,6 +1786,7 @@ class File(object):
 #             'node_identification_errors': [],
             # warnings
             # 'dangling_external_links': [],
+            'custom_nodes_inside_custom_missing_flag': {'group': [], 'dataset': []},
             'missing_recommended': {'group': [], 'dataset': []},
             'recommended_attributes_missing': [],
             'recommended_attributes_empty': [],
@@ -1888,6 +1889,8 @@ class File(object):
 
         # warnings
         total_warnings = (len(self.warning)
+            + len(vi['custom_nodes_inside_custom_missing_flag']['group']) +
+            + len(vi['custom_nodes_inside_custom_missing_flag']['dataset']) +
             + len(vi['missing_recommended']['group'])
             + len(vi['missing_recommended']['dataset'])
             + len(vi['recommended_attributes_missing'])
@@ -1897,6 +1900,10 @@ class File(object):
         if self.options['verbosity'] == 'all':
             self.display_report_heading(total_warnings, "warning", zero_msg="Good")
             self.print_message_list(self.warning, "Miscellaneous warnings", zero_msg="Good")
+            if self.options['identify_custom_nodes']:
+                # aid, val = self.options['custom_node_identifier']
+                cni_msg = "custom inside custom missing attribute %s=%s" % (aid, val)
+                self.report_problems(vi['custom_nodes_inside_custom_missing_flag'], cni_msg, zero_msg="Good")
             self.report_problems(vi['missing_recommended'], "missing", 
                  zero_msg="Good", qualifier="recommended")
             self.print_message_list(vi['recommended_attributes_missing'],
@@ -2005,13 +2012,20 @@ class File(object):
                             # pp.pprint(node.sdef)
                             pass 
                         else:
-                            vi['custom_nodes_missing_flag'][type].append(node.full_path)
-                            if 'h5nsig' in node.sdef:
-                                # this was inside a non-custom node.  Create explanation
-                                # for why is was not detected as non-custom
-                                explanation = self.explain_why_custom(node)
-                                if explanation:
-                                    vi['explanations'][node.full_path] = explanation
+                            if (node.parent and 'custom' in node.parent.sdef and
+                                node.parent.sdef['custom']):
+                                # this node is inside an already known custom node,
+                                # make a warning rather than an error
+                                
+                                vi['custom_nodes_inside_custom_missing_flag'][type].append(node.full_path)
+                            else:
+                                vi['custom_nodes_missing_flag'][type].append(node.full_path)
+                                if 'h5nsig' in node.sdef:
+                                    # this was inside a non-custom node.  If possible, create explanation
+                                    # for why is was not detected as non-custom
+                                    explanation = self.explain_why_custom(node)
+                                    if explanation:
+                                        vi['explanations'][node.full_path] = explanation
                     else:
                         vi['identified_custom_nodes'][type].append(node.full_path)
             elif node.sdef['ns'] != self.default_ns and self.options['identify_extension_nodes']:
@@ -2153,7 +2167,7 @@ class File(object):
                         # don't flag the value missing here.  Assume that will be done in routine "validate_node"
                         continue
                     if const:
-                        msg = "%s: (expected %s='%s')" %(node.full_path, aid, eval)
+                        msg = "%s: (expected %s='%s' %s)" %(node.full_path, aid, eval, type(eval))
                     else:
                         msg = "%s - %s" % (node.full_path, aid)
                     elist = 'missing_attributes' if qty == "!" else 'recommended_attributes_missing'
@@ -2168,7 +2182,8 @@ class File(object):
             # either qty == '?' or value is present or both
             # if value is present and const, check to see if it matches expected value
             if val_present and const and not find_links.values_match(aval, const_val):
-                msg = "%s: %s\nexpected: '%s'\nfound: '%s', " % (node.full_path, aid, const_val, aval)
+                msg = "%s: %s\nexpected: '%s' %s\nfound: '%s' %s " % (
+                    node.full_path, aid, const_val, type(const_val), aval, type(aval))
                 vi['incorrect_attribute_values'].append(msg)
                 
     def validate_dataset(self, node):
@@ -3077,8 +3092,8 @@ class File(object):
             for key in attrs:
                 avi = attrs[key]  # avi == attribute value info
                 if 'value' in avi:
+                    # flag as 'const' those with 'const' and required
                     const = 'const' in avi and avi['const'] and avi['qty'] == '!'
-                    # found an attribute with a specified value
                     sig_attrs[key] = {'value': avi['value'], 'const':const}
         return sig_attrs
         
@@ -3488,11 +3503,18 @@ class File(object):
         # ('const' may or may not be present)
         found_matching_attribute = 0
         for key in idsig['attrs']:
+            idval = idsig['attrs'][key]['value']
             const = 'const' in idsig['attrs'][key] and idsig['attrs'][key]['const']
             if key in h5nsig['attrs']:
-                vals_match = find_links.values_match(idsig['attrs'][key]['value'],
-                    h5nsig['attrs'][key])
+                h5val = h5nsig['attrs'][key]
+                vals_match = find_links.values_match(idval, h5val)
                 if vals_match:
+                    found_matching_attribute = 1
+                    continue
+                elif (const and isinstance(idval, (list, tuple)) and len(idval) == 1 and
+                    isinstance(idval[0], str) and find_links.values_match(idval[0], h5val)):
+                    # idval is a list containing a single string which matches h5val.
+                    # treat this as a match
                     found_matching_attribute = 1
                     continue
             if const and h5nsig['type']:
