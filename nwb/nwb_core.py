@@ -11,8 +11,8 @@
 
 "info": {
     "name": "NWB file format specification",
-    "version": "1.0.5b_beta",
-    "date": "Aug 16, 2016",
+    "version": "1.0.5c_beta",
+    "date": "Aug 17, 2016",
     "author": "Keith Godfrey.  Converted to format specification by Jeff Teeters.",
     "contact": "jteeters@berkeley.edu, keithg@alleninstitute.org",
     "description": "Specification for the core NWB (Neurodata Withoug Borders) format."
@@ -954,7 +954,8 @@
             "references": "indexed_timeseries/data.num_times"},
         "indexed_timeseries/": {
             "description": "HDF5 link to TimeSeries containing images that are indexed.",
-            "link": {"target_type": "<ImageSeries>/", "allow_subclasses": True } },
+            # "link": {"target_type": "<ImageSeries>/", "allow_subclasses": True } },
+            "link": {"target_type": "<TimeSeries>/", "allow_subclasses": True } },
         "indexed_timeseries_path": {
             "description": "Path to linked TimeSeries",
             "data_type": "text",
@@ -2525,6 +2526,10 @@ advice.</p>
         "level": 0,
         "content": """
  
+ <p style="margin-bottom: 0in">1.0.5c_beta, Aug 17, 2016</p>
+ <p>Change IndexSeries to allow linking to any form of TimeSeries, not just
+ an ImageSeries</p>
+ <p style="margin-bottom: 0in"></p><br/>
  <p style="margin-bottom: 0in">1.0.5b_beta, Aug 16, 2016</p>
  <p>
  <ul>
