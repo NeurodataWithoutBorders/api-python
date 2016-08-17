@@ -3230,7 +3230,15 @@ class File(object):
         # only save if h5_node is not None.  It will be None if there is an external link
         if h5_node:
             for key in h5_node.attrs:
-                value = h5_node.attrs[key]
+                try:
+                    value = h5_node.attrs[key]
+                except IOError, e:
+                    msg = ("%s: unable to read attribute '%s' due to h5py IOError. "
+                        "Value is probably unicode array.  See https://github.com/h5py/h5py/issues/624.") % (
+                        h5_node.name, key)
+                    assert msg not in self.warning, "warning message already stored:\n%s" % msg
+                    self.warning.append(msg)
+                    value = "???"
                 node.h5attrs[key] = value
         return node
 
@@ -3591,7 +3599,11 @@ class File(object):
         fixed_attrs = self.get_sig_attrs(edf)
         changed_attrs = {}
         for key in h5_node.attrs:
-            value = h5_node.attrs[key]
+            try:
+                value = h5_node.attrs[key]
+            except IOError, e:
+                # assume this error was detected previously in fetch_attributes
+                value = "???"
             if (key not in fixed_attrs or not find_links.values_match(fixed_attrs[key], value)):
                 changed_attrs[key] = value
         return changed_attrs
@@ -3599,11 +3611,14 @@ class File(object):
     def fetch_attributes(self, h5_node):
         """ Get attributes for hdf5 node as a dictionary"""
         attrs = {}
-        for key in h5_node.attrs:
-            value = h5_node.attrs[key]
+        for key in h5_node.attrs.keys():
+            try:
+                value = h5_node.attrs[key]
+            except IOError, e:
+                # unable to read attribute.  Assume this will be reported in load_node
+                value = "???"
             attrs[key] = value
         return attrs
-        
             
     def get_dtype_and_shape(self, val):
         """ Return data type and shape of value val, as a tuple.  This
