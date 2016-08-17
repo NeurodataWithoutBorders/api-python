@@ -11,8 +11,8 @@
 
 "info": {
     "name": "NWB file format specification",
-    "version": "1.0.5a_beta",
-    "date": "Aug 10, 2016",
+    "version": "1.0.5b_beta",
+    "date": "Aug 16, 2016",
     "author": "Keith Godfrey.  Converted to format specification by Jeff Teeters.",
     "contact": "jteeters@berkeley.edu, keithg@alleninstitute.org",
     "description": "Specification for the core NWB (Neurodata Withoug Borders) format."
@@ -491,7 +491,7 @@
                 "description": "Description of &lt;image_plane_X&gt;",
                 "data_type": "text"
             },
-            "manifold": {
+            "manifold^": {
                 "description": ("Physical position of each pixel. "
                 "COMMENT: \"xyz\" represents the position of the pixel relative to the "
                 "defined coordinate space"),
@@ -512,7 +512,7 @@
                         { "alias": "x", "unit": "Meter" },
                         { "alias": "y", "unit": "Meter" },
                         { "alias": "z", "unit": "Meter" } ] }},
-            "reference_frame": {
+            "reference_frame^": {
                 "description": ("Describes position and reference frame of manifold based "
                     "on position of first element in manifold. For example, text description "
                     "of anotomical location or vectors needed to rotate to common anotomical "
@@ -852,7 +852,9 @@
                         "value": 0.0, # default value
                         "data_type": "float32!"},
             },
-            "dimensions": ["num_times"], # specifies 1-d array
+            "dimensions": [["num_times"],                       # 1-d array (normal case)
+                           ["num_times", "num_d2"],             # 2-d array
+                           ["num_times", "num_d2", "num_d3"]],  # 3-d array
             "data_type": "any"
         },
     },
@@ -915,14 +917,14 @@
             "data_type": "text",
             "attributes": {
 				"conversion": {
-					"description": "Value is float('NaN') (const) since this does not apply.",
-					"value": "float('NaN')", "const": True},
+					"description": "Value is float('NaN') since this does not apply.",
+					"value": "float('NaN')"},
 				"resolution": {
-					"description": "Value is float('nan') (const) since this does not apply",
-					"value": "float('NaN')", "const": True},
+					"description": "Value is float('nan')since this does not apply",
+					"value": "float('NaN')"},
 				"unit": {
 					"description": "Value is \"n/a\" to indicate that this does not apply", 
-					"value": "n/a", "const": True}}},
+					"value": "n/a"}}},
     },
     "<IndexSeries>/": {
         "description": ("Stores indices to image frames stored in an ImageSeries. The purpose "
@@ -987,14 +989,14 @@
             "dimensions": ["num_times"],
             "attributes": {
                 "conversion": {
-                    # "description": "Valus is float('nan') (const) since this does not apply.",
-                    "value": "float('NaN')", "const": True},
+                    # "description": "Value is float('nan') since this does not apply.",
+                    "value": "float('NaN')"},
                 "resolution": {
-                    # "description": "Value is float('nan') (const) since this does not apply",
-                    "value": "float('NaN')", "const": True},
+                    # "description": "Value is float('nan') since this does not apply",
+                    "value": "float('NaN')"},
                 "unit": {
                     # "description": "Value is \"n/a\" to indicate that this does not apply", 
-                    "value": "n/a", "const": True}},
+                    "value": "n/a"}},
             "data_type": "int8"},
     },
     "<OptogeneticSeries>/": {
@@ -1219,31 +1221,31 @@
                 "value": ("Current recorded from cell during voltage-clamp recording"),
                 "const": True}},
         "capacitance_fast^": {
-            "attributes": { "unit": {"data_type": "text", "value": "Farad"}},
+            "attributes": { "unit^": {"data_type": "text", "value": "Farad"}},
             "description": "Unit: Farad",
             "data_type": "float32"},
         "capacitance_slow^": {
-            "attributes": { "unit": {"data_type": "text", "value": "Farad"}},
+            "attributes": { "unit^": {"data_type": "text", "value": "Farad"}},
             "description": "Unit: Farad",
             "data_type": "float32"},
         "resistance_comp_bandwidth^": {
-            "attributes": { "unit": {"data_type": "text", "value": "Hz"}},
+            "attributes": { "unit^": {"data_type": "text", "value": "Hz"}},
             "description": "Unit: Hz",
             "data_type": "float32"},
         "resistance_comp_correction^": {
-            "attributes": { "unit": {"data_type": "text", "value": "pecent"}},
+            "attributes": { "unit^": {"data_type": "text", "value": "pecent"}},
             "description": "Unit: %",
             "data_type": "float32"},
         "resistance_comp_prediction^": {
-            "attributes": { "unit": {"data_type": "text", "value": "pecent"}},
+            "attributes": { "unit^": {"data_type": "text", "value": "pecent"}},
             "description": "Unit: %",
             "data_type": "float32"},
         "whole_cell_capacitance_comp^": {
-            "attributes": { "unit": {"data_type": "text", "value": "Farad"}},
+            "attributes": { "unit^": {"data_type": "text", "value": "Farad"}},
             "description": "Unit: Farad",
             "data_type": "float32"},
         "whole_cell_series_resistance_comp^": {
-            "attributes": { "unit": {"data_type": "text", "value": "Ohm"}},
+            "attributes": { "unit^": {"data_type": "text", "value": "Ohm"}},
             "description": "Unit: Ohm",
             "data_type": "float32"}
     },
@@ -1436,7 +1438,7 @@
                 "const": True}},
         "merge": ["<ImageSeries>/", ],
         "field_of_view^": {
-            "description": "Width, height and depto of image, or imaged area (meters).",
+            "description": "Width, height and depth of image, or imaged area (meters).",
             "data_type": "float32",
             "dimensions" : ["fov",],
             "fov" : {  # definition of dimension fov
@@ -2523,11 +2525,26 @@ advice.</p>
         "level": 0,
         "content": """
  
+ <p style="margin-bottom: 0in">1.0.5b_beta, Aug 16, 2016</p>
+ <p>
+ <ul>
+<li>Make 'manifold' and 'reference_frame' (under /general/optophysiology)
+recommended rather than required.</li>
+<li>In all cases, allow subclasses of a TimeSeries to fulfill validation requirements
+ when an instance of TimeSeries is required.</li>
+<li>Change unit attributes in VoltageClampSeries series datasets from
+required to recommended.</li>
+<li>Remove 'const'=True from TimeSeries attributes in AnnotationSeries and IntervalSeries.</li>
+<li>Allow the base TimeSeries class to store multi-dimensional arrays in 'data'.  
+  A user is expected to describe the contents of 'data' in the comments 
+  and/or description fields.</li>
+</ul></p>
+<p style="margin-bottom: 0in"></p><br/>
  
 <p style="margin-bottom: 0in">1.0.5a_beta, Aug 10, 2016</p>
 <p>Expand class of Ids allowed in TimeSeries missing_fields
 attribute to allow custom uses.<br />
-<p style="margin-bottom: 0in"><br/>
+<p style="margin-bottom: 0in"></p><br/>
      
 <p style="margin-bottom: 0in">1.0.5_beta Aug 2016</p>
 <p>Allow subclasses to be used for merges instead of base class (specified by
@@ -2536,13 +2553,13 @@ Use 'neurodata_type=Custom' to flag additions that are not describe
 by a schema.<br />
 Exclude TimeSeries timestamps and starting time from under
 /stimulus/templates<br />
-<p style="margin-bottom: 0in"><br/>
+<p style="margin-bottom: 0in"></p><br/>
         
 <p style="margin-bottom: 0in">1.0.4_beta June 2016</p>
 <p>Generate documentation directly from format specification file."<br />
 Change ImageSeries external_file to an array.<br />
 Made TimeSeries description and comments recommended.<br />
-<p style="margin-bottom: 0in"><br/>
+<p style="margin-bottom: 0in"></p><br/>
 
 
 <p style="margin-bottom: 0in">1.0.3 April, 2016</p>
@@ -2550,7 +2567,7 @@ Made TimeSeries description and comments recommended.<br />
 Change ImageSeries external_file to an array.  Added attribute
 starting_frame.<br />
 <p style="margin-bottom: 0in">Added IZeroClampSeries.</p>
-<p style="margin-bottom: 0in"><br/>
+<p style="margin-bottom: 0in"></p><br/>
 
 </p>
 <p style="margin-bottom: 0in">1.0.2 February, 2016</p>
@@ -2566,7 +2583,7 @@ Current/VoltageClampSeries to parent PatchClampSeries, due need of
 stimuli to sometimes store gain</p>
 <p style="margin-bottom: 0in">Added Ken Harris to the
 Acknowledgements section</p>
-<p style="margin-bottom: 0in"><br/>
+<p style="margin-bottom: 0in"></p><br/>
 
 </p>
 <p style="margin-bottom: 0in">1.0.1 October 7th, 2015</p>
@@ -2587,12 +2604,12 @@ sizes for floats are minimum sizes</p>
 <p style="margin-bottom: 0in">Added text to the documentation stating
 that, if the TimeSeries::data::resolution attribute value is unknown
 then store a NaN</p>
-<p style="margin-bottom: 0in"><br/>
+<p style="margin-bottom: 0in"></p><br/>
 
 </p>
 <p style="margin-bottom: 0in">1.0.0 September 28<sup>th</sup>, 2015</p>
 <p style="margin-bottom: 0in">Convert document to .html</p>
-<p style="margin-bottom: 0in"><br/>
+<p style="margin-bottom: 0in"></p><br/>
 
 </p>
 <p style="margin-bottom: 0in"><font size="5" style="font-size: 18pt"><b>Design
@@ -2601,7 +2618,7 @@ notes</b></font></p>
 <p style="margin-bottom: 0in">Declaring the following groups as
 required (this was implicit before) 
 </p>
-<p style="margin-bottom: 0in"><br/>
+<p style="margin-bottom: 0in"></p><br/>
 
 </p>
 <p style="margin-bottom: 0in">acquisition/</p>
@@ -2614,7 +2631,7 @@ required (this was implicit before)
 <p style="margin-bottom: 0in">stimulus/</p>
 <p style="margin-bottom: 0in">_ presentation/</p>
 <p style="margin-bottom: 0in">_ templates/</p>
-<p style="margin-bottom: 0in"><br/>
+<p style="margin-bottom: 0in"></p><br/>
 
 </p>
 <p style="margin-bottom: 0in">This is to ensure consistency between

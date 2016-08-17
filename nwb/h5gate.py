@@ -1901,7 +1901,7 @@ class File(object):
             self.display_report_heading(total_warnings, "warning", zero_msg="Good")
             self.print_message_list(self.warning, "Miscellaneous warnings", zero_msg="Good")
             if self.options['identify_custom_nodes']:
-                # aid, val = self.options['custom_node_identifier']
+                aid, val = self.options['custom_node_identifier']
                 cni_msg = "custom inside custom missing attribute %s=%s" % (aid, val)
                 self.report_problems(vi['custom_nodes_inside_custom_missing_flag'], cni_msg, zero_msg="Good")
             self.report_problems(vi['missing_recommended'], "missing", 
