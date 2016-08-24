@@ -861,16 +861,17 @@ def check_for_autogen(dict, aid, path, ctype, f):
     error = []
     ag_types = ('links', 'link_path', "names", "values", "length", "create", "missing", "extern")
     if type not in ag_types:
-        error.append("Invalid autogen specification. (%s). Type must be one of: %s" % (agspec, ag_types)) 
+        error.append("Type must be one of: %s" % ag_types) 
     if target is None and type not in ('create', 'missing', "extern"):
-        error.append("Invalid 'autogen' specification.  'target' must be specified: %s" % agspec)
+        error.append("'target' must be specified")
     if trim not in (True, False):
-        error.apped("Invalid 'autogen' specification.  'trim' must be True or False: %s" % agspec)
+        error.apped("'trim' must be True or False")
     if sort not in (True, False):
-        error.apped("Invalid 'autogen' specification.  'sort' must be True or False: %s" % agspec)
+        error.apped("'sort' must be True or False")
     if qty not in ("!", "*"):
-        error.apped("Invalid 'autogen' specification.  'qty' must be '!' or '*': %s" % agspec)
+        error.apped("'qty' must be '!' or '*'")
     if error:
+        error = "Invalid 'autogen' specification. %s: %s" % ("; ".join(error), agspec)
         f.error.append(error)
     else:
         a = {'node_path':path, 'aid': aid, 'agtarget':target, 'agtype':type, 'format':format,
@@ -1162,9 +1163,13 @@ def compute_autogen(f, a):
                 # leave value undetermined.  Require user set it.
                 return
             else:
-                print "Unexpected node type in autogen length, type=%s, target=%s" % (ntype, target)
-                # import pdb; pdb.set_trace()
-                sys.exit(1)
+                msg = "%s: autogen unable to determine length of '%s' because unable to retrieve value." % (
+                    a['node_path'], path)
+                f.warning.append(msg)
+                return
+#                 print "Unexpected node type in autogen length, type=%s, target=%s" % (ntype, target)
+#                 # import pdb; pdb.set_trace()
+#                 sys.exit(1)
         else:
             try:
                 length = len(val)
@@ -1221,7 +1226,7 @@ def process_ag_missing(f, a, enclosing_node):
     if required_info:
         # has a '_required' specification.  See if it evaluates to False
         required_spec = required_info['spec']
-        ce = f.eval_required(required_spec, required_id_status)
+        ce = f.eval_required(enclosing_node, required_spec, required_id_status)
         # ce will be a tuple if an error, or None if no error
         required_has_error = not (ce is None)
     for mid in enclosing_node.mstats:
@@ -1247,7 +1252,7 @@ def process_ag_missing(f, a, enclosing_node):
             assert required_id_status[mid] == False, ("required_var_status for '%s' should be"
                 " False since it's not created") % mid
             required_id_status[mid] = True
-            ce = f.eval_required(required_spec, required_id_status)
+            ce = f.eval_required(enclosing_node, required_spec, required_id_status)
             required_id_status[mid] = False
             if ce:
                 # still have an error, assume not missing
@@ -1503,7 +1508,7 @@ def compare_autogen_values(f, a, value):
         # value match, check for value required but missing
         if value is None and a['qty'] == '!':
             msg = "value required but is empty."
-            report_autogen_problem(f, a, msg)
+            report_autogen_problem(f, a, msg, "error")
         return
     # values do not match
     # check for autogen "missing" type with option "allow_others"

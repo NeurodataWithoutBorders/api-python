@@ -1910,7 +1910,7 @@ def make_avid_doc(f, ids_documented):
             for pair in descriptions:
                 dqid, desc = pair
                 dns, did = dqid.split(';')
-                description.append("<b>%s</b>: %" % (dns, desc))
+                description.append("<b>%s</b>: %s" % (dns, desc))
                 description = "\n".join(description)
         # Add description to definition
         df['_description'] = description
@@ -2015,7 +2015,7 @@ def process_exclude_in_clause(tbl, exclude_clause):
             if id not in exclude_ids:
                 exclude_ids[id] = [pq,]
             else:
-                exclude_ids.append(pq)
+                exclude_ids[id].append(pq)
     tbl.save_exclude_ids(exclude_ids)
 
 def get_link_spec(df):

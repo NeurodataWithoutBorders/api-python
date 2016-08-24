@@ -1,5 +1,5 @@
-import h5gate as g
-import nwb_utils as ut
+import sys
+import nwb.nwb_utils as ut
 
 def nwb_init(f, mode, start_time, identifier, description, creating_file):
     """ Set initial metadata if creating a new file or set callback for

@@ -1,7 +1,9 @@
+#!/Users/jt/anaconda/bin/python
+
 # program to validate nwb files using specification language definition
 
 import sys
-import nwb_file
+import nwb.nwb_file as nwb_file
 
 
 def validate_file(name, core_spec="nwb_core.py", extensions=None, verbosity="all"):

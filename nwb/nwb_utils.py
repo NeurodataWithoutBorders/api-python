@@ -332,6 +332,7 @@ def add_roi_mask_img(seg_iface, image_plane, name, desc, img, start_time=0):
     """
     # create pixel list out of image
     pixel_list = []
+    weights = []
     for y in range(len(img)):
         row = img[y]
         for x in range(len(row)):

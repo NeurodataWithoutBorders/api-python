@@ -376,7 +376,7 @@ class File(object):
             return
         # now save each format specification file in the HDF5 file
         # make qualified id (qualified by namespace if not default)
-        qsid = sid if sns == self.default_ns else "%s:%" % (sns, sid)
+        qsid = sid if sns == self.default_ns else "%s:%s" % (sns, sid)
         for file_name in spec_files:
             path = self.get_spec_file_path(file_name)
             fp = open(path, "r")
@@ -392,7 +392,7 @@ class File(object):
             msg = "Unable to load format specifications from hdf5 file because file not found: %s" % (
                 self.file_name)
             error_exit(msg)
-        specs_location = self.options['specs_location'];
+        specs_location = self.options['specs_location']
         if not specs_location:
             msg = ("Cannot load format specifications because parameter spec_files is empty and "
                 "option 'specs_location' is empty.")
@@ -495,7 +495,7 @@ class File(object):
             # save command for later processing
             self.clear_storage_commands()
         else:
-            raise Exception('Invalid storage_method (%s)' % storage_method)
+            raise Exception('Invalid storage_method (%s)' % self.options['storage_method'])
             
     def clear_storage_commands(self):
         """ Clear list of storage commands.  This method is called by an external
@@ -516,7 +516,7 @@ class File(object):
             # save command for later processing
             self.h5commands.append(("create_group", path,))
         else:
-            raise Exception('Invalid option value for storage_method (%s)' % storage_method)
+            raise Exception('Invalid option value for storage_method (%s)' % self.options['storage_method'])
         self.file_changed = True
     
     def create_dataset(self, path, data, dtype=None, compress=False, maxshape=None):
@@ -562,7 +562,7 @@ class File(object):
             # save command for later processing
             self.h5commands.append(("create_dataset", path, data, dtype, compress, maxshape))
         else:
-            raise Exception('Invalid option value for storage_method (%s)' % storage_method)
+            raise Exception('Invalid option value for storage_method (%s)' % self.options['storage_method'])
         self.file_changed = True
    
     def create_softlink(self, path, target_path):
@@ -578,7 +578,7 @@ class File(object):
             # save command for later processing
             self.h5commands.append(("create_softlink", path, target_path))
         else:
-            raise Exception('Invalid option value for storage_method (%s)' % storage_method)
+            raise Exception('Invalid option value for storage_method (%s)' % self.options['storage_method'])
         self.file_changed = True
  
     def create_external_link(self, path, target_file, target_path):
@@ -595,7 +595,7 @@ class File(object):
             # save command for later processing
             self.h5commands.append(("create_external_link", path, target_file, target_path))
         else:
-            raise Exception('Invalid option value for storage_method (%s)' % storage_method)
+            raise Exception('Invalid option value for storage_method (%s)' % self.options['storage_method'])
         self.file_changed = True
 
     def set_attribute(self, path, name, value):
@@ -611,7 +611,7 @@ class File(object):
             # save command for later processing
             self.h5commands.append(("set_attribute", path, name, value))
         else:
-            raise Exception('Invalid option value for storage_method (%s)' % storage_method)
+            raise Exception('Invalid option value for storage_method (%s)' % self.options['storage_method'])
         self.file_changed = True
                               
     def get_file_to_open(self):
@@ -716,7 +716,7 @@ class File(object):
         print "python __del__ called"
         if self.file_pointer:
             try:
-                file_pointer.close()
+                self.file_pointer.close()
                 print "python __del__ closed file"
             except (RuntimeError):
                 pass
@@ -944,8 +944,8 @@ class File(object):
             # found quantity flag. Replace key with version without qty
             qty = idq[-1]
             id = idq[0:len(idq)-1]
-            assert id not in df, ("namespace '%s', source '%s': id '%s' appears at "
-                "the same level more than once") % (ns, source, id)
+            assert id not in df, ("source '%s': id '%s' appears at "
+                "the same level more than once") % (source, id)
             sval = df.pop(idq)
             sval["_qty"] = qty
             df[id] = sval
@@ -1692,7 +1692,7 @@ class File(object):
             msg = "Did not find '%s' in parent mstats in file set_dataset for: %s" % (id, path)
             error_exit(msg)
         if 'df' not in parent.mstats[id]:
-            msg = "Did not find df in mstats[%s] in file make_group for: %s" %(id, full_path)
+            msg = "Did not find df in mstats[%s] in file make_group for: %s" %(id, path)
             error_exit(msg)
         # namespace mismatch allowed when using extensions
         if ns is not None and ns != parent.mstats[id]['ns']:
@@ -1814,31 +1814,31 @@ class File(object):
 #                         vi['missing_nodes'][type].append(node_info)
         # check entire node_tree (all nodes created)
         self.validate_nodes(self.node_tree, vi)
-        # to_check = [self.node_tree, ]
-        while False:  #  to_check:  # former code if have top and locations
-            group = to_check.pop(0)
-            if 'top' in group.sdef and group.sdef['top']:
-            #    self.validate_nodes(group, missing_nodes, custom_nodes, links)
-                self.validate_nodes(group, vi)
-            elif group.link_info:
-                # for now, ignore links.  TODO: validate link target is correct type
-                continue
-            else:
-#                 if (group.full_path != "/" and not
-#                     ('location' in group.sdef and group.sdef['location'])):
-#                     # group is not at top, also does not have location flag.  Is unknown
-#                     vi['unknown_nodes']['group'].append(group.full_path)
-                for id in group.mstats:
-                    if group.mstats[id]['type'] == 'group':
-                        to_check.extend(group.mstats[id]['created'])
-                    else:
-                        # is dataset
-                        for ds in group.mstats[id]['created']:
-                            if 'top' in ds.sdef and ds.sdef['top']:
-                                self.validate_nodes(ds, vi)
-#                             else:
-#                                 # dataset not in top, I think this should not happen
-#                                 vi['unknown_nodes']['dataset'].append(ds.full_path)
+#         # to_check = [self.node_tree, ]
+#         while False:  #  to_check:  # former code if have top and locations
+#             group = to_check.pop(0)
+#             if 'top' in group.sdef and group.sdef['top']:
+#             #    self.validate_nodes(group, missing_nodes, custom_nodes, links)
+#                 self.validate_nodes(group, vi)
+#             elif group.link_info:
+#                 # for now, ignore links.  TODO: validate link target is correct type
+#                 continue
+#             else:
+# #                 if (group.full_path != "/" and not
+# #                     ('location' in group.sdef and group.sdef['location'])):
+# #                     # group is not at top, also does not have location flag.  Is unknown
+# #                     vi['unknown_nodes']['group'].append(group.full_path)
+#                 for id in group.mstats:
+#                     if group.mstats[id]['type'] == 'group':
+#                         to_check.extend(group.mstats[id]['created'])
+#                     else:
+#                         # is dataset
+#                         for ds in group.mstats[id]['created']:
+#                             if 'top' in ds.sdef and ds.sdef['top']:
+#                                 self.validate_nodes(ds, vi)
+# #                             else:
+# #                                 # dataset not in top, I think this should not happen
+# #                                 vi['unknown_nodes']['dataset'].append(ds.full_path)
         # check ids that are an absolute path for missing
         self.check_path_ids_for_missing(vi)
         # display reports
@@ -2238,7 +2238,7 @@ class File(object):
         match = re.match(pat, found_dtype)
         if not match:
             msg = "%s: unable to split hdf5 dtype (%s) into type and size." % (node.full_path, found_dtype)
-            f.warning.append(msg)
+            self.warning.append(msg)
             return
         typ = match.group(1)
         siz = int(match.group(2))
@@ -2328,7 +2328,7 @@ class File(object):
             return
         required_spec = required_info['spec']
         id_status = required_info['id_status']
-        ce = self.eval_required(required_spec, id_status)
+        ce = self.eval_required(node, required_spec, id_status)
         if ce:
             [condition_string, error_message] = ce
             msg = "%s: %s - %s" % (node.full_path, condition_string, error_message)
@@ -2385,7 +2385,7 @@ class File(object):
 
     
 
-    def eval_required(self, required_spec, var_status):
+    def eval_required(self, node, required_spec, var_status):
         """ evaluate the condition strings in required_spec to determine if the all the
         condition strings evaluate to True given the state of variables in var_status.
         required_spec is the '_required' specification in the format specification for
@@ -2393,7 +2393,8 @@ class File(object):
         required_spec to either True (if the variable is present) or False if it's not.
         Returns None if all the conditions evaluate to True (e.g. no error) or returns
         a tuple with (condition_string, error_message) if any conditions evaluate to 
-        False (indicating an error).
+        False (indicating an error).  node is the node containing the required_spec
+        which is used to display the path if there in an error.
         """
         subs = {'AND': 'and', 'XOR': '^', 'OR': 'or', 'NOT': 'not'}
         # convert var_status from having boolean values to strings "True" or "False"
@@ -4002,7 +4003,7 @@ class File(object):
                     pass # same leaf value
                 else:
                     # raise Exception('Conflict at %s' % '.'.join(path + [str(key)]))
-                    self.append_or_replace(a,b,key, '/'.join(path + [str(key)]));
+                    self.append_or_replace(a,b,key, '/'.join(path + [str(key)]))
             else:
                 if key == 'attributes' and isinstance(b[key], dict):
                     # if attributes, always call merge attribute defs to setup source key to
@@ -4691,7 +4692,7 @@ class Dataset(Node):
                 self.full_path)
             error_exit(msg)
         if len(dims) > 1:
-            msg = "%s: append currently allowed for 1-D datasets.  Dims is:" % (
+            msg = "%s: append currently allowed for 1-D datasets.  Dims is: %s" % (
                 self.full_path, dims)
             error_exit(msg)  
         # dataset being appended
@@ -4748,7 +4749,7 @@ class Dataset(Node):
         if ddt['type'] == 'text':
             # this should never be called because strings converted to np.string_ without
             # calling this function
-            sys.error("attempting to specify width of string.  Not allowed.")
+            error_exit("Attempting to specify width of string.  Not allowed.")
             # dtype = 'S' + str(default_size)
             # return dtype
         # if not int, float or text, don't return default dtype
@@ -5233,7 +5234,7 @@ class Group(Node):
                 assert len(df[key][msc]) == 1, ("%s: must be only one element in list when"
                     " using \"%s\": %s") % (self.full_path, msc, df[key][msc])
                 orig_df = df[key]
-                assert 'merge' not in orig_df, ('%s: cannot have "merge" and "%s" ' %
+                assert 'merge' not in orig_df, ('%s: cannot have "merge" and "%s" '
                     'at same time: %s') % (self.full_path, msc, orig_df)
                 base_class = orig_df[msc][0]
                 q_base_class = self.file.make_qid(base_class, self.sdef['ns'])
