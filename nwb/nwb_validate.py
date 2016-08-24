@@ -1,4 +1,3 @@
-#!/Users/jt/anaconda/bin/python
 
 # program to validate nwb files using specification language definition
 
