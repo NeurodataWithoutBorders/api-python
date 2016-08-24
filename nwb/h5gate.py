@@ -5635,6 +5635,7 @@ class Group(Node):
             value = self.file.deflatten(value, shape)
         gslash = ""
         parent = self
-        sdef, name, path = self.file.get_custom_node_info(qid, gslash, name, path, parent)   
-        ds = Dataset(self.file, sdef, name, path, attrs, parent, value, dtype, compress)
+        sdef, name, path = self.file.get_custom_node_info(qid, gslash, name, path, parent)
+        link_info = self.file.extract_link_info(value, None, Dataset)
+        ds = Dataset(self.file, sdef, name, path, attrs, parent, value, dtype, compress, link_info)
         return ds    

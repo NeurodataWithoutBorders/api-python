@@ -805,15 +805,20 @@ def validate_link(f, source, target):
             warning.append("%s - target type of link not specified.  Linking to type '%s' at: %s" %
                 (source.full_path, target_type, target.full_path))
     else:
-        # no link spec see if type of items match
-        source_type = f.make_qid(source.sdef['id'], source.sdef['ns'])
-        if source_type != target_type:
-            warning.append("%s - type (%s) is linked to a different type (%s) at: %s" %
-                (source.full_path, source_type, target_type, target.full_path))
-            # import pdb; pdb.set_trace()
+        # no link spec
+        # check for custom link
+        if 'custom' in source.sdef and source.sdef['custom']:
+            warning.append("%s - unable to validate custom link to: %s" %
+                (source.full_path, target.full_path))
         else:
-            # perfect match
-            pass
+            # see if type of items match
+            source_type = f.make_qid(source.sdef['id'], source.sdef['ns'])
+            if source_type != target_type:
+                warning.append("%s - type (%s) is linked to a different type (%s) at: %s" %
+                    (source.full_path, source_type, target_type, target.full_path))
+            else:
+                # perfect match
+                pass
 
 # def initialize_autogen():
 #     """ Setup structure for storing autogen information.  Looks like:
