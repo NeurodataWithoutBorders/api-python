@@ -2005,27 +2005,27 @@ class File(object):
                 if (self.options['identify_custom_nodes']):
                     caid, cval = self.options['custom_node_identifier']
                     if not (caid in node.h5attrs and cval == node.h5attrs[caid]):
-                        if type not in ('group', 'dataset'):
-                            # type must be external link.  Ignore here. Warning will be
-                            # displayed elsewhere
+                        # custom node identifier is missing
+                        if type not in ('group', 'dataset') or node.link_info:
+                            # type must be external link or is a custom link.  Warning will be
+                            # displayed elsewhere.  Nothing to do here.  Warnings for custom
+                            # links are generated in find_links.validate_link
                             # print "TMP: %s, type='%s', sdef=" % (node.full_path, type)
                             # pp.pprint(node.sdef)
                             pass 
+                        elif (node.parent and 'custom' in node.parent.sdef and
+                            node.parent.sdef['custom']):
+                            # this node is inside an already known custom node,
+                            # make a warning rather than an error
+                            vi['custom_nodes_inside_custom_missing_flag'][type].append(node.full_path)
                         else:
-                            if (node.parent and 'custom' in node.parent.sdef and
-                                node.parent.sdef['custom']):
-                                # this node is inside an already known custom node,
-                                # make a warning rather than an error
-                                
-                                vi['custom_nodes_inside_custom_missing_flag'][type].append(node.full_path)
-                            else:
-                                vi['custom_nodes_missing_flag'][type].append(node.full_path)
-                                if 'h5nsig' in node.sdef:
-                                    # this was inside a non-custom node.  If possible, create explanation
-                                    # for why is was not detected as non-custom
-                                    explanation = self.explain_why_custom(node)
-                                    if explanation:
-                                        vi['explanations'][node.full_path] = explanation
+                            vi['custom_nodes_missing_flag'][type].append(node.full_path)
+                            if 'h5nsig' in node.sdef:
+                                # this was inside a non-custom node.  If possible, create explanation
+                                # for why is was not detected as non-custom
+                                explanation = self.explain_why_custom(node)
+                                if explanation:
+                                    vi['explanations'][node.full_path] = explanation
                     else:
                         vi['identified_custom_nodes'][type].append(node.full_path)
             elif node.sdef['ns'] != self.default_ns and self.options['identify_extension_nodes']:

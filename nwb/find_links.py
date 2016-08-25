@@ -314,6 +314,7 @@ def merge_soft_and_hard_links(links):
             # found target in hard link link-group
             hloc = hpath2loc[target]
             # include members of hard link-group in soft link-group and delete hard link-group
+            hl[hloc].remove(target)
             sl[target].extend(hl[hloc])
             del hl[hloc]
             merged.append(hloc)
