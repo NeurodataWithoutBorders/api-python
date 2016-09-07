@@ -11,8 +11,8 @@
 
 "info": {
     "name": "NWB file format specification",
-    "version": "1.0.5c_beta",
-    "date": "Aug 17, 2016",
+    "version": "1.0.5d_beta",
+    "date": "Sept 6, 2016",
     "author": "Keith Godfrey.  Converted to format specification by Jeff Teeters.",
     "contact": "jteeters@berkeley.edu, keithg@alleninstitute.org",
     "description": "Specification for the core NWB (Neurodata Withoug Borders) format."
@@ -1800,7 +1800,7 @@
                 "img_mask": {
                     "description": "ROI mask, represented in 2D ([y][x]) intensity image",
                     "data_type": "float32",
-                    "dimensions": ["num_x","num_y"]},
+                    "dimensions": ["num_y","num_x"]},
                 "pix_mask": {
                     "description": "List of pixels (x,y) that compose the mask",
                     "data_type": "uint16",
@@ -2525,6 +2525,13 @@ advice.</p>
         "location": {"id":"Acknowledgements", "position": "after"},
         "level": 0,
         "content": """
+ <br />
+ 
+ <p style="margin-bottom: 0in">1.0.5d_beta, Sept 6, 2016</p>
+ <p>Changed ImageSeries img_mask dimensions to:<br />
+ "dimensions": ["num_y","num_x"]<br />
+ to match description.</p>
+ <p style="margin-bottom: 0in"></p><br/>
  
  <p style="margin-bottom: 0in">1.0.5c_beta, Aug 17, 2016</p>
  <p>Change IndexSeries to allow linking to any form of TimeSeries, not just
