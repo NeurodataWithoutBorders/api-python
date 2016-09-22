@@ -380,17 +380,17 @@ def font_size(size, text):
 #      "<": "%3C;",
 #      }
      
-html_list_bullets = [
-    "&bullet;",
-    "&cir;",
-    "&blacksquare;",
-    "&rtrif;",
-    "&rtri;"]
+# html_list_bullets = [
+#     "&bullet;",
+#     "&cir;",
+#     "&blacksquare;",
+#     "&rtrif;",
+#     "&rtri;"]
     
-def html_list_bullet(level):
-    """ Return character for bullet of html list"""
-    global html_list_bullets;
-    return html_list_bullets[level]
+# def html_list_bullet(level):
+#     """ Return character for bullet of html list"""
+#     global html_list_bullets;
+#     return html_list_bullets[level]
     
      
 # html5_escape_table = {
@@ -538,38 +538,38 @@ def add_to_tc(id, level, tc, tcids, ids_adding):
     for new_id in sorted(new_ids):
         add_to_tc(new_id, level+1, tc, tcids, ids_adding)
             
-def build_tc(top_ids):
-    """Build table of contents listing id's ordered hierarchically under the
-    id's that they depend on.  top_ids are the 'top-level' ids from which other
-    id's depend.  Returns:
-    tc - table of contents.  List of form: [(id1 level1) (id2 level2), ...]
-    tcids - list of id that were added to table of contents).
-    """
-    import pdb; pdb.set_trace()
-    tc = []
-    tcids = []
-    ltop = top_ids[:]  # local top_ids, make copy of it
-    while ltop:
-        tcs = {}  # for storing all table of contents generated
-        llongest = None
-        for id in ltop:
-            ltc = tc[:]
-            ltcids = tcids[:]
-            level = 1
-            ids_adding = []
-            add_to_tc(id, level, ltc, ltcids, ids_adding)
-            # save table of contents found using this id
-            tcs[id] = {'tc': ltc, 'tcids': ltcids}
-            if llongest == None or len(ltcids) > llongest:
-                llongest = len(ltcids)
-                lid = id  # longest id
-        # now know which of the top ids found the most ids within it.  Use that id
-        tc = tcs[lid]['tc']
-        tcids = tcs[lid]['tcids']
-        # import pdb; pdb.set_trace()
-        ltop.remove(lid)
-    rv = (tc, tcids)
-    return rv
+# def build_tc(top_ids):
+#     """Build table of contents listing id's ordered hierarchically under the
+#     id's that they depend on.  top_ids are the 'top-level' ids from which other
+#     id's depend.  Returns:
+#     tc - table of contents.  List of form: [(id1 level1) (id2 level2), ...]
+#     tcids - list of id that were added to table of contents).
+#     """
+#     import pdb; pdb.set_trace()
+#     tc = []
+#     tcids = []
+#     ltop = top_ids[:]  # local top_ids, make copy of it
+#     while ltop:
+#         tcs = {}  # for storing all table of contents generated
+#         llongest = None
+#         for id in ltop:
+#             ltc = tc[:]
+#             ltcids = tcids[:]
+#             level = 1
+#             ids_adding = []
+#             add_to_tc(id, level, ltc, ltcids, ids_adding)
+#             # save table of contents found using this id
+#             tcs[id] = {'tc': ltc, 'tcids': ltcids}
+#             if llongest == None or len(ltcids) > llongest:
+#                 llongest = len(ltcids)
+#                 lid = id  # longest id
+#         # now know which of the top ids found the most ids within it.  Use that id
+#         tc = tcs[lid]['tc']
+#         tcids = tcs[lid]['tcids']
+#         # import pdb; pdb.set_trace()
+#         ltop.remove(lid)
+#     rv = (tc, tcids)
+#     return rv
     
 # def build_class_include_dict(classes):
 #     """ Build dict mapping each class in classes, to a list of the classes that
@@ -883,23 +883,23 @@ def make_doc(f):
     html = "\n".join(doc_parts['header'] + doc_parts['toc'] + doc_parts['main'] + doc_parts['footer'])
     return html
 
-def add_id_doc_indent(doc_parts, toc, ids_documented):
-    """ Add documentation for ids listed in 'toc' (table of contents) to the 'toc' and
-    'main' sections of doc_parts"""
-    for id in toc:
-        if id not in ids_documented:
-            # assume is a position label, e.g. "_toc_top".  Ignore it
-            continue
-        idoc = ids_documented[id]
-        level = idoc.level
-        link = idoc.make_toc_link()
-        main_doc = idoc.make_doc()
-        indent = (" &nbsp; &nbsp; " * level)
-        # bullet simulates <ul> and </ul> without requiring <li> nested properly
-        bullet = html_list_bullet(level - 2) + " &nbsp; " if level >= 2 else ""
-        toc_entry = indent + bullet + link + "<br />"
-        doc_parts['toc'].append(toc_entry)
-        doc_parts['main'].append(main_doc)
+# def add_id_doc_indent(doc_parts, toc, ids_documented):
+#     """ Add documentation for ids listed in 'toc' (table of contents) to the 'toc' and
+#     'main' sections of doc_parts"""
+#     for id in toc:
+#         if id not in ids_documented:
+#             # assume is a position label, e.g. "_toc_top".  Ignore it
+#             continue
+#         idoc = ids_documented[id]
+#         level = idoc.level
+#         link = idoc.make_toc_link()
+#         main_doc = idoc.make_doc()
+#         indent = (" &nbsp; &nbsp; " * level)
+#         # bullet simulates <ul> and </ul> without requiring <li> nested properly
+#         bullet = html_list_bullet(level - 2) + " &nbsp; " if level >= 2 else ""
+#         toc_entry = indent + bullet + link + "<br />"
+#         doc_parts['toc'].append(toc_entry)
+#         doc_parts['main'].append(main_doc)
 
 
 def add_id_doc(doc_parts, toc, ids_documented):
@@ -952,34 +952,34 @@ def close_toc_ul(doc_parts, level, prev_level):
         doc_parts['toc'].append('</ul>')
 
 
-def add_id_doc_orig(doc_parts, toc, ids_documented):
-    """ Add documentation for ids listed in 'toc' (table of contents) to the 'toc' and
-    'main' sections of doc_parts"""
-    prev_level = None
-    for id in toc:
-        if id not in ids_documented:
-            # assume is a position label, e.g. "_toc_top".  Ignore it
-            continue
-        idoc = ids_documented[id]
-        level = idoc.level
-        if not prev_level:
-            prev_level = level
-        if level > prev_level and level >= 2:
-            doc_parts['toc'].append('<ul>')
-        elif level < prev_level and prev_level >= 2:
-            doc_parts['toc'].append('</ul>')
-        main_doc = idoc.make_doc()
-        link = idoc.make_toc_link()
-#         safe_id = cgi.escape(id)
-#         link = "<a href=\"#%s\">%s</a>" % (safe_id, safe_id)
-#         anchor = "<a name=\"%s\"></a>\n" % safe_id
-        toc_entry = "<li>%s</li>" % link if level >= 2 else (" &nbsp; &nbsp; " * level) + link + "<br />"
-        doc_parts['toc'].append(toc_entry)
-        doc_parts['main'].append(main_doc)
-        prev_level = level
-    while level >= 2:
-        doc_parts['toc'].append('</ul>')
-        level = level - 1
+# def add_id_doc_orig(doc_parts, toc, ids_documented):
+#     """ Add documentation for ids listed in 'toc' (table of contents) to the 'toc' and
+#     'main' sections of doc_parts"""
+#     prev_level = None
+#     for id in toc:
+#         if id not in ids_documented:
+#             # assume is a position label, e.g. "_toc_top".  Ignore it
+#             continue
+#         idoc = ids_documented[id]
+#         level = idoc.level
+#         if not prev_level:
+#             prev_level = level
+#         if level > prev_level and level >= 2:
+#             doc_parts['toc'].append('<ul>')
+#         elif level < prev_level and prev_level >= 2:
+#             doc_parts['toc'].append('</ul>')
+#         main_doc = idoc.make_doc()
+#         link = idoc.make_toc_link()
+# #         safe_id = cgi.escape(id)
+# #         link = "<a href=\"#%s\">%s</a>" % (safe_id, safe_id)
+# #         anchor = "<a name=\"%s\"></a>\n" % safe_id
+#         toc_entry = "<li>%s</li>" % link if level >= 2 else (" &nbsp; &nbsp; " * level) + link + "<br />"
+#         doc_parts['toc'].append(toc_entry)
+#         doc_parts['main'].append(main_doc)
+#         prev_level = level
+#     while level >= 2:
+#         doc_parts['toc'].append('</ul>')
+#         level = level - 1
 
 def add_fs_doc(f, toc, ids_documented):
     """ Add any documentation provided in "doc" section of format specification."""
