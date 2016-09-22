@@ -3,6 +3,7 @@
 
 import sys
 import cgi
+import urllib
 import pprint
 import re
 import os.path
@@ -224,14 +225,29 @@ def make_group_members(f, node):
 #         grp = node.make_group(id_noslash)
 #         # and create any group members it might have
 #         make_group_members(grp)
-    
+
+
+  
 def make_header(title):
     """Return html for page header"""
-    html= """<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+    # allow specifying html5 or html4 doctype
+    doctype = "html5"
+    assert doctype in ('html5', 'html4')
+    if doctype == "html4":
+        doc_start = """<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
 <html>
   <head>
     <meta content="text/html; charset=utf-8" http-equiv="content-type">
-    <title>""" + title + """</title>
+    <title>""" + title + """</title>"""
+    else:
+        # html5 doctype 
+        doc_start = """<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>""" + title + """</title>"""
+    # combine doc_start with the rest of the header
+    html = doc_start + """
     <style type="text/css">
 table {
     border-collapse: collapse;
@@ -353,9 +369,42 @@ a:active {
    
 def font_size(size, text):
     """ return html css stype to specify font size for text"""
-    html = "<font style=\"font-size: %ipt\">%s</font>" % (size, text)
+    html = "<span style=\"font-size: %ipt\">%s</span>" % (size, text)
     return html
     
+# html5_escape_table = {
+#      "&": "%26",
+#      '"': "%22",
+#      "'": "%27",
+#      ">": "%3E",
+#      "<": "%3C;",
+#      }
+     
+html_list_bullets = [
+    "&bullet;",
+    "&cir;",
+    "&blacksquare;",
+    "&rtrif;",
+    "&rtri;"]
+    
+def html_list_bullet(level):
+    """ Return character for bullet of html list"""
+    global html_list_bullets;
+    return html_list_bullets[level]
+    
+     
+# html5_escape_table = {
+#      "&": "&amp;",
+#      '"': "&quot;",
+#      "'": "&apos;",
+#      ">": "&gt;",
+#      "<": "&lt;",
+#      }
+
+# def html_escape(text):
+#     """Produce entities within text."""
+#     return cgi.escape(text)
+#     # return "".join(html5_escape_table.get(c,c) for c in text)
 
 def make_required_from_qty(qty):
     required = "yes" if qty in ("!", "+") else "recommended" if qty == "^" else "no"
@@ -431,6 +480,14 @@ def reverse_dict(din):
         add_to_dict_array(dout, value, key)
     return dout
     
+def reverse_dict_array(din):
+    """ Make reverse of dictionary, with each key mapped to an array of values"""
+    dout = {}
+    for key in din:
+        val_arr = din[key]
+        for value in val_arr:
+            add_to_dict_array(dout, value, key)
+    return dout 
             
 def make_expanded_targets_to_sources(source_to_expanded_targets):
     """ make dictionary mapping expanded targets to all the sources that depend
@@ -488,6 +545,7 @@ def build_tc(top_ids):
     tc - table of contents.  List of form: [(id1 level1) (id2 level2), ...]
     tcids - list of id that were added to table of contents).
     """
+    import pdb; pdb.set_trace()
     tc = []
     tcids = []
     ltop = top_ids[:]  # local top_ids, make copy of it
@@ -512,7 +570,176 @@ def build_tc(top_ids):
         ltop.remove(lid)
     rv = (tc, tcids)
     return rv
-            
+    
+# def build_class_include_dict(classes):
+#     """ Build dict mapping each class in classes, to a list of the classes that
+#     are included by the class, either directly or indirectly.  This is done
+#     to figure out the order in which the table of contents for the classes should
+#     be made."""
+#     # make dict mapping each class to list of class and any subclasses
+#     subclasses = {}
+#     for source in classes:
+#         subclasses[source] = [source]
+#         if source in merges_found:
+#             subclasses[source].extend(merges_found[source])
+#     # now find includes using subclasses
+#     class_includes = {}
+#     for source in classes:
+#         class_includes[source] = []
+#         for target in classes:
+#             if source == target:
+#                 continue
+#             for souce_subclass in subclasses[source]:
+#                 if source_subclass in includes_found:
+#                     
+#             source_set = [source] + 
+
+        
+def get_base_class_map():
+    """ build dict mapping each class to it's base class (should be only one).  Classes
+    are defined by merges."""
+    base_class_map = {}
+    for source in merges_found:
+        key = source
+        while key in merges_found:
+            target_list = merges_found[key]
+            assert len(target_list) == 1, "should only be one base class"
+            key = target_list[0]
+        base_class_map[source] = key
+    return base_class_map
+
+def get_base_class(source, base_class_map, classes):
+    """ return base class corresponding to source.  Should either be given
+    by base_class_map, or already be a base class listed in classes."""
+    base = base_class_map[source] if source in base_class_map else source
+    assert base in classes, "base '%s' not found in classes %s" % (base, classes)
+    return base
+               
+def collapse_includes_found(classes):
+    """ Convert "includes_found" dict to a new dict which replaces each class
+    by the base class (as determined through merges).  This done to determine
+    which classes depend on other classes, which is needed to figure out
+    the order in which the classes should be displayed.
+    classes is the list of classes to which all entries in includes_found
+    should be either a class or subclass.
+    """
+    base_class_map = get_base_class_map()
+    collapsed_includes_found = {}
+    for source in includes_found:
+        source_base = get_base_class(source, base_class_map, classes)
+        for target in includes_found[source]:
+            target_base = get_base_class(target, base_class_map, classes)
+            add_to_dict_array(collapsed_includes_found, source_base, target_base)
+    # print "collapsed_includes_found="
+    # pp.pprint(collapsed_includes_found)
+    return collapsed_includes_found
+    
+def get_tc_top_order(collapsed_includes, top_nodes, promoted_nodes):
+    """ Deduce order in which ids at top of table of contents should be displayed.
+    This done by using collapsed_includes, which contains the id's which must either
+    be in top_nodes or promoted_nodes.
+    collapsed_includes is a dictionary mapping a source id to target id's it includes.  Example is:
+    { '<Interface>/': ['<TimeSeries>/'], '<Module>/': ['<Interface>/']}
+    Rule is if source_id is in top_nodes (e.g. Interface, TimeSeries), target_id should become
+    before the source.  If source_id is in promoted_nodes (Module), it should come immediately
+    before target_id."""
+    # split collapsed_includes pairs into two dicts, one for top_nodes, one for promoted_nodes
+    top_ci = {}
+    pro_ci = {}
+    for source in collapsed_includes:
+        assert len(collapsed_includes[source]) == 1, "more than one included class for source %s: %s" %(
+            source, collapsed_includes[source])
+        target = collapsed_includes[source][0]
+        assert target in top_nodes
+        if source in top_nodes:
+            top_ci[source] = target
+        elif source in promoted_nodes:
+            pro_ci[source] = target
+        else:
+            print "collapsed_includes source %s not in top_nodes %s or promoted_nodes %s" % (
+                source, top_nodes, promoted_nodes)
+    tc_top_order = []
+    # process all top_nodes first since promoted nodes must be placed immediately in
+    # front of corresponding top_node
+    for source in top_ci:
+        target = top_ci[source]
+        add_to_list(tc_top_order, target, source)  # add target before source
+    # now process all promoted_nodes
+    for source in pro_ci:
+        target = pro_ci[source]
+        add_to_list(tc_top_order, source, target)  # add source before target
+    return tc_top_order
+        
+def add_to_list(arr, v1, v2):
+    """ Add v1 and v2 to list 'arr'.  First check if v2 is in list.  If not,
+    append it.  Then insert v1 in front of v2.  Final result is that v1 is
+    before v2.
+    """
+    if v2 not in arr:
+        arr.append(v2)
+    idx = arr.index(v2)
+    arr.insert(idx, v1)
+
+def get_new_ids2(tcids, ids_adding):
+    """Given id's in table of contents (tcids), return a list of new ids that can
+    be added to table of contents based on the id's present.  The new ids are sources
+    that have targets which are all in tcids.  However, do not return any ids in ids_adding
+    because those are already in the process of being added.
+    """
+    # global source_to_expanded_targets
+    global merges_to_expanded_targets
+    new_ids = []
+    for id in merges_to_expanded_targets:
+        if id not in tcids and id not in ids_adding:
+            targets = merges_to_expanded_targets[id]
+            found_all = True
+            for target in targets:
+                if target not in tcids:
+                    found_all = False
+                    break
+            if found_all:
+                new_ids.append(id)
+    return new_ids
+
+def add_to_tc2(id, level, tc, tcids, ids_adding):
+    """add id to table of contents.
+    id - id to add.
+    level - indentation level for id.
+    tc - table of contents.  Is a list of form:
+        [(id1 level1) (id2 level2), ...]
+    tcids - ids in table of contents
+    ids_adding - id's that are currently being added to table of contents
+        but are not yet stored in it.
+    """
+    # global expanded_targets_to_sources
+    # add id to table of contents and tcids
+    tc.append((id, level))
+    tcids.append(id)
+    if id in ids_adding:
+        ids_adding.remove(id)
+    # check for new id's to add
+    new_ids = get_new_ids2(tcids, ids_adding)
+    ids_adding.extend(new_ids)
+    for new_id in sorted(new_ids):
+        add_to_tc2(new_id, level+1, tc, tcids, ids_adding)
+
+
+def build_tc2(tc_top_order):
+    """Build table of contents listing id's ordered hierarchically under the
+    id's that they depend on.  tc_top_order are the top level id's in the
+    table of contents.  Returns:
+    tc - table of contents.  List of form: [(id1 level1) (id2 level2), ...]
+    tcids - list of id that were added to table of contents).
+    """
+    tc = []
+    tcids = []
+    level = 1
+    for top_id in tc_top_order:
+        ids_adding = []
+        add_to_tc2(top_id, level, tc, tcids, ids_adding)
+    rv = (tc, tcids)
+    return rv
+
 
 def make_id_order_tree():
     """ uses merges_found and includes_found (both of which map an id to a target_id)
@@ -521,6 +748,7 @@ def make_id_order_tree():
     order the inclusion of id's in the generated documentation."""
     global merges_found, includes_found, expanded_targets_to_sources
     global source_to_expanded_targets
+    global merges_to_expanded_targets
     # combine merges_found and includes_found
 #     print "merges found:"
 #     pp.pprint(merges_found)
@@ -544,7 +772,17 @@ def make_id_order_tree():
     for node in target_to_source:
         if node not in source_to_target:
             top_nodes.append(node)
-#     print "top nodes: %s" % top_nodes
+#    print "top nodes: %s" % top_nodes
+    # promoted_nodes (as computed below) are groups that are source of a top_node, but are
+    # not source of a merge; hence must be source of an include to a top_node
+    promoted_nodes = []
+    for tn in top_nodes:
+        promoted_nodes.extend([ x for x in target_to_source[tn] if x not in merges_found.keys()])
+#    print "promoted_nodes: %s" % promoted_nodes
+    top_and_promoted = top_nodes + promoted_nodes
+    collapsed_includes = collapse_includes_found(top_and_promoted)
+    tc_top_order = get_tc_top_order(collapsed_includes, top_nodes, promoted_nodes)
+#    print "tc_top_order=%s" % tc_top_order
     source_to_expanded_targets = expand_targets(source_to_target)
 #     print "\n\nsource_to_expanded_targets ="
 #     pp.pprint(source_to_expanded_targets)
@@ -552,9 +790,16 @@ def make_id_order_tree():
     make_expanded_targets_to_sources(source_to_expanded_targets)
 #     print "\n\nexpanded_targets_to_sources ="
 #     pp.pprint(expanded_targets_to_sources)
-    # build table of contents based on top nodes
-    rv = build_tc(top_nodes)
+    merges_to_expanded_targets = expand_targets(merges_found)
+    rv = build_tc2(tc_top_order)
     tc, tcids = rv
+#     print "\nTable of contents2:"
+#     pp.pprint(tc)
+#     import pdb; pdb.set_trace()
+    # build table of contents based on top nodes
+#    rv = build_tc(top_nodes)
+    # rv = build_tc(top_and_promoted)
+#    tc, tcids = rv
 #     print "\nTable of contents:"
 #     pp.pprint(tc)
     return rv
@@ -589,7 +834,7 @@ def make_doc(f):
     title = "%s documentation" % doc_source
     header = doc_parts['header']  # convenient for appending
     header.append(make_header(title))
-    header.append("<center>")
+    header.append('<div style="text-align: center">')
     header.append(font_size(12, "Documentation for: %s" % doc_source))
     # following has default namespace last
     name_spaces = f.name_spaces
@@ -610,7 +855,7 @@ def make_doc(f):
             "%s;\">%s</span>") % (color, ns) if color else ns
         ns_str = "(File '%s', namespace '%s')" % (file_name, cns)
         header.append(font_size(10, ns_str) + "\n")
-    header.append("</center>")
+    header.append("</div>")
         
 #         ns_info = ("<center>\n<span class=\"fs26\">%s</span><br />"
 #             "<span class=\"fs20\">Version %s, %s</span><br />\n"
@@ -638,7 +883,76 @@ def make_doc(f):
     html = "\n".join(doc_parts['header'] + doc_parts['toc'] + doc_parts['main'] + doc_parts['footer'])
     return html
 
+def add_id_doc_indent(doc_parts, toc, ids_documented):
+    """ Add documentation for ids listed in 'toc' (table of contents) to the 'toc' and
+    'main' sections of doc_parts"""
+    for id in toc:
+        if id not in ids_documented:
+            # assume is a position label, e.g. "_toc_top".  Ignore it
+            continue
+        idoc = ids_documented[id]
+        level = idoc.level
+        link = idoc.make_toc_link()
+        main_doc = idoc.make_doc()
+        indent = (" &nbsp; &nbsp; " * level)
+        # bullet simulates <ul> and </ul> without requiring <li> nested properly
+        bullet = html_list_bullet(level - 2) + " &nbsp; " if level >= 2 else ""
+        toc_entry = indent + bullet + link + "<br />"
+        doc_parts['toc'].append(toc_entry)
+        doc_parts['main'].append(main_doc)
+
+
 def add_id_doc(doc_parts, toc, ids_documented):
+    """ Add documentation for ids listed in 'toc' (table of contents) to the 'toc' and
+    'main' sections of doc_parts.  For table of contents, use html unordered lists <li>
+    to make indentation if indentation level is >= 2, otherwise, if level is
+    0 or 1, just use spaces to indent. """
+    prev_level = None
+    ul_count = 0
+    for id in toc:
+        if id not in ids_documented:
+            # assume is a position label, e.g. "_toc_top".  Ignore it
+            continue
+        idoc = ids_documented[id]
+        link = idoc.make_toc_link()
+        level = idoc.level
+        increase_indent = prev_level is None or level > prev_level
+        decrease_indent = prev_level is not None and level < prev_level
+        same_indent = prev_level is not None and level == prev_level
+        if prev_level > 1 and decrease_indent:
+            close_toc_ul(doc_parts, level, prev_level)
+        if level >= 2:
+            # only use <ul> for level >= 2
+            if increase_indent:
+                doc_parts['toc'].append('<ul>')
+            elif decrease_indent:
+                # already handled above
+                pass
+            elif same_indent:
+                doc_parts['toc'][-1] += '</li>'
+            else:
+                exit("Unexpected indentation when making table of contents")
+            toc_entry = "<li>%s" % link
+        else:
+            # not using <ul>, just spaces indentation
+            toc_entry = (" &nbsp; &nbsp; " * level) + link + "<br />"
+        doc_parts['toc'].append(toc_entry)
+        main_doc = idoc.make_doc()
+        doc_parts['main'].append(main_doc)
+        prev_level = level
+    if prev_level > 1:
+        close_toc_ul(doc_parts, 1, prev_level)
+
+def close_toc_ul(doc_parts, level, prev_level):
+    """ Output </li> and </ul> tags needed to decrease table of contents
+    indent from prev_level to level, if level > 1 (e.g. using <ul>). """
+    close_count = prev_level - max(1, level)
+    for i in range(close_count):
+        doc_parts['toc'][-1] += '</li>'
+        doc_parts['toc'].append('</ul>')
+
+
+def add_id_doc_orig(doc_parts, toc, ids_documented):
     """ Add documentation for ids listed in 'toc' (table of contents) to the 'toc' and
     'main' sections of doc_parts"""
     prev_level = None
@@ -732,6 +1046,11 @@ def ns_color(f, ns):
     color = colors[idx]
     return color
 
+def make_safe_anchor(text):
+    """ replace spaces by underscore then url escape special chars"""
+    safe_anchor = urllib.quote(remove_spaces(text))
+    return safe_anchor
+
 
 class Id_doc(object):
     """ Class for documentation about an individual id.  Usually this corresponds to
@@ -767,12 +1086,14 @@ class Id_doc(object):
         self.namespaces = namespaces if namespaces is not None else []
         self.toc_link = None
         self.doc = None
-        
+
     def make_safe_anchor(self):
         """remove angle brackets, replace spaces by underscore, escape any special chars"""
-        safe_anchor = cgi.escape(remove_spaces(self.anchor))
-        return safe_anchor
-    
+        return make_safe_anchor(self.anchor)
+        # safe_anchor = urllib.quote(remove_spaces(self.anchor))
+        # safe_anchor = html_escape(remove_spaces(self.anchor))
+        # return safe_anchor
+
     def make_nslist(self):
         """Make list namespaces referenced.  This appended to table of contents
         entry.  Namespace are color highlighted."""
@@ -824,8 +1145,9 @@ class Id_doc(object):
         safe_anchor = self.make_safe_anchor()
         subclass = self.get_subclass()
         if subclass:
-            safe_sc = cgi.escape(subclass)
-            sc_link = "<a href=\"#%s\">%s</a>" % (safe_sc, safe_sc)
+            # safe_sc = html_escape(subclass)
+            # sc_link = "<a href=\"#%s\">%s</a>" % (safe_sc, safe_sc)
+            sc_link = "<a href=\"#%s\">%s</a>" % (make_safe_anchor(subclass), cgi.escape(subclass))
             extends_text = " extends %s" % sc_link
         else:
             extends_text = ""
@@ -833,7 +1155,10 @@ class Id_doc(object):
         anchor_text = "<a name=\"%s\">&nbsp;</a>\n" % safe_anchor
         # make label <h2> if it's level zero in table of contents, else <h3>
         label_size = 2 if self.level == 0 else 3
-        label_text = "<h%i>%s%s</h%i>" % (label_size, safe_label, anchor_text, label_size)
+        # label_text = "<h%i>%s%s</h%i>" % (label_size, safe_label, anchor_text, label_size)
+        # label_text = "<h%i id=\"%s\">%s</h%i>" % (label_size, safe_anchor, safe_label, label_size)
+        safe_id = remove_spaces(self.anchor)
+        label_text = "<h%i id=\"%s\">%s</h%i>" % (label_size, safe_id, safe_label, label_size)
         # label_text = "<h3>%s</h3>" % safe_label
         # put the a anchor around the label.  This seems to be needed for: wkhtmltopdf
         # anchor_label = "<a name=\"%s\">%s</a>\n" % (safe_anchor, label_text)
@@ -1188,8 +1513,6 @@ def make_tree_doc(f, ids_documented):
         # processed.append(grp)
         grp = grp_tl.next()  
         full_path = grp.full_path
-#         if full_path == '/now/for/something':
-#             import pdb; pdb.set_trace()
         # print "processing %s" % full_path
         if full_path == "/":
             # for root group, separate members into top-level groups and datasets
@@ -1255,6 +1578,8 @@ def make_tree_doc(f, ids_documented):
         (id, level) = item
         id = remove_trailing_slash(id)
         id_toc.append(id)
+        if id not in ids_documented:
+            import pdb; pdb.set_trace()
         ids_documented[id].level = level
     # id_toc.extend(tc)
     # put any ids in ids_documented not yet included in a table of contents in ophan_toc
@@ -1281,7 +1606,7 @@ def make_tree_doc(f, ids_documented):
             pqid = "%s:%s" % (ns, id)
             cid = remove_trailing_slash(id)
             qid = cid if ns == f.default_ns else "%s:%s" % (ns, cid)
-            if (qid not in ids_documented 
+            if (qid not in ids_documented and cid not in ids_documented
                 and qid != starting_group.full_path
                 and pqid not in ids_used):
                 undocumented_ids.append(qid)
@@ -1368,7 +1693,6 @@ def process_top_group_members(f, grp, level, ids_documented, grp_tl, filter=None
         # description = get_description(mdf, more_info=more_info)
         in_group = filter is not None
         description = get_description(mdf, in_group=in_group)
-        safe_id = cgi.escape(remove_trailing_slash(mid))
         v_id = re.match( r'^<[^>]+>/?$', mid) # True if variable_id (in < >)
         # if id_info['created'] and not v_id:
         if id_info['created'] and ((not v_id) or avid_ns):
@@ -1380,11 +1704,13 @@ def process_top_group_members(f, grp, level, ids_documented, grp_tl, filter=None
             grp_tl.add(mg)
             if avid_ns:
                 print "added %s, avid_ns=%s" % (mg.full_path, avid_ns)
-            mg_full_path = cgi.escape(remove_trailing_slash(mg.full_path))
+            mg_full_path = make_safe_anchor(remove_trailing_slash(mg.full_path))
+            safe_id = cgi.escape(remove_trailing_slash(mid))
             id_link = "<a href=\"#%s\">%s</a>" % (mg_full_path, safe_id)
         else:
             # must be a relative-id group added by include  Make a link to it
-            id_link = "<a href=\"#%s\">%s</a>" % (safe_id, safe_id)
+            # id_link = "<a href=\"#%s\">%s</a>" % (safe_id, safe_id)
+            id_link = make_link(mid)
         indent = ".&nbsp;" * level
         id_str = "%s%s" % (indent, id_link)
         override = 'source' in id_info and len(id_info['source']) > 1
@@ -1412,8 +1738,8 @@ def remove_trailing_slash(id):
     
 def make_link(id):
     """ Make link to target id"""
-    safe_id = cgi.escape(remove_trailing_slash(id))
-    link = "<a href=\"#%s\">%s</a>" % (safe_id, safe_id)
+    idns = remove_trailing_slash(id)
+    link = "<a href=\"#%s\">%s</a>" % (make_safe_anchor(idns), cgi.escape(idns))
     return link
 
 def make_id_doc(f, id, id_info, ids_documented, sdef=None):
@@ -1538,7 +1864,8 @@ def make_id_doc(f, id, id_info, ids_documented, sdef=None):
                     merges_found[id].append(dns_id)
                 else:
                     merges_found[id] = [dns_id, ]
-                mlink = make_link(mqid)
+                # mlink = make_link(mqid)
+                mlink = make_link(dns_id)
 #                 safe_id = cgi.escape(remove_trailing_slash(mqid))
 #                 mlink = "<a href=\"#%s\">%s</a>" % (safe_id.strip("<>"), safe_id)
 #                 import pdb; pdb.set_trace()
@@ -1554,6 +1881,9 @@ def make_id_doc(f, id, id_info, ids_documented, sdef=None):
 #                 make_id_doc(f, mid, mid_info, ids_documented, msdef)
             if len(ml) == 1:
                 ml = ml[0]
+            if "core" in ml:
+                print "found ml: %s" % ml
+                import pdb; pdb.set_trace()
             html.append("<p><i>%s</i> includes all elements of <i>%s</i> with the "
                 "the following additions or <u>changes</u>:</p>" % (cgi.escape(qid), ml))
     tbl = Table(f)
@@ -1660,8 +1990,9 @@ def add_group_doc(f, id, id_info, tbl, level, ids_documented, mode="stand_alone"
     # get type
     link_spec = get_link_spec(df)
     if link_spec:
-        safe_tt = cgi.escape(remove_trailing_slash(link_spec['target_type']))
-        tt_link = "<a href=\"#%s\">%s</a>" % (safe_tt, safe_tt)
+        # safe_tt = html_escape(remove_trailing_slash(link_spec['target_type']))
+        # tt_link = "<a href=\"#%s\">%s</a>" % (safe_tt, safe_tt)
+        tt_link = make_link(link_spec['target_type'])
         type = "link; target type=%s" % tt_link
         if link_spec['allow_subclasses']:
             type = type + " (or subtype)"
@@ -1676,8 +2007,9 @@ def add_group_doc(f, id, id_info, tbl, level, ids_documented, mode="stand_alone"
         mtarget = mlist[0]
         # remove namespace from link
         mtype = mtarget if ':' not in mtarget else mtarget.split(':')[1]
-        safe_tt = cgi.escape(remove_trailing_slash(mtype))
-        tt_link = "<a href=\"#%s\">%s</a>" % (safe_tt, safe_tt)
+        # safe_tt = html_escape(remove_trailing_slash(mtype))
+        # tt_link = "<a href=\"#%s\">%s</a>" % (safe_tt, safe_tt)
+        tt_link = make_link(mtype)
         # if this was made by a "subclass merge" add text "(or subclass)"
         # attribute 'subclass_merge_base' is set in h5gate function "prune_subclass_merges"
         node = id_info['created'][0]
@@ -1791,12 +2123,19 @@ def add_group_doc(f, id, id_info, tbl, level, ids_documented, mode="stand_alone"
         mqid = "%s:%s" % (ns, mid) if ns != f.default_ns else mid
         if level == 1 and mode == "stand_alone":
             if (inc_info['source'] == 'implicit' or inc_info['id'][0] == '/' or
-                not mkey.endswith('/')):
+                not mkey.endswith('/')
+                or id[0] == '/'):
                 # don't save information about implicit includes or includes of
-                # datasets.  They are not used to make subclass hierarchy 
+                # datasets or includes inside absolute path (e.g. "/processing" include "<Module>/".)
+                # They are not used to make subclass hierarchy 
                 continue            
             # is group that is not inside another group in schema
             # save includes for determining dependencies for ordering documentation
+            if ':' in mqid:
+                # print "adding %s to includes_found" % mqid
+                # test replacing by mid
+                mqid = mid
+                # import pdb; pdb.set_trace()
             if id in includes_found:
                 includes_found[id].append(mqid)
             else:
@@ -1806,8 +2145,9 @@ def add_group_doc(f, id, id_info, tbl, level, ids_documented, mode="stand_alone"
         mdf = msdef['df']
         mdescription = get_description(mdf, in_group=True, by_include=True)
         mrequired = make_required_from_qty(mqty)
-        safe_mqid = cgi.escape(remove_trailing_slash(mqid))
-        mlink = "<a href=\"#%s\">%s</a>" % (safe_mqid, safe_mqid)
+        # safe_mqid = cgi.escape(remove_trailing_slash(mqid))
+        # mlink = "<a href=\"#%s\">%s</a>" % (safe_mqid, safe_mqid)
+        mlink = make_link(mqid)
 #         te = "<tr><td>%s%s</td><td>%s</td><td>%s</td><td style=\"text-align:center\">%s</td></tr>" % (
 #             indent, mlink, mtype, cgi.escape(mdescription), mrequired)
 #         html.append(te)
@@ -1890,7 +2230,7 @@ def make_avid_doc(f, ids_documented):
         tsdef = {'id': mid, 'ns':f.default_ns, 'df':{}}
         to_merge = f.find_overlapping_structures(tsdef, full_path)
 #         print "***\navid '%s', to_merge='%s'" % (id, to_merge)
-        to_include = []
+        to_include = {}
         id_sources = {}
         descriptions = []
         f.process_merge(df, to_merge, to_include, id_sources, f.default_ns, id, descriptions)
@@ -1945,8 +2285,9 @@ def get_combined_includes(f, includes, ns, ids_documented):
             mqty = iinfo['qty']
             mqid = "%s:%s" % (ns, mid) if ns != f.default_ns else mid
             # mqid = "%s:%s" % (mns, mid) if mns != f.default_ns else mid # possibly new
-            safe_mqid = cgi.escape(remove_trailing_slash(mqid))
-            mlink = "<a href=\"#%s\">%s</a>" % (safe_mqid, safe_mqid)
+            # safe_mqid = html_escape(remove_trailing_slash(mqid))
+            # mlink = "<a href=\"#%s\">%s</a>" % (safe_mqid, safe_mqid)
+            mlink = make_link(mqid)
             # make documentation for element if not already made
             make_iid_doc(f, mid, mns, ids_documented)
             
@@ -2091,7 +2432,7 @@ def get_description(df, in_group=True, by_include=False):    # more_info=False):
     if inside a group.  by_include is True if added to a group using an "include"
     (in the specification language).  Logic is:
        if in_group is true:
-            if sting "MORE_INFO:" is present:
+            if string "MORE_INFO:" is present:
                 Return all text before More_info
             else:
                 If "COMMENT:" present:
@@ -2135,8 +2476,8 @@ def get_description(df, in_group=True, by_include=False):    # more_info=False):
     elif idx_more_info != -1:
         description = description[idx_more_info + len(more_info_str):]
     # add any css to description
-    # description = add_css_to_escaped_html(description)
-    description = add_css(description)
+    description = add_css_to_escaped_html(description)
+    # description = add_css(description)
     return description
 
 def add_css_to_escaped_html(str):

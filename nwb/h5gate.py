@@ -714,7 +714,7 @@ class File(object):
         deleted.  File might not have been closed if an error was found.
         """
         print "python __del__ called"
-        if self.file_pointer:
+        if hasattr(self, 'file_pointer') and self.file_pointer:
             try:
                 self.file_pointer.close()
                 print "python __del__ closed file"
@@ -1925,7 +1925,7 @@ class File(object):
             if self.options['identify_custom_nodes']:
                 caid, cval = self.options['custom_node_identifier']
                 self.report_problems(vi['identified_custom_nodes'], 
-                    "custom and identifieed by attribute %s=%s" % (caid, cval))
+                    "custom and identified by attribute %s=%s" % (caid, cval))
             if self.options['identify_extension_nodes']:
                 eaid = self.options['extension_node_identifier']
                 self.report_problems(vi['identified_extension_nodes'], 
@@ -2873,7 +2873,11 @@ class File(object):
                         del idsigs[id]['attrs'][key]
         # Part 2.  Remove any member nodes with fixed names
         # that are common to more than one id.  To find these, make mbs:
-        # { "name-type": [id1, id2, ...], "name-type": [id3,], ... }
+        # { "name-type": [[id1, id2, ...], nreq], "name-type": [[id3,], nreq] ... }
+        # value of each key is a list of two elements
+        # first element is a list of ids that have that name-type,
+        # second element (nreq) is the number of ids that are required.
+        # nreq is used to keep the one required if there is only one that is required
         mbs = {}
         for id in idsigs:
             sig = idsigs[id]
@@ -2882,24 +2886,31 @@ class File(object):
                     if not msig['name']:
                         continue
                     # member has fixed name, i.e. not in <>
+                    required = 1 if msig['qty'] in ('!', '+') else 0
                     key = "%s-%s" % (msig['name'], msig['type'])
                     if key not in mbs:
-                        mbs[key] = [id, ]
+                        mbs[key] = [[id, ], required] 
                     else:
-                        mbs[key].append(id)
+                        mbs[key][0].append(id)
+                        mbs[key][1] += required
         # Now that have mbs structure, use it to remove members with the
         # same name and type that appear in multiple id's
         for kt in mbs:
-            if len(mbs[kt]) > 1:
+            if len(mbs[kt][0]) > 1:
                 # found member appearing in multiple ids
                 name, type = kt.rsplit('-',1)
-                for id in mbs[kt]:
+                nreq = mbs[kt][1]
+                for id in mbs[kt][0]:
                     sig = idsigs[id]
-                    if 'msigs' in sig:
-                        msigs = sig['msigs']
-                        # update list of members to only include those with different name / type
+                    msigs = sig['msigs']
+                    if nreq == 1:
+                        # exactly one is required, remove all of the name and type that are not required
                         # from: http://stackoverflow.com/questions/1207406/remove-items-from-a-list-while-iterating-in-python
-                        msigs[:] = [m for m in msigs if m['name'] != name and m['type'] != type]
+                        msigs[:] = [m for m in msigs if m['name'] != name 
+                            or m['type'] != type or m['qty'] in ('!', '+')]
+                    else:
+                        # not exactly one required, remove all of the name and type
+                        msigs[:] = [m for m in msigs if m['name'] != name or m['type'] != type]
         # Part 3 (last part).  Remove attributes in members with no name if the values are
         # common to other attributes in members with no name with the same type.  For this, create av:
         #  { "key1-type" : { val_1: [id1-index, id2-index...], val_2: [id3-index, ] },
@@ -3032,14 +3043,18 @@ class File(object):
         # type is group, need to get expanded def for attributes and also msigs
         # make sdef to use when calling get_expanded_def
         sdef = { 'type': type, 'id':id, 'ns':ns, 'df': df, }
-        name = ""  # don't specify name.  Name only used if variable named id, and know actual replacement
+        v_id = re.match( r'^<[^>]+>/$', id) # True if variable_id (in < >)
+        # name = ""  # don't specify name.  Name only used if variable named id, and know actual replacement
+        # if variable id, pretend name of node is same as variable_id without trailing slash
+        # this done so full_path (made in 'get_expanded_def') will have the correct depth, so
+        # find_overlapping_structures will operate correctly
+        name = id.rstrip('/') if v_id else None
         # path = full_path  # either None (if called for top level id, or full_path to node, if called for mstats)
         path = node.full_path if node else None
         expanded_def = self.get_expanded_def(sdef, name, path)
         # attrs = self.get_sig_attrs(df)   # probable bug, cause failure if no locations.  Fix below:
         attrs = self.get_sig_attrs(expanded_def)
         # Now have idsig for id, need to get idsigs for members
-        v_id = re.match( r'^<[^>]+>/$', id) # True if variable_id (in < >)
         # path_id = id if not v_id else "__unknown__"
         # path = None if path is None else self.make_full_path(path, path_id)
         # don't use __unknown__ in path, instad make None if not known
@@ -3049,6 +3064,7 @@ class File(object):
         for mid in mstats:
             mname = self.get_sig_name(mid)
             mdf = mstats[mid]['df']
+            qty = mstats[mid]['qty']
             mtype = mstats[mid]['type']
             mlink = 'link' in mdf
             if mlink:
@@ -3060,14 +3076,15 @@ class File(object):
                 # is group
                 mns = mstats[mid]['ns']
                 msdef = { 'type': type, 'id':mid, 'ns':mns, 'df': mdf, }
-                mex_def = self.get_expanded_def(msdef, name, path)  # leave name as blank
+                v_id = re.match( r'^<[^>]+>/$', mid) # True if variable_id (in < >)
+                name = id.rstrip('/') if v_id else None
+                mex_def = self.get_expanded_def(msdef, name, path)
                 mattrs = self.get_sig_attrs(mex_def)
-            msig = {'name':mname, 'type':mtype, 'attrs': mattrs, 'link': mlink}
+            msig = {'name':mname, 'type':mtype, 'attrs': mattrs, 'link': mlink, 'qty': qty}
             msigs.append(msig)
         idsig = {'name': sig_name, 'type': type, 'attrs': attrs,
             'msigs': msigs, 'name_unique':name_unique}
         return idsig  
-
        
         
     def get_sig_name(self, id):
@@ -3119,11 +3136,10 @@ class File(object):
         while groups_to_visit:
             np = groups_to_visit.pop(0)
             h5_group, path = np
-            if 'spontaneous_stimulus/data' in h5_group.name:
+            # if 'spontaneous_stimulus/data' in h5_group.name:
             # if h5_group.name == '/stimulus/presentation/spontaneous_stimulus/data':
-                import pdb; pdb.set_trace()
-#             if h5_group.name == '/processing/brain_observatory_pipeline/MotionCorrection/2p_image_series/corrected':
-#                 import pdb; pdb.set_trace()
+            # if h5_group.name == '/processing/brain_observatory_pipeline/MotionCorrection/2p_image_series/corrected':
+            #    import pdb; pdb.set_trace()
             node = self.load_node(h5_group, path, 'group')
             if node.link_info:
                 # this node was a link.  No further processing
@@ -3325,11 +3341,12 @@ class File(object):
         parent_path, node_mname  = full_path.rsplit('/',1)
         if node_mname  == '':
             node_mname  = '/'  # at root node
-        # import pdb; pdb.set_trace()
         assert (h5node is None) == (type == "extlink"), "h5node and extlink do not match in deduce_sdef"
         h5nsig = self.make_h5nsig(h5node, node_mname) if h5node else self.make_minimal_msig(node_mname)
         # if h5node and h5node.name == "/processing/brain_observatory_pipeline/MotionCorrection/2p_image_series/corrected":
-        #     import pdb; pdb.set_trace()
+        # if h5node and h5node.name == '/processing/custom_module':
+        # if h5node and h5node.name == '/processing':
+        #    import pdb; pdb.set_trace()
         if not parent:
             # is root node.  See if there is a definition for root in structures
             match = self.find_matching_id_in_structures(h5nsig)
@@ -3713,11 +3730,20 @@ class File(object):
         source_id - ns:id of structure specifying this include.  Currently not used.
         """
         if mid in includes:
-            # this was already included.  Don't include it again, don't flag an error, just ignore it
-            # print "Found id '%s' in includes.  ns='%s', source=%s, loc=%s, includes=" % (
-            #    mid, ns, source, loc)
-            # print "ignoring this for now."
-            return
+            # this was already included
+            # if the 'qty' is different, overwrite the old one with the new one
+            # (to allow modifying the required quantity in subclasses)
+            # otherwise just return
+#             print "Found duplicate id '%s' in includes." % mid
+#             print "  New: ns='%s', source=%s, qty=%s, loc=%s" % (ns, source, qty, loc)
+#             print " prev: ns='%s', source=%s, qty=%s" % (includes[mid]['ns'], includes[mid]['source'],
+#                 includes[mid]['qty'])
+            if qty == includes[mid]['qty']:
+                # quantity is same, ignore this new one
+               return
+            else:
+                # quantity is different, replace old include with new one
+                pass
 #         assert mid not in includes, "%s: attempting to add include %s more than once" %(
 #             loc, mid)
         assert id in self.ddef[ns]['structures'], ("%s: attempting to add include %s:%s "
@@ -3735,7 +3761,7 @@ class File(object):
             # qid, qty = self.parse_qty(qidq, "*")
             ins, mid = self.parse_qid(qid, ns)
             extra = include_spec[qid]
-            qty = extra.pop('_qty') if '_qty' in extra else '*'
+            qty = extra.pop('_qty') if '_qty' in extra else '!'
             # remove '_source' from includes extra.  This currently not used.
             source_id = extra.pop('_source') if '_source' in extra else None
             if ("_options" in extra and "subclasses" in extra["_options"]
@@ -4045,13 +4071,20 @@ class File(object):
                 # found to merge using criteria 1
                 qid = "%s:%s" % (ns, id)
                 to_merge.append(qid)
+                # print "overlapping merge criteria 1: full_path=%s, id=%s:%s, qid=%s" % (
+                #    full_path, tns, id, qid)
             if full_path is None:
                 # full path is unknown.  Don't check for absolute paths to merge
                 continue
             if full_path_g in structures and (ns != tns or full_path_g != source_id):  # don't merge in self
+            # requirement that source_id[0] == '/' allows merges in same ns only if 
+            # both source ids are absolute paths
+#             if full_path_g in structures and (ns != tns or 
+#                 (source_id[0] == '/' and full_path_g != source_id)):
                 # found to merge using criteria 2
                 qid = "%s:%s" % (ns, full_path_g)
                 to_merge.append(qid)
+                # print "overlapping merge criteria 2: full_path=%s, id=%s:%s, qid=%s" % (full_path, tns, id, qid)
             v_id = re.match( r'^<[^>]+>/$', id) # True if variable_id (in < >)
             if v_id:
                 parent_path, name = self.get_name_from_full_path(full_path)
@@ -4060,6 +4093,7 @@ class File(object):
                 # found to merge using criteria 3
                     qid = "%s:%s" % (ns, full_path_vid)
                     to_merge.append(qid)
+                    # print "overlapping merge criteria 3: full_path=%s, id=%s:%s, qid=%s" % (full_path, tns, id, qid)
 #         if to_merge:
 #             print "find_overlapping_structures, tns=%s, id=%s, full_path=%s; returning %s" % (tns,
 #                 id, full_path, to_merge)
@@ -5103,6 +5137,8 @@ class Group(Node):
                 parent_path, basename = self.file.get_name_from_full_path(id)
                 parent_path_g = parent_path + '/' if not parent_path.endswith('/') else parent_path
                 if parent_path_g.startswith(full_path_g):
+                    # print "found id to include, id=%s, full_path_g = %s, parent_path=%s" % (id, full_path_g, parent_path)
+                    # import pdb; pdb.set_trace()
                     # found id to include
                     # '_qty' key may have been added by function File.reformat_structures
                     qty = structures[id]['_qty'] if '_qty' in structures[id] else '!'
@@ -5120,32 +5156,25 @@ class Group(Node):
 #         pp.pprint(implicit_includes)
         source = "implicit"
         for mid in implicit_includes:
-            if mid not in self.includes:
-                mid_info = implicit_includes[mid]
-                if len(mid_info) > 1:
-                    # find implicit include with shortest path to be sure to get the definition
-                    # of it in function get_member_stats.  (If the path was longer than necessary
-                    # get_member_stats might create an empty definition, rather than using the
-                    # real one).
-                    min_path_length = None
-                    for i in range(len(mid_info)):
-                        (i_ns, i_id, i_qty) = mid_info[i]
-                        i_path_length = len(i_id)
-                        if min_path_length is None or i_path_length < min_path_length:
-                            min_path_length = i_path_length
-                            wanted_index = i
-#                     print "%s: implicitly including more than one id with same member id: %s" % (
-#                         self.full_path, mid)
-#                     print "Id's are:"
-#                     pp.pprint(mid_info)
-#                     print "selected index %i: %s" % (wanted_index, mid_info[wanted_index])
-                else:
-                    wanted_index = 0
-                ns, id, qty = mid_info[wanted_index]
+            # if mid in self.includes:
+            #     print "found mid=%s in includes" % mid
+            mid_info = implicit_includes[mid]
+            if len(mid_info) > 1:
+                # find implicit include with shortest path to be sure to get the definition
+                # of it in function get_member_stats.  (If the path was longer than necessary
+                # get_member_stats might create an empty definition, rather than using the
+                # real one).
+                min_path_length = None
+                for i in range(len(mid_info)):
+                    (i_ns, i_id, i_qty) = mid_info[i]
+                    i_path_length = len(i_id)
+                    if min_path_length is None or i_path_length < min_path_length:
+                        min_path_length = i_path_length
+                        wanted_index = i
+            else:
+                wanted_index = 0
+            ns, id, qty = mid_info[wanted_index]
             self.file.save_include(self.includes, mid, id, ns, qty, source, self.sdef['id'])
-#                 qidq = "%s:%s%s" % (ns, id, qty)
-#             self.includes[qidq] = {}
-   
     
     def get_path_part(self, prefix, full_path):
         """ Get part of path after prefix.  prefix must end with slash.
