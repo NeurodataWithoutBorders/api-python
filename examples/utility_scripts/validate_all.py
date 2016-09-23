@@ -26,6 +26,7 @@ extensions_dir="../create_scripts/extensions"
 needed_extensions = {
     'analysis-e': 'e-analysis.py',
     'behavior-e': 'e-behavior.py',
+    'closed_interface-e': 'e-closed_interface.py',
     'general-e': 'e-general.py',
     'interface-e': 'e-timeseries.py,e-interface.py',
     'module-e': 'e-module.py,e-interface.py,e-timeseries.py',

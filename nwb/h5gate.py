@@ -2014,7 +2014,7 @@ class File(object):
                             # pp.pprint(node.sdef)
                             pass 
                         elif (node.parent and 'custom' in node.parent.sdef and
-                            node.parent.sdef['custom']):
+                            node.parent.sdef['custom'] and not self.closed_group(node.parent)):
                             # this node is inside an already known custom node,
                             # make a warning rather than an error
                             vi['custom_nodes_inside_custom_missing_flag'][type].append(node.full_path)
@@ -2027,7 +2027,13 @@ class File(object):
                                 if explanation:
                                     vi['explanations'][node.full_path] = explanation
                     else:
-                        vi['identified_custom_nodes'][type].append(node.full_path)
+                        if self.closed_group(node.parent):
+                            # generate an error because additions not allowed in this group
+                            msg = "%s: addition not allowed because parent group specified as closed" % (
+                                node.full_path)
+                            self.error.append(msg)
+                        else:
+                            vi['identified_custom_nodes'][type].append(node.full_path)
             elif node.sdef['ns'] != self.default_ns and self.options['identify_extension_nodes']:
                 # this node defined in an extension and should be identified by an attribute
                 eaid = self.options['extension_node_identifier']
@@ -2114,6 +2120,11 @@ class File(object):
                 # should never happen
                 error_exit("unknown type in validation: %s" %type)
 
+    def closed_group(self, node):
+        """ return True if group is 'closed' (specified by '_closed': True)
+        otherwise, return False"""
+        closed = hasattr(node, 'closed') and node.closed
+        return closed
      
     def validate_attributes(self, node, vi):
         """ Check for any attributes that are required or recommended but do not
@@ -4003,7 +4014,7 @@ class File(object):
             # OLD: save namespace associated with this id
             # ns_sources[id] = sdef['ns']
             # NEW: append qid of this source to id_sources
-            if "_source" in expanded_def[id]:
+            if isinstance(expanded_def[id], dict) and "_source" in expanded_def[id]:
                 source = expanded_def[id].pop("_source")
                 if id in id_sources:
                     id_sources[id].append(source)
@@ -5353,6 +5364,9 @@ class Group(Node):
             if id == "_required":
                 # don't save _required specification in mstats, save it with object
                 self.required = self.expanded_def[id]
+                continue
+            if id == "_closed":
+                self.closed = self.expanded_def[id]
                 continue
             if id == "_exclude_in":
                 # don't save _exclude_in specification in mstats, save it with object

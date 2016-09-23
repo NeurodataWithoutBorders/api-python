@@ -1220,9 +1220,10 @@ class Table(object):
         self.filter = filter  # group, dataset or none
         self.required_messages = []
         self.exclude_ids = None
+        self.closed_ids = []
         # self.more_info_str = "MORE_INFO:"
         
-    def add(self, id, id_str, type, description, required, ns=None, override=None):
+    def add(self, id, id_str, type, description, required, ns=None, override=None, closed=False):
         """Add a row to the table.
         id - actual id (key) for member.
         id_str - string to display for id.  Might include indentation.
@@ -1232,9 +1233,10 @@ class Table(object):
         ns - namespace associated with item.  Used to display namespace if it's not the default
             (i.e. is from an extension).
         override - True if this item overrides one in a subclass (because of merge).  False otherwise.
+        closed - True if this is a closed group (specified by '_closed': True). False otherwise
         """
         row = {'id': id, 'Id':id_str, 'Type':type, 'Description':description, 'Required':required,
-            'ns': ns, 'override': override}
+            'ns': ns, 'override': override, 'closed': closed}
         self.rows.append(row)
         
     def save_required_message(self, ids, message):
@@ -1313,6 +1315,11 @@ class Table(object):
         msgs = '; '.join(msgs) + "."
         msgs = msgs[0].upper() + msgs[1:] # capitalize first character
         return msgs
+
+    def get_closed_message(self, row):
+        """ return message indicating group is closed if closed was specified."""
+        msg = 'This group is closed (no additional members allowed).' if row['closed'] else ''
+        return msg
     
     def get_id_css(self, id_str, ns, override):
         """ if either an extension namespace or subclass override is specified
@@ -1343,7 +1350,9 @@ class Table(object):
             id = row['id']
             required_message = self.get_required_message(id)
             exclude_message = self.get_exclude_message(id)
-            qualifier_message = " ".join([m for m in [required_message, exclude_message] if m])
+            # closed message only applies to first row since it's for the entire group
+            closed_message = self.get_closed_message(tmp_row)
+            qualifier_message = " ".join([m for m in [required_message, exclude_message, closed_message] if m])
             if qualifier_message:
                 tmp_row['Description'] = tmp_row['Description'] + " <b>%s</b>" % qualifier_message
             if self.has_comment:
@@ -1644,7 +1653,8 @@ def make_tree_doc(f, ids_documented):
 def process_top_group_members(f, grp, level, ids_documented, grp_tl, filter=None):
     """ Generate table of documentation for members in "top-level" (i.e. group that has
     a known absolute path specified in the schema.  This called from function
-    make_tree_doc.  Return table object.
+    make_tree_doc.  grp_tl is a "task list" of groups to processes.
+    Return table object.
     """
     df = grp.sdef['df']
     tbl = Table(f, filter=filter)
@@ -1800,53 +1810,6 @@ def make_id_doc(f, id, id_info, ids_documented, sdef=None):
                 print "Did merge of %s into %s, found to_include=%s" % (
                     to_merge, qid, to_include)
                 sys.exit(1)
-#             if id_sources:
-#                 # add id_sources to id_info so can display source of extension id's
-#                 assert 'id_sources' not in id_info, "id_sources already in id_info: %s" % id_info
-#                 id_info['id_sources'] = id_sources
-#                    import pdb; pdb.set_trace()
-#                     print "Did merge of %s into %s, found ns_sources=%s" % (
-#                         to_merge, qid, ns_sources)
-       
-# OLD code, used only for <Interface>/, did not work for more general extensions    
-#     print "make_id_doc, id=%s ns=%s qty=%s df=" % (id, ns, qty)
-#     pp.pprint(df)
-#     if sdef and '<' in sdef['id']:
-# #         print "found sdef, id=%s, sdef['id']=%s" % (id, sdef['id'])
-# #         import pdb; pdb.set_trace()
-#         # found variable id to merge
-#         if sdef['id'][0] == '/':
-#             # has absolute path, ignore for now
-# #             print "%s: found absolute path, sdef[id]= %s" % (id, sdef['id'])
-#             pass
-#         else:
-#             # does not have absolute path, unless it's abstract (e.g. <Interface>/,
-#             # it should have been created somewhere
-# #             if id in created_ids:
-# #                 node = created_ids[id][0]    
-#             # import pdb; pdb.set_trace()
-#             # for nwb core doc, this only called for <Interface>/
-#             to_merge = f.find_overlapping_structures(sdef, None)
-#             if to_merge:
-# #                 print "%s: found overlapping structures: %s" % (id, to_merge)
-#                 df = dict(df)  # make copy so don't modify original
-#                 to_include = []
-#                 id_sources = {}
-#                 f.process_merge(df, to_merge, to_include, id_sources, ns, qid)
-#                 id_info = dict(id_info)  # copy so don't change original
-#                 id_info['df'] = df
-#                 if to_include:
-#                     # not sure what to do with to_include right now
-#                     print "Did merge of %s into %s, found to_include=%s" % (
-#                         to_merge, qid, to_include)
-#                     sys.exit(1)
-#                 if id_sources:
-#                     # add id_sources to id_info so can display source of extension id's
-#                     assert 'id_sources' not in id_info, "id_sources already in id_info: %s" % id_info
-#                     id_info['id_sources'] = id_sources
-# #                    import pdb; pdb.set_trace()
-# #                     print "Did merge of %s into %s, found ns_sources=%s" % (
-# #                         to_merge, qid, ns_sources)
     # description = cgi.escape(get_description(df, more_info=True))
     description = get_description(df, in_group=False)
     html.append("<p>%s</p>" % description)
@@ -2023,8 +1986,9 @@ def add_group_doc(f, id, id_info, tbl, level, ids_documented, mode="stand_alone"
     indent = ".&nbsp;" * level
     qid = id if ns == f.default_ns else "%s:%s" % (ns, id)
     override = 'source' in id_info and len(id_info['source']) > 1
+    closed = "_closed" in df and df["_closed"]
     id_str = "%s%s" % (indent, cgi.escape(remove_trailing_slash(qid)))
-    tbl.add(qid, id_str, type, description, required, ns, override)
+    tbl.add(qid, id_str, type, description, required, ns, override, closed)
     add_attributes(f, id_info, tbl, level+1)
     if link_spec:
         # if this is a link there should not be any members to process
@@ -2057,6 +2021,9 @@ def add_group_doc(f, id, id_info, tbl, level, ids_documented, mode="stand_alone"
         if mkey == "_exclude_in":
             process_exclude_in_clause(tbl, df[mkey])
             continue
+        if mkey == "_closed":
+            # was processed previously and added to table
+            continue
         if mkey == "_properties":
             # properties not displayed.  They are used to flag that a group is "abstract"
             continue
@@ -2085,28 +2052,6 @@ def add_group_doc(f, id, id_info, tbl, level, ids_documented, mode="stand_alone"
             # table for it, but make a link
             includes[mid] = mid_info['include_info']
             continue
-        # mqty = f.retrieve_qty(mdf, "!")
-        
-        
-#         if mid in id_sources:
-#             print "id %s - %s, id_sources: %s" % (id, mid, id_sources[mid])
-#         else:
-#             print "id %s - %s, id_sourcs *Not Found*" % (id, mid)
-# code above more recent
-# code below old, was commented out a while agoe
-#         if 'ns_sources' in id_info and mid in id_info['ns_sources']:
-#             # namespace specified for this id, (merged from extension)
-#             mns = id_info['ns_sources'][mid]
-#         else:
-#             mns = ns
-# Below code was recently in, probably if condition was never true
-#         if 'id_sources' in id_info:
-#             id_source = self.id_sources[mid]  # this is an error - TODO: fix
-#             # get ns from last element, all elements have format: "ns:id"
-#             mns = id_source[-1].rpartition(':')[0]
-#         else:
-#             mns = ns
-
         mtype = 'group' if mid.endswith('/') else 'dataset'
         # mid_info = {'df': mdf, 'qty': mqty, 'ns':mns, 'type':mtype}
         if mtype == 'group':
@@ -2302,7 +2247,7 @@ def get_combined_includes(f, includes, ns, ids_documented):
             if base in combined_includes:
                 combined_includes[base]['subclasses'][mkey] = mlink
             else:
-                combined_includes[base] = {'id': base, 'ns': iinfo['ns'],
+                combined_includes[base] = {'id': base, 'ns': ns,
                     'qty': iinfo['qty'], 'source': 'subclass', 'subclasses': {mkey: mlink}}
         else:
             # normal include, just copy info

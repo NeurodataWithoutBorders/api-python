@@ -18,7 +18,7 @@
 "info": {
     "name": "Example custom module extension",
     "version": "1.0",
-    "date": "Sept. 7, 2016",
+    "date": "Sept. 22, 2016",
     "author": "Jeff Teeters",
     "contact": "jteeters@berkeley.edu",
     "description": ("Extension defining a new Module type, named 'MyNewModule', that has"
@@ -26,7 +26,6 @@
     },
     
 "schema": {
-    # "/processing/<MyNewModule>/":
     "<MyNewModule>/": {
         "merge": ["core:<Module>/"],
         "description": ("A new module defined in extension e-module.py.  Requires two "
