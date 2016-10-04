@@ -4,8 +4,8 @@
 
 "info": {
     "name": "AIBS Cell Types - intracellular metadata",
-    "version": "0.9.2",
-    "date": "Feb 22, 2016",
+    "version": "0.9.3",
+    "date": "Oct 3, 2016",
     "author": "Jeff Teeters, based on HDF5 created by Keith Godfrey using AIBS NWB API",
     "contact": "jteeters@berkeley.edu",
     "description": "NWB extension for intracellular metadata base onf AIBS cell types data base NWB files."
@@ -16,8 +16,9 @@
         "description": ("AIBS specific VoltageClampSeries.  Includes AIBS sepcific metadata."),
         "aibs_stimulus_amplitude_mv": {
             "description": "AIBS specific stimulus_amplitude",
-            "data_type": "float",
-            "unit": "mv"},
+            "attributes": {
+			    "unit": { "data_type": "text", "value": "mv"}},
+			"data_type": "float"},
         "aibs_stimulus_description": {
             "description": "AIBS specific stimulus description",
             "data_type": "text"},
@@ -32,8 +33,9 @@
         "description": ("AIBS specific CurrentClampSeries.  Includes AIBS sepcific metadata."),
         "aibs_stimulus_amplitude_pa": {
             "description": "AIBS specific stimulus_amplitude",
-            "data_type": "float",
-            "unit": "pa"},
+            "attributes": {
+			    "unit": { "data_type": "text", "value": "pa"}},
+            "data_type": "float"},
         "aibs_stimulus_description": {
             "description": "AIBS specific stimulus description",
             "data_type": "text"},
@@ -49,8 +51,9 @@
 		    "location /stimulus/presentation/, but not to location /stimulus/templates"),
 		"aibs_stimulus_amplitude_pa": {
 			"description": "AIBS specific stimulus_amplitude",
-			"data_type": "float",
-			"unit": "mv"},
+			"attributes": {
+			    "unit": { "data_type": "text", "value": "mv"}},
+			"data_type": "float"},
 		"aibs_stimulus_description": {
 			"description": "AIBS specific stimulus description",
 			"data_type": "text"},
@@ -66,8 +69,9 @@
 		    "location /stimulus/presentation/, not to location /stimulus/templates"),
 		"aibs_stimulus_amplitude_mv": {
 			"description": "AIBS specific stimulus_amplitude",
-			"data_type": "float",
-			"unit": "mv"},
+			"attributes": {
+			    "unit": { "data_type": "text", "value": "mv"}},
+			"data_type": "float"},
 		"aibs_stimulus_description": {
 			"description": "AIBS specific stimulus description",
 			"data_type": "text"},

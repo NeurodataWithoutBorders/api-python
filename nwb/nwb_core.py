@@ -11,8 +11,8 @@
 
 "info": {
     "name": "NWB file format specification",
-    "version": "1.0.5e_beta",
-    "date": "Sept 22, 2016",
+    "version": "1.0.5f_beta",
+    "date": "Oct 3, 2016",
     "author": "Keith Godfrey.  Converted to format specification by Jeff Teeters.",
     "contact": "jteeters@berkeley.edu, keithg@alleninstitute.org",
     "description": "Specification for the core NWB (Neurodata Withoug Borders) format."
@@ -171,7 +171,7 @@
                     "\"'auditory_cue' is '/stimulus/presentation/auditory_cue'\"."
                     ),
                     "data_type": "text",
-                    "dimensions": "num_links",
+                    "dimensions": ["num_links"],
                     "autogen": {
                         "type": "link_path",
                         "target":"<timeseries_X>/timeseries",
@@ -185,12 +185,12 @@
                 "description": "Description of this epoch (&lt;epoch_X&gt;)."},
             "start_time": {
                 "description": "Start time of epoch, in seconds",
-                "data_type": "float64!",
-                "unit": "second", },
+                # "unit": "second",
+                "data_type": "float64!"},
             "stop_time": {
                 "description": "Stop time of epoch, in seconds",
-                "data_type": "float64!",
-                "unit": "second", },
+                # "unit": "second",
+                "data_type": "float64!"},
             "tags?": {
                 "description": ("User-defined tags used throughout "
                     "the epochs. Tags are "
@@ -426,7 +426,7 @@
             "dimensions": ["num_electrodes","xyz"],  # specifies 2-D array
             "data_type": "number",
             "xyz" : {  # definition of dimension xyz
-                "type": "struct",
+                "type": "structure",
                 "components": [
                     { "alias": "x", "unit": "meter" },
                     { "alias": "y", "unit": "meter" },
@@ -507,7 +507,7 @@
                             "unit (e.g., 1e-3 for millimeters)"),
                         "data_type": "float", "value": 1.0}},
                 "xyz" : {  # definition of dimension xyz
-                     "type": "struct",
+                     "type": "structure",
                     "components": [
                         { "alias": "x", "unit": "Meter" },
                         { "alias": "y", "unit": "Meter" },
@@ -1406,7 +1406,7 @@
             "data_type": "float32",
             "dimensions": ["whd", ],
             "whd": {
-                "type": "struct",
+                "type": "structure",
                 "components": [
                     { "alias": "width", "unit": "meter" },
                     { "alias": "height", "unit": "meter" },
@@ -2042,7 +2042,7 @@
             "corrected/": {
                 "description": "Image stack with frames shifted to the common coordinates.",
                 #{ "include": {"<ImageSeries>/*": {} } }
-                "merge+": ["<ImageSeries>/", ]
+                "merge+": ["<ImageSeries>/"]
             }
         },
     },
@@ -2525,7 +2525,13 @@ advice.</p>
         "location": {"id":"Acknowledgements", "position": "after"},
         "level": 0,
         "content": """
-  <p style="margin-bottom: 0in">1.0.5e_beta, Sept 22, 2016</p>
+ <p style="margin-bottom: 0in">1.0.5f_beta, Oct 3, 2016</p>
+ <p>Minor fixes to allow validation of schema using json-schema
+ specification in file "meta-schema.py" using utility
+ "check_schema.py".</p>
+ <p style="margin-bottom: 0in"></p><br/>
+ 
+ <p style="margin-bottom: 0in">1.0.5e_beta, Sept 22, 2016</p>
  <p>Moved definition of &lt;Module&gt;/ out of /processing group to allow
  creating subclasses of Module.  This is useful for making custom
  Module types that specified required interfaces.  Example of

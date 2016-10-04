@@ -15,6 +15,7 @@
 
 {"fs": { "new_mod": {
 
+
 "info": {
     "name": "Example custom module extension",
     "version": "1.0",

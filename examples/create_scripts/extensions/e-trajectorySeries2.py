@@ -8,7 +8,7 @@
 "info": {
     "name": "Sabes lab data trajectory series",
     "version": "1.0",
-    "date": "May 2, 2016",
+    "date": "Oct 3, 2016",
     "author": "Jeff Teeters",
     "contact": "jteeters@berkeley.edu",
     "description": ("Extension to store timeseries of hand trajectories for Sabes lab data")
@@ -33,7 +33,7 @@
             "dimensions": ["num_times", "trajectories"],
             "data_type": "float32",
             "trajectories": {
-                "type": "struct",
+                "type": "structure",
                 # define components of trajectories dimension 
                 "components": [
                     { "alias": "s1_x", "unit": "meter" },
