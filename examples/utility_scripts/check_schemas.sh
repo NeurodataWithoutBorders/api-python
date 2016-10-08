@@ -5,7 +5,7 @@
 # nwb.check_schema requires having jsonschema installed.
 # available at: https://github.com/Julian/jsonschema
 
-# to run, type ./check_all_schema.sh
+# to run, type ./check_schemas.sh
 
 # check core schema
 python -m nwb.check_schema -
