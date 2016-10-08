@@ -848,9 +848,15 @@ def check_for_autogen(dict, aid, path, ctype, f):
 #     print "check for autogen, aid=%s" % aid
 #     if aid == "missing_fields":
 #         import pdb; pdb.set_trace()
-    if 'autogen' not in dict:
+    if 'autogen' in dict:
+        agspec = dict['autogen']
+    elif (ctype == 'group' and '_properties' in dict and 'create' in dict['_properties']
+        and dict['_properties']['create']):
+        # found "_properties": {"create": True}.  Treat this as "autogen": {"type": "create"}
+        agspec = {"type": "create"}
+    else:
+        # autogen not found
         return False
-    agspec = dict['autogen']
     type = get_param(agspec, 'type', None)
     target = get_param(agspec, 'target', None)
     trim = get_param(agspec, 'trim', False)

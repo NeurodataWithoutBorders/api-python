@@ -2121,9 +2121,11 @@ class File(object):
                 error_exit("unknown type in validation: %s" %type)
 
     def closed_group(self, node):
-        """ return True if group is 'closed' (specified by '_closed': True)
+        """ return True if group is 'closed' (specified by '_properties': {'closed': True)
         otherwise, return False"""
-        closed = hasattr(node, 'closed') and node.closed
+        df = node.sdef['df']
+        closed = "_properties" in df and "closed" in df["_properties"] and df["_properties"]["closed"]
+        # closed = hasattr(node, 'closed') and node.closed
         return closed
      
     def validate_attributes(self, node, vi):
@@ -5104,7 +5106,10 @@ class Group(Node):
         "mstats" (member stats" dictionary is searched. """
         for id in self.mstats:
             minfo = self.mstats[id]
-            if 'autogen' in minfo['df']:
+            if 'autogen' in minfo['df'] or (
+                # check for "_properties": {"create": True}  -- this replaces "autogen": {"type": "create"}
+                minfo['type'] == 'group' and '_properties' in minfo['df'] and
+                 'create' in minfo['df']['_properties'] and minfo['df']['_properties']['create']):
                 # found autogen.  Make sure member does not have a variable name
                 v_id = re.match( r'^<[^>]+>/?$', id)   # True if variable_id (in < >)
                 if v_id:
@@ -5355,8 +5360,8 @@ class Group(Node):
                 # ignore it here
                 continue
             if id == "_properties":
-                # _properties currently used only for documentation (to flag group is abstract)
-                # not needed here
+                # _properties used to flag group is abstract, closed or create (should be
+                # created).  They are not needed here
                 continue
 #             if id in ("description", "_description"):
 #                 # testing not including description
@@ -5365,9 +5370,9 @@ class Group(Node):
                 # don't save _required specification in mstats, save it with object
                 self.required = self.expanded_def[id]
                 continue
-            if id == "_closed":
-                self.closed = self.expanded_def[id]
-                continue
+#             if id == "_closed":
+#                 self.closed = self.expanded_def[id]
+#                 continue
             if id == "_exclude_in":
                 # don't save _exclude_in specification in mstats, save it with object
                 self.exclude_in = self.expanded_def[id]
@@ -5379,14 +5384,18 @@ class Group(Node):
                 # is the quantity specified at end of absolute path_id, moved
                 # to _qty by function "File.reformat_structures"
                 continue
+            if not isinstance(self.expanded_def[id], dict):
+                msg = "%s: Invalid type for id %s, should be dict, found %s" % (
+                    self.full_path, id, type(self.expanded_def[id]))
+                error_exit(msg)
             # check for trailing quantity specifier (!, *, +, ?).  Not for name space.
             # ! - required (default), * - 0 or more, + - 1 or more, ? - 0 or 1
             # id, qty = self.file.parse_qty(qid, "!")
             qty = self.file.retrieve_qty(self.expanded_def[id], "!")
             if id in self.mstats.keys():
                 error_exit("duplicate (%s) id in group" % id)
-            type = 'group' if id.endswith('/') else 'dataset'
-            if type == 'dataset':
+            mtype = 'group' if id.endswith('/') else 'dataset'
+            if mtype == 'dataset':
                 # check for this being a dimension and not really a dataset
                 if 'data_type' in self.expanded_def[id]:
                     # is dataset
@@ -5413,7 +5422,7 @@ class Group(Node):
 #             ns = self.ns_sources[id] if id in self.ns_sources else self.sdef['ns']
             # quid = "%s:%s" % (ns, id) if ns != self.file.default_ns else id
             self.mstats[id] = { 'ns': ns, 'qty': qty, 'df': self.expanded_def[id],
-                'created': [], 'type': type, 'source': id_source }
+                'created': [], 'type': mtype, 'source': id_source }
         # add in members from any includes
         # first find any id's that are included explicitly (by absolute path)
         self.find_implicit_includes()

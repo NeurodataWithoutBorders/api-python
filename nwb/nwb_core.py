@@ -11,8 +11,8 @@
 
 "info": {
     "name": "NWB file format specification",
-    "version": "1.0.5f_beta",
-    "date": "Oct 3, 2016",
+    "version": "1.0.5g_beta",
+    "date": "Oct 7, 2016",
     "author": "Keith Godfrey.  Converted to format specification by Jeff Teeters.",
     "contact": "jteeters@berkeley.edu, keithg@alleninstitute.org",
     "description": "Specification for the core NWB (Neurodata Withoug Borders) format."
@@ -77,10 +77,10 @@
             "If bulky data is stored in the /acquisition group, the data can exist in a "
             "separate HDF5 file that is linked to by the file being used for processing "
             "and analysis."),
-        "autogen": { "type": "create"},
+        "_properties": {"create": True},
         "images/": {
             "description": "Acquired images",
-            "autogen": { "type": "create"},
+            "_properties": {"create": True},
             "<image_X>*": {
                 "data_type": "binary",
                 "description": ("Photograph of experiment or experimental setup (video also OK). "
@@ -101,7 +101,7 @@
                 "COMMENT: When importing acquisition data to an NWB file, "
                 "all acquisition/tracking/stimulus data must already be aligned to a common time "
                 "frame. It is assumed that this task has already been performed."),
-            "autogen": { "type": "create"},
+            "_properties": {"create": True},
             "include":  {
                 "<TimeSeries>/*":{"_options": {"subclasses": True}},
                 }}
@@ -116,7 +116,7 @@
             "restriction on its form or schema, reducing data formatting restrictions on "
             "end users. Such data should be placed in the analysis group. The analysis data "
             "should be documented so that it is sharable with other labs"),
-        "autogen": { "type": "create"}
+        "_properties": {"create": True},
     },
     "/epochs/": {
         "description": ("Experimental intervals, whether that be logically distinct sub-experiments "
@@ -136,7 +136,7 @@
             "can be limited to the interval of a particular stimulus, or they can span multiple "
             "stimuli. Different windows into the same time series can be achieved by including "
             "multiple instances of that time series, each with different start/stop times."),
-        "autogen": { "type": "create"},
+        "_properties": {"create": True},
         "attributes": {
             "tags": {
                 "description": ("A sorted list of the different tags used by epochs. "
@@ -185,11 +185,9 @@
                 "description": "Description of this epoch (&lt;epoch_X&gt;)."},
             "start_time": {
                 "description": "Start time of epoch, in seconds",
-                # "unit": "second",
                 "data_type": "float64!"},
             "stop_time": {
                 "description": "Stop time of epoch, in seconds",
-                # "unit": "second",
                 "data_type": "float64!"},
             "tags?": {
                 "description": ("User-defined tags used throughout "
@@ -236,7 +234,7 @@
             "All entries in the below table are to be included when data is present. "
             "Unused groups (e.g., intracellular_ephys in an optophysiology experiment) "
             "should not be created unless there is data to store within them."),
-        "autogen": { "type": "create"},
+        "_properties": {"create": True},
         "__custom?": {
             "description": ("Indicates that this group (general/) is the default location for custom"
                 " nodes.  This dataset in the format specification is just a flag. "
@@ -580,7 +578,7 @@
             "MORE_INFO: 'Processing' refers to intermediate analysis of the acquired data to make "
             "it more amenable to scientific analysis. These are performed using Modules, as "
             "defined above. All modules reside in the processing group."),
-        "autogen": { "type": "create"},
+        "_properties": {"create": True},
         "include": { "<Module>/*": {"_options": {"subclasses": True} }}
     },
     "/stimulus/": {
@@ -597,10 +595,10 @@
             "stimuli can be stored and these be used multiple times. These templates can "
             "exist in the present file or can be HDF5-linked to a remote library file."
             ),
-        "autogen": { "type": "create"},
+        "_properties": {"create": True},
         "presentation/": {
             "description": "Stimuli presented during the experiment.",
-            "autogen": { "type": "create"},
+            "_properties": {"create": True},
             "include": {
                 "<TimeSeries>/*":{"_options": {"subclasses": True}},
             }
@@ -611,7 +609,7 @@
                 "relative to the beginning of the stimulus. When templates are used, the "
                 "stimulus instances must convert presentation times to the experiment's "
                 "time reference frame."),
-            "autogen": { "type": "create"},
+            "_properties": {"create": True},
             "include": {
                 "<TimeSeries>/*":{"_options": {"subclasses": True}},
             }
@@ -627,7 +625,6 @@
             "description?": {
                 "data_type": "text",
                 "description": "Description of Module"},
-            # "interfaces": {"data_type": "text", "dimensions": ["num_interfaces",]},
             "interfaces": {
                 "description": ("Names of the data interfaces offered by this module. "
                     "COMMENT: E.g., [0]=\"EventDetection\", [1]=\"Clustering\", "
@@ -2525,6 +2522,15 @@ advice.</p>
         "location": {"id":"Acknowledgements", "position": "after"},
         "level": 0,
         "content": """
+ <p style="margin-bottom: 0in">1.0.5g_beta, Oct 7, 2016</p>
+ <p>Replace group options: autogen: {"type": "create"} and
+ "_closed": True with
+ "_properties": {"create": True} and "_properties": {"closed": True}.
+ This done to make the specification language more
+ consistent by having these group properties specified in one place
+ ("_properties" dictionary).</p>
+ <p style="margin-bottom: 0in"></p><br/>
+
  <p style="margin-bottom: 0in">1.0.5f_beta, Oct 3, 2016</p>
  <p>Minor fixes to allow validation of schema using json-schema
  specification in file "meta-schema.py" using utility

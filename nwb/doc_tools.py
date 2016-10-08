@@ -1233,7 +1233,7 @@ class Table(object):
         ns - namespace associated with item.  Used to display namespace if it's not the default
             (i.e. is from an extension).
         override - True if this item overrides one in a subclass (because of merge).  False otherwise.
-        closed - True if this is a closed group (specified by '_closed': True). False otherwise
+        closed - True if this is a closed group (specified by '_properties': {'closed': True}). False otherwise
         """
         row = {'id': id, 'Id':id_str, 'Type':type, 'Description':description, 'Required':required,
             'ns': ns, 'override': override, 'closed': closed}
@@ -1986,7 +1986,8 @@ def add_group_doc(f, id, id_info, tbl, level, ids_documented, mode="stand_alone"
     indent = ".&nbsp;" * level
     qid = id if ns == f.default_ns else "%s:%s" % (ns, id)
     override = 'source' in id_info and len(id_info['source']) > 1
-    closed = "_closed" in df and df["_closed"]
+    # closed = "_closed" in df and df["_closed"]
+    closed = '_properties' in df and 'closed' in df['_properties'] and df['_properties']['closed']
     id_str = "%s%s" % (indent, cgi.escape(remove_trailing_slash(qid)))
     tbl.add(qid, id_str, type, description, required, ns, override, closed)
     add_attributes(f, id_info, tbl, level+1)
@@ -2395,7 +2396,10 @@ def get_description(df, in_group=True, by_include=False):    # more_info=False):
     """
     # in_group = not more_info
     description = get_element(df, '_description', None)
-    is_autogen = 'autogen' in df
+    # is_autogen = 'autogen' in df
+    # check for "_properties": {"create": True}  -- this replaces "autogen": {"type": "create"}
+    auto_created = ("_properties" in df and 'create' in df['_properties'] and df['_properties']['create']
+        or 'autogen' in df)
     if not description:
         description = get_element(df, 'description', '*Not available*')
         if not isinstance(description, str):
@@ -2409,14 +2413,14 @@ def get_description(df, in_group=True, by_include=False):    # more_info=False):
     if in_group:
         if idx_more_info != -1:
             description = description[0:idx_more_info]
-            if is_autogen:
+            if auto_created:
                 description += autogen_msg
         else:
             if idx_comment == -1 and by_include:
                 # only return first sentence for table
                 sentence_list = splitParagraphIntoSentences(description)
                 description = sentence_list[0]
-            elif is_autogen:
+            elif auto_created:
                 description += autogen_msg
     elif idx_more_info != -1:
         description = description[idx_more_info + len(more_info_str):]

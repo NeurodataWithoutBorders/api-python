@@ -124,8 +124,11 @@
         "group_properties": {
             "type": "object",
             "properties": {
-                "abstract": {"type": "boolean"}
-            }
+                "abstract": {"type": "boolean"},
+                "create": {"type": "boolean"},
+                "closed": {"type": "boolean"}
+            },
+            "additionalProperties": False
         },
         "group_required": {
             "type": "object",

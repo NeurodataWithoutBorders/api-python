@@ -19,7 +19,7 @@
         "merge": ["core:<Interface>/"],
         "description": ("A new interface defined in extension e-closed-interface.py."
             "  This is closed (no new members can be added)."),
-        "_closed": True,  # specify that this group is closed (no new members can be added).
+        "_properties": {"closed": True},  # specify that this group is closed (no new members can be added).
         "attributes": {
             "foo": {
                 "description": "example text attributed for MyClosedInterface",
@@ -30,10 +30,12 @@
             "dimensions": ["num_measurements"]},
         "bazc/": {
             "description": ("Example closed group in MyClosedInterface"),
-            "_closed": True},
+            # "_closed": True,
+            "_properties": {"closed": True}},
         "bazo/": {
             "description": ("Example open group in MyClosedInterface"),
-            "_closed": False}
+            # "_closed": False,
+            "_properties": {"closed": False}}
     }
 }
 
