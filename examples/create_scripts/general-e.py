@@ -45,6 +45,8 @@ gri.set_dataset("attendance", [23, 45, 33])
 f.set_dataset("rctn:activity_level", '7')
 f.set_dataset("rctn:time_since_fed", '6 hours 20 minutes')
 
+f.set_dataset("notes", "some notes")
+
 # also set extra metadata about subject
 # these datasets are also defined in the extension
 # dataset names and values are from a file in the AIBS cell types database

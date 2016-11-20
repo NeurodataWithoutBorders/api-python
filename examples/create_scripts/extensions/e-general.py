@@ -27,6 +27,10 @@
     "/general/": {
         "description": "Extension to core general",
         "include": {  'time_since_fed': {}},
+        "_required": { # Specifies required member combinations",
+            "test_req" :
+                ["notes AND experiment_description",
+                    "notes and experiment_description are both required"]},
         "experimenter": {
             "attributes": {
                 "orcid_id": {

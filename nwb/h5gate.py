@@ -1999,7 +1999,7 @@ class File(object):
             node = to_check.pop(0)
             custom = 'custom' in node.sdef and node.sdef['custom']
             type = node.sdef['type']
-#             if node.full_path == "/stimulus/templates/locally_sparse_noise_image_stack":
+#             if node.full_path == "/general":
 #                 import pdb; pdb.set_trace()
             if custom:
                 if (self.options['identify_custom_nodes']):
@@ -3300,11 +3300,21 @@ class File(object):
             # this from: http://docs.h5py.org/en/latest/special.html
             base_type = h5py.check_dtype(vlen=dtype)
             matchObj = re.match(r"<(type|class) '([^']+)'>", str(base_type))
-            if not matchObj:
-                raise SystemError("** Error: Unable to find object base type in %s" % base_type)
-            dt_name = matchObj.group(2)
-            if dt_name == "str":
-                dt_name = "text"
+            if matchObj:
+                # found string type
+                dt_name = matchObj.group(2)
+                if dt_name == "str":
+                    dt_name = "text"
+            else:
+                # check for region reference
+                val = h5_dataset.value
+                if (isinstance(val, np.ndarray) and val.shape == (1,) and val.size == 1 and
+                    isinstance(val[0], h5py.h5r.RegionReference)):
+                    # found region reference
+                    dt_name = "region_reference"
+                else:
+                    raise SystemError("** Error: Unable to find object base type in %s or %s" %
+                        base_type, type(val))
         elif dt_name == "string_": 
         # if dtype in ('object_', 'string_'):
         # if dtype in ('string_',):  # need to add unicode
