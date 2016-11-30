@@ -11,8 +11,8 @@
 
 "info": {
     "name": "NWB file format specification",
-    "version": "1.0.5g_beta",
-    "date": "Oct 7, 2016",
+    "version": "1.0.5h_beta",
+    "date": "Nov 30, 2016",
     "author": "Keith Godfrey.  Converted to format specification by Jeff Teeters.",
     "contact": "jteeters@berkeley.edu, keithg@alleninstitute.org",
     "description": "Specification for the core NWB (Neurodata Withoug Borders) format."
@@ -83,6 +83,7 @@
             "_properties": {"create": True},
             "<image_X>*": {
                 "data_type": "binary",
+                "dimensions": [["1d_size"],["num_rows","num_cols"]],
                 "description": ("Photograph of experiment or experimental setup (video also OK). "
                     "COMMENT: Name is arbitrary.  Data is stored as a single binary object "
                     "(HDF5 opaque type)."),
@@ -2522,6 +2523,11 @@ advice.</p>
         "location": {"id":"Acknowledgements", "position": "after"},
         "level": 0,
         "content": """
+<p style="margin-bottom: 0in">1.0.5h_beta, Nov 30, 2016</p>
+ <p>Add dimensions to /acquisition/images/&lt;image_X&gt;
+ </p>
+ <p style="margin-bottom: 0in"></p><br/>
+
  <p style="margin-bottom: 0in">1.0.5g_beta, Oct 7, 2016</p>
  <p>Replace group options: autogen: {"type": "create"} and
  "_closed": True with

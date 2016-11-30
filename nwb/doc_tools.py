@@ -656,8 +656,8 @@ def get_tc_top_order(collapsed_includes, top_nodes, promoted_nodes):
         elif source in promoted_nodes:
             pro_ci[source] = target
         else:
-            print "collapsed_includes source %s not in top_nodes %s or promoted_nodes %s" % (
-                source, top_nodes, promoted_nodes)
+            print ("collapsed_includes source %s not in top_nodes %s or promoted_nodes %s" % (
+                source, top_nodes, promoted_nodes))
     tc_top_order = []
     # process all top_nodes first since promoted nodes must be placed immediately in
     # front of corresponding top_node
@@ -998,8 +998,8 @@ def insert_doc_content(dinfo, toc, ids_documented, ns):
     content = add_css(dinfo['content'])
     lid = location['id']
     if lid not in toc:
-        print "namespace: %s, doc id '%s' location id '%s' not in table of contents" %(
-            ns, doc_id, lid)
+        print ("namespace: %s, doc id '%s' location id '%s' not in table of contents" %(
+            ns, doc_id, lid))
         traceback.print_stack()
         import pdb; pdb.set_trace()
     position = location['position']
@@ -1026,8 +1026,8 @@ def insert_doc_content(dinfo, toc, ids_documented, ns):
         # content goes in "post_text" part of lid
         idoc.post_text.append(content)
     else:
-        print "namespace: %s, doc id '%s' location '%s', position '%s' not implemented." % (
-            ns, doc_id, location, position)
+        print ("namespace: %s, doc id '%s' location '%s', position '%s' not implemented." % (
+            ns, doc_id, location, position))
         sys.exit(1)
 
 
@@ -1713,7 +1713,7 @@ def process_top_group_members(f, grp, level, ids_documented, grp_tl, filter=None
             # to_process.append(mg)
             grp_tl.add(mg)
             if avid_ns:
-                print "added %s, avid_ns=%s" % (mg.full_path, avid_ns)
+                print ("added %s, avid_ns=%s" % (mg.full_path, avid_ns))
             mg_full_path = make_safe_anchor(remove_trailing_slash(mg.full_path))
             safe_id = cgi.escape(remove_trailing_slash(mid))
             id_link = "<a href=\"#%s\">%s</a>" % (mg_full_path, safe_id)
@@ -1807,8 +1807,8 @@ def make_id_doc(f, id, id_info, ids_documented, sdef=None):
             id_info['df'] = df
             if to_include:
                 # not sure what to do with to_include right now
-                print "Did merge of %s into %s, found to_include=%s" % (
-                    to_merge, qid, to_include)
+                print ("Did merge of %s into %s, found to_include=%s" % (
+                    to_merge, qid, to_include))
                 sys.exit(1)
     # description = cgi.escape(get_description(df, more_info=True))
     description = get_description(df, in_group=False)
@@ -1845,7 +1845,7 @@ def make_id_doc(f, id, id_info, ids_documented, sdef=None):
             if len(ml) == 1:
                 ml = ml[0]
             if "core" in ml:
-                print "found ml: %s" % ml
+                print ("found ml: %s" % ml)
                 import pdb; pdb.set_trace()
             html.append("<p><i>%s</i> includes all elements of <i>%s</i> with the "
                 "the following additions or <u>changes</u>:</p>" % (cgi.escape(qid), ml))
@@ -1917,7 +1917,7 @@ def add_dimensions(f, df, tbl):
             for dim in dlist:
                 dim_names.append(dim)
         else:
-            print "invalid type for dimensions: %s" % dimensions
+            print ("invalid type for dimensions: %s" % dimensions)
     for dname in dim_names:
         if dname in df:
             # found dimension in definition

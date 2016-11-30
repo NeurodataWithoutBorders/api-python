@@ -19,26 +19,26 @@ import os
     
 
 def display_versions():
-    print "** environment variables:"
+    print ("** environment variables:")
     for key in sorted(os.environ.keys()):
-        print key, os.environ[key]
-    print "** Versions:"
-    print "Python:", sys.version
-    print "Python executable:", sys.executable
+        print( "%s - %s" % (key, os.environ[key]))
+    print ("** Versions:")
+    print ("Python: %s" % sys.version)
+    print ("Python executable: %s", sys.executable)
     try:
         import h5py
     except:
         e = sys.exc_info()[0]
-        print "unable to import hd5f:", e
+        print ("unable to import hd5f: %s" % e)
     else:
-        print "HDF5 API:", h5py.version.api_version
-        print "HDF5:", h5py.version.hdf5_version
+        print ("HDF5 API: %s" % h5py.version.api_version)
+        print ("HDF5: %s" % h5py.version.hdf5_version)
     
 def matlab():
-    print "\n**** called from MatLab"
+    print ("\n**** called from MatLab")
     display_versions()
     
 
 if __name__ == "__main__":
-    print "\n**** called directly from Python"
+    print ("\n**** called directly from Python")
     display_versions()

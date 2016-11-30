@@ -11,8 +11,6 @@ import combine_messages as cm
 import pprint
 pp = pprint.PrettyPrinter(indent=4)
 
-
-
 def reverse_dict(din):
     dout = {}
     for key in din:
@@ -264,7 +262,7 @@ def check_link_equivalence():
                 soft_group_paths = [target] + ci["tmp_soft_links"][source_ab][target_type][target]
                 validate_group(source_ab, "soft", target_type, soft_group_paths, dest_ba, errors)
     if errors:
-        print "** Above links are NOT equivalent:\n\t" + "\n\t".join(errors)
+        print ("%s" % ("** Above links are NOT equivalent:\n\t" + "\n\t".join(errors)))
     else:
         nlg = num_link_groups
         total_found = (nlg["A"]["hard"]["group"] + nlg["A"]["hard"]["dataset"] +
@@ -272,13 +270,13 @@ def check_link_equivalence():
             nlg["B"]["hard"]["group"] + nlg["B"]["hard"]["dataset"] + 
             nlg["B"]["soft"]["group"] + nlg["B"]["soft"]["dataset"])
         if total_found == 0:
-            print "** No links found."
+            print ("** No links found.")
         else:
-            print "** Above found links are equivalent. -- Good.\n   Total of %i link groups found:\n   %s" %(
-                total_found, str(num_link_groups))
+            print ("** Above found links are equivalent. -- Good.\n   Total of %i link groups found:\n   %s" %(
+                total_found, str(num_link_groups)))
         if not single_file:
-            print ("   Note: links inside unpaired groups will not be found.  To guarantee "
-                "finding all links, run script with just one file (comparing it to itself).")
+            print (("   Note: links inside unpaired groups will not be found.  To guarantee "
+                "finding all links, run script with just one file (comparing it to itself)."))
                 
                 
 def validate_group(source_ab, source_link_type, type, paths, dest_ba, errors):
@@ -409,22 +407,22 @@ def display_report(file1, file2):
     num_matching_attributes = len(ci["everything_matches"]['attribute'])
     num_dont_match_attributes = num_paired_attributes - num_val_match_attributes
     num_dont_match_datasets = num_paired_datasets - num_val_match_datasets
-    print "-" * 20
-    print "** Summary"
-    print "Unpaired groups: %i only in A, %i only in B" % (
-        len(ci['only_in']['A']['group']), len(ci['only_in']['B']['group']))   
-    print "Unpaired datasets: %i only in A, %i only in B" % (
-        len(ci['only_in']['A']['dataset']), len(ci['only_in']['B']['dataset']))
-    print "Unpaired attributes: %i only in A, %i only in B" % (
-        len(ci['only_in']['A']['attribute']), len(ci['only_in']['B']['attribute']))
-    print "Total paired: %i datasets, %i attributes, %i groups" % ( num_paired_datasets,
-        num_paired_attributes, num_paired_groups)  
-    print "Total paired with values match: %i/%i datasets, %i/%i attributes." % (num_val_match_datasets,
-        num_paired_datasets, num_val_match_attributes, num_paired_attributes)
-    print "Total paired, vals don't match: %i/%i datasets, %i/%i attributes." % (num_dont_match_datasets,
-        num_paired_datasets, num_dont_match_attributes, num_paired_attributes)
-    print "Total paired, everything match: %i/%i datasets, %i/%s attributes" % (
-        num_matching_datasets, num_paired_datasets, num_matching_attributes, num_paired_attributes)
+    print ("-" * 20)
+    print ("** Summary")
+    print ("Unpaired groups: %i only in A, %i only in B" % (
+        len(ci['only_in']['A']['group']), len(ci['only_in']['B']['group'])))
+    print ("Unpaired datasets: %i only in A, %i only in B" % (
+        len(ci['only_in']['A']['dataset']), len(ci['only_in']['B']['dataset'])))
+    print ("Unpaired attributes: %i only in A, %i only in B" % (
+        len(ci['only_in']['A']['attribute']), len(ci['only_in']['B']['attribute'])))
+    print ("Total paired: %i datasets, %i attributes, %i groups" % ( num_paired_datasets,
+        num_paired_attributes, num_paired_groups))
+    print ("Total paired with values match: %i/%i datasets, %i/%i attributes." % (num_val_match_datasets,
+        num_paired_datasets, num_val_match_attributes, num_paired_attributes))
+    print ("Total paired, vals don't match: %i/%i datasets, %i/%i attributes." % (num_dont_match_datasets,
+        num_paired_datasets, num_dont_match_attributes, num_paired_attributes))
+    print ("Total paired, everything match: %i/%i datasets, %i/%s attributes" % (
+        num_matching_datasets, num_paired_datasets, num_matching_attributes, num_paired_attributes))
     
             
 def display_messages(messages, description, quote="", zero_msg=None, combine=True):
@@ -438,18 +436,18 @@ def display_messages(messages, description, quote="", zero_msg=None, combine=Tru
         msg = "No %s." % description
         if zero_msg:
             msg = msg + " -- %s" % zero_msg
-        print "**", msg
+        print ("** %s" % msg)
     else:
         cmsg = cm.combine_messages(messages) if cm else messages
         if len(cmsg) != len(messages):
-            print "** %i %s (%i combined):" %(len(messages), description, len(cmsg))
+            print ("** %i %s (%i combined):" %(len(messages), description, len(cmsg)))
         else:
-            print "** %i %s:" % (len(messages), description)
+            print ("** %i %s:" % (len(messages), description))
         i = 0
         for m in cmsg:
             i = i + 1
             mt = m.replace("\n", "\n     ")  # insert tab after new line char
-            print "%3i. %s%s%s" % (i, quote, mt, quote)
+            print ("%3i. %s%s%s" % (i, quote, mt, quote))
             
             
 def display_sub_messages(sub_messages, description, zero_msg = None, qualifier=None, combine=True):
@@ -677,25 +675,24 @@ def diff_groups2(ggp):
             member_groups.append(ggp)
     return member_groups
             
-
 def diff_files(file1, file2):
     ci = initialize_ci()
-    print
-    print "command was: python %s %s %s" % (sys.argv[0], file1, file2)
+    print ("")
+    print ("command was: python %s %s %s" % (sys.argv[0], file1, file2))
     if file1 == file2:
-        print "comparing %s (A) to itself (B)" % (file1)
+        print ("comparing %s (A) to itself (B)" % file1)
     else:
-        print "comparing %s (A) and %s (B)" % (file1, file2)
+        print ("comparing %s (A) and %s (B)" % (file1, file2))
     print
     try:
         f1 = h5py.File(file1, 'r')
     except IOError:
-        print "Unable to open file '%s'" % file1
+        print ("Unable to open file '%s'" % file1)
         sys.exit(1)
     try:
         f2 = h5py.File(file2, 'r')
     except IOError:
-        print "Unable to open file '%s'" % file2
+        print ("Unable to open file '%s'" % file2)
         sys.exit(1)
 
     # get_sizes(f1, file1)
@@ -704,7 +701,7 @@ def diff_files(file1, file2):
     display_report(file1, file2)
 
 if len(sys.argv) not in (2, 3):
-    print "Usage: %s <file1.h5> [<file2.h5>]" % sys.argv[0]
+    print ("Usage: %s <file1.h5> [<file2.h5>]" % sys.argv[0])
     sys.exit(1)
 # set to True if this file is being compared to itself
 single_file = len(sys.argv) == 2

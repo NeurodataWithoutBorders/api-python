@@ -1,9 +1,8 @@
 import sys
 import time
 import os.path
-import h5gate as g
-import nwb_init as ni
-
+from . import h5gate as g
+from . import nwb_init as ni
 
 def open(file_name, start_time=None, mode="w-", identifier=None, description=None,
     core_spec="nwb_core.py", extensions=[], default_ns="core",
@@ -53,6 +52,11 @@ def open(file_name, start_time=None, mode="w-", identifier=None, description=Non
     **verbosity** - Controls how much validation output is displayed.  Options are:
     'all' (default), 'summary', and 'none'.  'none' is mainly useful for unittests.
     """
+    # set unicode to str if using Python 3 (which does not have unicode class)
+    try:
+        unicode
+    except NameError:
+        unicode = str
     # check for required fields
     errors = []
     if not file_name or not isinstance(file_name, (str, unicode)):
@@ -80,8 +84,8 @@ def open(file_name, start_time=None, mode="w-", identifier=None, description=Non
 #             errors.append("Cannot overwrite existing file if overwrite option is False")
 
     if errors:
-        print "Error(s) found:"
-        print "\n".join(errors)
+        print ("Error(s) found:")
+        print ("\n".join(errors))
         sys.exit(1)
     # setup options for h5gate
     options = {}

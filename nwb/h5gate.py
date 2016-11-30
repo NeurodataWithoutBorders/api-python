@@ -14,11 +14,16 @@ import imp
 import ast
 import shutil
 import array
-import find_links
-import combine_messages as cm
+from . import find_links
+from . import combine_messages as cm
 
 import pprint
 pp = pprint.PrettyPrinter(indent=4)
+# set unicode to str if using Python 3 (which does not have unicode class)
+try:
+    unicode
+except NameError:
+    unicode = str
 
 class File(object):
     """ hdf5 file """
@@ -251,7 +256,9 @@ class File(object):
                 'default': 'all' },
         }
         errors = []
-        for opt, value in self.options.iteritems():
+        # for opt, value in self.options.iteritems():
+        for opt in self.options:
+            value = self.options[opt]
             if opt not in all_options:
                 errors.append("Invalid option specified (%s)" % opt)
             elif 'values' in all_options[opt] and value not in all_options[opt]['values']:
@@ -264,8 +271,8 @@ class File(object):
                     errors.append(("Invalid value for option 'custom_node_identifer', "
                         "must be [attribute_id, value], is: %s") % value)
         if errors:
-            print "\n".join(errors)
-            print "valid options are:"
+            print ("\n".join(errors))
+            print ("valid options are:")
             pp.pprint(all_options)
             error_exit()
         # Add default values for options that were not specified
@@ -285,9 +292,9 @@ class File(object):
             # convert to dictionary
             return dict(zip(obj[0::2], obj[1::2]))
         else:
-            print ('Invalid class (%s) for object.  Trying to convert to'
-                ' dict.  Should be either dict, list or tuple.') % type(obj)
-            print "object is:"
+            print (('Invalid class (%s) for object.  Trying to convert to'
+                ' dict.  Should be either dict, list or tuple.') % type(obj))
+            print ("object is:")
             pp.pprint(obj)
             error_exit()
     
@@ -311,16 +318,17 @@ class File(object):
             self.load_specifications_from_h5_file(fs_var)
         for file_name in spec_files:
             path = self.get_spec_file_path(file_name)
-            with file(path) as f:
+            # with file(path) as f:
+            with open(path) as f:
                 file_contents = f.read()
             try:
                 # use use ast.literal_eval rather than eval to prevent potential security problems
                 # vals = eval(file_contents)
                 vals = ast.literal_eval(file_contents)
-            except Exception, e:
-                print ("** Invalid format in specification file '%s' (should "
-                    "be mostly JSON)") % file_name
-                print "Error is: %s" % e
+            except Exception as e:
+                print (("** Invalid format in specification file '%s' (should "
+                    "be mostly JSON)") % file_name)
+                print ("Error is: %s" % e)
                 error_exit()
             patch_json_vals(vals, {"float('NaN')": float('NaN')})
             if fs_var not in vals:
@@ -331,8 +339,8 @@ class File(object):
             # validate that components of definition are present
             errors = self.validate_fs(ddefin)
             if errors:
-                print ("Specification file '%s', has"
-                    " the following errors:\n%s" % (file_name, errors))
+                print (("Specification file '%s', has"
+                    " the following errors:\n%s" % (file_name, errors)))
                 error_exit()
             # save map from file name to name spaces stored in that file
             name_spaces = ddefin.keys()  # e.g. "core".  Usually only one namespace, but could be more
@@ -405,18 +413,18 @@ class File(object):
         try:
             specs_group = fp[specs_location]
         except KeyError:
-            print "Format specifications location (%s) not found in file '%s'" % (
-                specs_location, self.file_name)
+            print ("Format specifications location (%s) not found in file '%s'" % (
+                specs_location, self.file_name))
         # Now load each specification
         for file_name in specs_group:
             file_contents = specs_group[file_name].value
             try:
                 # vals = eval(file_contents)
                 vals = ast.literal_eval(file_contents)
-            except Exception, e:
-                print ("** Invalid format in specification file '%s' (should "
-                    "be mostly JSON)") % file_name
-                print "Error is: %s" % e
+            except Exception as e:
+                print (("** Invalid format in specification file '%s' (should "
+                    "be mostly JSON)") % file_name)
+                print ("Error is: %s" % e)
                 error_exit()
             patch_json_vals(vals, {"float('NaN')": float('NaN')})
             if fs_var not in vals:
@@ -621,11 +629,11 @@ class File(object):
         self.file_exists = os.path.isfile(self.file_name)
         if self.file_exists:
             if mode == "w-":
-                print "Mode 'w-' specified, but cannot be used because the file (%s) exists." % self.file_name
+                print ("Mode 'w-' specified, but cannot be used because the file (%s) exists." % self.file_name)
                 error_exit()
         else:
             if mode in ("r", "r+"):
-                print "File '%s' not found.  File must exist to use mode 'r' or 'r+'" % self.file_name
+                print ("File '%s' not found.  File must exist to use mode 'r' or 'r+'" % self.file_name)
                 error_exit()
         if mode == 'w' and self.options['keep_original'] and self.file_exists:
             # need to create temporary file rather than original
@@ -667,14 +675,14 @@ class File(object):
                 try:
                     os.remove(file_to_open)
                 except IOError:
-                    print "Unable to remove previously existing file '%s'\nbefore opening with mode '%s'\n" % (
-                        file_to_open, self.options['mode'])
+                    print ("Unable to remove previously existing file '%s'\nbefore opening with mode '%s'\n" % (
+                        file_to_open, self.options['mode']))
                     error_exit() 
             try:
                 fp = h5py.File(file_to_open, self.options['mode'])
             except IOError:
-                print "Unable to open file '%s' with mode '%s'" % (file_to_open,
-                    self.options['mode'])
+                print ("Unable to open file '%s' with mode '%s'" % (file_to_open,
+                    self.options['mode']))
                 error_exit()
             # remember file pointer
             self.file_pointer = fp
@@ -713,12 +721,12 @@ class File(object):
         """ Close file if not already closed.  This called when the File object is
         deleted.  File might not have been closed if an error was found.
         """
-        print "python __del__ called"
+        print ("python __del__ called")
         if hasattr(self, 'file_pointer') and self.file_pointer:
             try:
                 self.file_pointer.close()
-                print "python __del__ closed file"
-            except (RuntimeError):
+                print ("python __del__ closed file")
+            except (RuntimeError, SystemError):
                 pass
         
             
@@ -747,24 +755,24 @@ class File(object):
                         if ":" in qtid:
                             tns, tid = qtid.split(':')
                             if tns != self.default_ns:
-                                print ("Namespace %s, id %s has 'merge_into' listing '%s', but "
+                                print (("Namespace %s, id %s has 'merge_into' listing '%s', but "
                                     "namespaces specified in merge_into must be the default namespace (%s)") % (
-                                    ns, id, qtid, self.default_ns)
+                                    ns, id, qtid, self.default_ns))
                                 error_exit()
                         else:
                             tid = qtid
                         if tid not in dns_structures:
-                            print ("'%s' referenced in '%s:%s' 'merge_into' but not found in default "
-                                "namespace '%s'") % (tid, ns, id, self.default_ns)
+                            print (("'%s' referenced in '%s:%s' 'merge_into' but not found in default "
+                                "namespace '%s'") % (tid, ns, id, self.default_ns))
                             error_exit()
                         self.append_to_merge(tid, ns, id)
                 elif id in dns_structures:
                     # name matches id in default_ns.  Assume this should be merged.
                     self.append_to_merge(id, ns, id)
                 else:
-                    print ("** Warning: Id '%s' in namespace '%s' does not match id in default namespace '%s' "
-                        "and 'merge_into' not present") %(id, ns, self.default_ns)
-                    print "It might not be used unless it is referenced from another id (by merge or include)"
+                    print (("** Warning: Id '%s' in namespace '%s' does not match id in default namespace '%s' "
+                        "and 'merge_into' not present") %(id, ns, self.default_ns))
+                    print ("It might not be used unless it is referenced from another id (by merge or include)")
         
     def append_to_merge(self, tid, ns, id):
         """ Append id in namespace ns to 'merge' directive in target id tid that is in the
@@ -812,7 +820,7 @@ class File(object):
                 mdf = mstats[mid]['df']
                 mlink = 'link' in mdf  # should not need this
                 if mlink:
-                    print "found link at top level when making idlookup.  Not allowed.  Path is: %s" % path
+                    print ("found link at top level when making idlookup.  Not allowed.  Path is: %s" % path)
                     error_exit()
                 mns = mstats[mid]['ns']
                 msdef = { 'type': mtype, 'id':mid, 'ns':mns, 'df': mdf}
@@ -1124,8 +1132,8 @@ class File(object):
             sdef = { 'type': type, 'qid': qid, 'id':id, 'ns':ns, 'df': df, }
             return sdef
         if errmsg != "":
-            print "Error: Structure '%s' (in name space '%s') referenced but not defined." % (id, ns)
-            print "(%s)" % errmsg
+            print ("Error: Structure '%s' (in name space '%s') referenced but not defined." % (id, ns))
+            print ("(%s)" % errmsg)
             # import pdb; pdb.set_trace()
             error_exit()
         return None
@@ -1399,15 +1407,15 @@ class File(object):
         if path != '':
             path_sl = path if path.endswith("/") else path + "/"
             if path_sl not in idlocs:
-                print "** Error"
-                print "Specified path '%s' not in name space '%s' locations for id '%s'" % (path, ns, id)
-                print "expected one of: %s" % possible_paths
+                print ("** Error")
+                print ("Specified path '%s' not in name space '%s' locations for id '%s'" % (path, ns, id))
+                print ("expected one of: %s" % possible_paths)
                 error_exit()
         else:
             if len(idlocs) > 1:
-                print "** Error"
-                print "Path not specified for '%s', but must be since" % id
-                print " there are multiple possible locations: %s" % possible_paths
+                print ("** Error")
+                print ("Path not specified for '%s', but must be since" % id)
+                print (" there are multiple possible locations: %s" % possible_paths)
                 error_exit()
             path_sl = idlocs[0]
         return path_sl
@@ -1457,9 +1465,9 @@ class File(object):
                     return link_info
                 else:
                     # accept pretty much any characters in link path
-                    print ("** Error, invalid path specified in link string, must be "
-                        "less than 512 chars and not have new line or tabs")
-                    print " link string is: '%s'" % link
+                    print (("** Error, invalid path specified in link string, must be "
+                        "less than 512 chars and not have new line or tabs"))
+                    print (" link string is: '%s'" % link)
                     error_exit()
             elif re.match( r'^extlink:', link):
                 # assume intending to specify an external link, now match for rest of pattern
@@ -1475,9 +1483,9 @@ class File(object):
                     link_info = {'extlink': (file, path)}
                     return link_info
                 else:
-                    print "** Error, invalid file or path specified in extlink string"
-                    print " must not have spaces and file name must not end in comma"
-                    print "extlink string is: '%s'"% link
+                    print ("** Error, invalid file or path specified in extlink string")
+                    print (" must not have spaces and file name must not end in comma")
+                    print ("extlink string is: '%s'"% link)
                     error_exit(1)
         return None             
                 
@@ -1517,9 +1525,9 @@ class File(object):
             id = sdef['id']
             ns = sdef['ns']
             if path == '':
-                print "** Error"
-                print ("Path must be specified if creating '%s'"
-                    " in a custom location using name space '%s'.") % (id, ns)
+                print ("** Error")
+                print (("Path must be specified if creating '%s'"
+                    " in a custom location using name space '%s'.") % (id, ns))
                 error_exit()
             sdef['custom'] = True
             if parent is None:
@@ -1545,10 +1553,10 @@ class File(object):
                     custom_ns = ns if '__custom' in self.idlookups[ns] else (
                         self.default_ns if '__custom' in self.idlookups[self.default_ns] else None)
                     if not custom_ns:
-                        print ("** Error:  Attempting to make '%s' but path is relative and\n"
+                        print (("** Error:  Attempting to make '%s' but path is relative and\n"
                             "'__custom' not specified in namespace '%s' or default namespace '%s'") % (
-                            full_path, ns, self.default_ns)
-                        print "id_lookups is"
+                            full_path, ns, self.default_ns))
+                        print ("id_lookups is")
                         pp.pprint(self.idlookups)
                         error_exit()
                     custom_loc = self.idlookups[custom_ns]['__custom']
@@ -1863,8 +1871,8 @@ class File(object):
 #             + len(vi['node_identification_errors'])
             )
         if self.options['verbosity'] == 'all':
-            print "\n******"
-            print "Validation messages follow."
+            print ("\n******")
+            print ("Validation messages follow.")
             self.display_report_heading(total_errors, "error", zero_msg="Good")
             self.print_message_list(self.error, "Miscellaneous errors", zero_msg="Good")
             self.report_problems(vi['missing_nodes'], "missing", zero_msg="Good")
@@ -1932,13 +1940,13 @@ class File(object):
                     "defined by extension and identified by attribute %s" % eaid)           
             self.print_message_list(vi['added_attributes_described_by_extension'], 
                 "added attributes described by extension")
-            print "** Summary"
+            print ("** Summary")
         if self.options['verbosity'] in ('all', 'summary'):
-            print "%i errors, %i warnings, %i additions" %(total_errors, total_warnings, total_added_correctly)
+            print ("%i errors, %i warnings, %i additions" %(total_errors, total_warnings, total_added_correctly))
             if total_errors == 0:
-                print "passed validation check (no errors)"
+                print ("passed validation check (no errors)")
             else:
-                print "failed validation check (at least one error)"
+                print ("failed validation check (at least one error)")
         # return dict giving number of total errors, warnings and added
         validation_result = {'errors':total_errors, 'warnings':total_warnings,
             'added': total_added_correctly}
@@ -1957,7 +1965,7 @@ class File(object):
             msg = "** one %s." % name
         else:
             msg = "** %i %ss." % (count, name)
-        print msg
+        print (msg)
             
 
     def check_path_ids_for_missing(self, vi):
@@ -2304,9 +2312,9 @@ class File(object):
         id_status = {}
         for id in list(r_ref):
             if id not in node.mstats:
-                print ("%s identifier (%s) in _required specification not found "
-                        "in group") %(node.full_path, id)
-                print "valid options are:\n%s" % node.mstats.keys()
+                print (("%s identifier (%s) in _required specification not found "
+                        "in group") %(node.full_path, id))
+                print ("valid options are:\n%s" % node.mstats.keys())
                 error_exit()
             present = len(node.mstats[id]['created']) > 0
             id_status[id] = present
@@ -2426,9 +2434,9 @@ class File(object):
             try:
                 result = eval(text)
             except SyntaxError:
-                print "%s Invalid expression for _required clause:" % node.full_path
-                print condition_string
-                print "evaluated as: '%s'" % text
+                print ("%s Invalid expression for _required clause:" % node.full_path)
+                print (condition_string)
+                print ("evaluated as: '%s'" % text)
                 error_exit()
             if not result:
                 return (condition_string, error_message)
@@ -2558,20 +2566,20 @@ class File(object):
             msg = "No %s." % description
             if zero_msg:
                 msg = msg + " -- %s" % zero_msg
-            print msg
+            print (msg)
         else:
             cmsg = cm.combine_messages(messages)
             if len(cmsg) != len(messages):
-                print "%i %s (%i combined):" %(len(messages), description, len(cmsg))
+                print ("%i %s (%i combined):" %(len(messages), description, len(cmsg)))
             else:
-                print "%i %s:" % (len(messages), description)
+                print ("%i %s:" % (len(messages), description))
             i = 0
             for m in cmsg:
                 if m in explanations:
                     m += "\n" + explanations[m]
                 i = i + 1
                 mt = m.replace("\n", "\n     ")  # insert tab after new line char
-                print "%3i. %s%s%s" % (i, quote, mt, quote)
+                print ("%3i. %s%s%s" % (i, quote, mt, quote))
                 
                 
     def report_problems(self, nodes, problem, zero_msg = None, qualifier=None):
@@ -3132,7 +3140,7 @@ class File(object):
         """ Create list of name spaces with default namespace last, so when searching
         for structures that match a read hdf5 node, extensions (user defined name spaces)
         will take precedence"""
-        self.name_spaces = self.ddef.keys()
+        self.name_spaces = list(self.ddef.keys())
         self.name_spaces.remove(self.default_ns)
         self.name_spaces.append(self.default_ns)
          
@@ -3143,7 +3151,7 @@ class File(object):
         num_groups = self.links['count']['group']
         num_datasets = self.links['count']['dataset']
         if self.options['verbosity'] in ('all', ):
-            print "Reading %i groups and %i datasets" % (num_groups, num_datasets)
+            print ("Reading %i groups and %i datasets" % (num_groups, num_datasets))
         np = (self.file_pointer["/"], "/")  # np == 'node, path'
         groups_to_visit = [ np,]
         while groups_to_visit:
@@ -3262,7 +3270,7 @@ class File(object):
             for key in h5_node.attrs:
                 try:
                     value = h5_node.attrs[key]
-                except IOError, e:
+                except IOError as e:
                     msg = ("%s: unable to read attribute '%s' due to h5py IOError. "
                         "Value is probably unicode array.  See https://github.com/h5py/h5py/issues/624.") % (
                         h5_node.name, key)
@@ -3452,7 +3460,7 @@ class File(object):
                 # msigs[id] = self.mk_idsig(ns, id, info['df'], node.full_path)
                 msigs[id] = self.mk_idsig(ns, id, info['df'], node)
             else:
-                print "Did not find definition (df) in mstats entry: %s" % info
+                print ("Did not find definition (df) in mstats entry: %s" % info)
                 # import pdb; pdb.set_trace()
                 error_exit()
         self.filter_sigs(msigs)
@@ -3502,8 +3510,8 @@ class File(object):
             if match_count >= level or (len(idsigs) == 1 and level==1):
                 matches.append(id)
         if len(matches) > 1:
-            print "Found more than one match to node. (%s)" % matches
-            print "Perhaps specification is ambigious."
+            print ("Found more than one match to node. (%s)" % matches)
+            print ("Perhaps specification is ambigious.")
             import pdb; pdb.set_trace()
             error_exit()
         if len(matches) == 1:
@@ -3642,7 +3650,7 @@ class File(object):
         for key in h5_node.attrs:
             try:
                 value = h5_node.attrs[key]
-            except IOError, e:
+            except IOError as e:
                 # assume this error was detected previously in fetch_attributes
                 value = "???"
             if (key not in fixed_attrs or not find_links.values_match(fixed_attrs[key], value)):
@@ -3655,7 +3663,7 @@ class File(object):
         for key in h5_node.attrs.keys():
             try:
                 value = h5_node.attrs[key]
-            except IOError, e:
+            except IOError as e:
                 # unable to read attribute.  Assume this will be reported in load_node
                 value = "???"
             attrs[key] = value
@@ -3722,8 +3730,8 @@ class File(object):
 #             return (dtype, shape)
             
         else:
-            print "** Error, unable to determine shape of value assiged to dataset"
-            print "value type is '%s'" % val_type
+            print ("** Error, unable to determine shape of value assiged to dataset")
+            print ("value type is '%s'" % val_type)
             error_exit()
         return (dtype, shape)
         
@@ -3870,8 +3878,8 @@ class File(object):
                         dest[aid]['value'] = val
                     # TODO: check if data type specified in destination matches value       
                 else:
-                    print ("** Error, merging attribute '%s' but value not specified in source"
-                        " or destination") % aid
+                    print (("** Error, merging attribute '%s' but value not specified in source"
+                        " or destination") % aid)
 #                     import pdb; pdb.set_trace()
                     error_exit()
             else:
@@ -3926,10 +3934,10 @@ class File(object):
         # replace previous value by new value
         # first do some validation
         if type(prev_val) != type(new_val):
-            print ("** Error, type mismatch when setting %s, previous_type=%s,"
-                " new type=%s; previous value=") %(ident, type(prev_val), type(new_val))
+            print (("** Error, type mismatch when setting %s, previous_type=%s,"
+                " new type=%s; previous value=") %(ident, type(prev_val), type(new_val)))
             pp.pprint(prev_val)
-            print "New value="
+            print ("New value=")
             pp.pprint(new_val)
             error_exit()
 # Disable type checking for testing ancestry attribute as array
@@ -3997,12 +4005,12 @@ class File(object):
 #                          # replace earlier definition with latest one
 #                          expanded_def[id] = sdef['df'][id]
 #                          continue
-                    print "** Error"
-                    print "Conflicting key (%s) when merging '%s'" % (id, sdef['id'])
+                    print ("** Error")
+                    print ("Conflicting key (%s) when merging '%s'" % (id, sdef['id']))
                     # print "make_group(%s, %s, path=%s)" % (self.sdef['id'], self.name, self.path)
-                    print "expanded_def is:"
+                    print ("expanded_def is:")
                     pp.pprint(expanded_def)
-                    print "sdef is:"
+                    print ("sdef is:")
                     pp.pprint(sdef)
                     # import pdb; pdb.set_trace()
                     error_exit()
@@ -4311,7 +4319,7 @@ class Node(object):
             return
         # save node in path2node
         if self.full_path in self.file.path2node:
-            print "** Error, created node with path twice:\n'%s'" % self.full_path
+            print ("** Error, created node with path twice:\n'%s'" % self.full_path)
             # import pdb; pdb.set_trace()
             error_exit()
         self.file.path2node[self.full_path] = self            
@@ -4328,9 +4336,9 @@ class Node(object):
                 msg = "** Error: Unable to find id '%s' in id_lookups when saving node" % id
                 error_exit(msg)
             if self.path not in self.file.id_lookups[ns][id]:
-                print ("** Error: Unable to find path '%s' in id_lookups when"
-                    " saving node %s") % (self.path, id)
-                print "self.sdef['df'] is:"
+                print (("** Error: Unable to find path '%s' in id_lookups when"
+                    " saving node %s") % (self.path, id))
+                print ("self.sdef['df'] is:")
                 pp.pprint (self.sdef['df'])
                 error_exit()
             self.file.id_lookups[ns][id][self.path]['created'].append(self)
@@ -4406,8 +4414,8 @@ class Node(object):
                 # 'data_type' not required in autogen
                 continue
             if 'data_type' not in ats[aid]:
-                print "%s: data type not specified for attribute '%s'" % (self.full_path,
-                    aid)
+                print ("%s: data type not specified for attribute '%s'" % (self.full_path,
+                    aid))
                 # import pdb; pdb.set_trace()
                 error_exit()
             if 'const' in ats[aid] and 'value' not in ats[aid]:
@@ -4436,8 +4444,8 @@ class Node(object):
                     # check run at end will generate error
                     return
                 val = ats[aid]['value']
-                print "%s: attempting to change 'const' attribute '%s' value from '%s' to '%s'" % (
-                    self.full_path, aid, val, nv)
+                print ("%s: attempting to change 'const' attribute '%s' value from '%s' to '%s'" % (
+                    self.full_path, aid, val, nv))
                 # import pdb; pdb.set_trace()
                 error_exit()
             # check data type
@@ -4652,6 +4660,8 @@ class Dataset(Node):
         if self.link_info:
             # this dataset set to link to another.  Already done in Node.  Nothing to do here
             return
+#         if self.full_path == "/session_start_time":
+#             import pdb; pdb.set_trace()
         # print "Creating Dataset, sdef="
         # pp.pprint(sdef)
         if 'attributes' in self.sdef['df']:
@@ -4934,23 +4944,28 @@ class Dataset(Node):
                 # nothing specified for dataset definition.  Must be custom dataset
                 # (being created by "set_custom_dataset").  Do no validation
                 return dsinfo
-            print "** Error: 'data_type' not specified in dataset definition"
-            print "definition is:"
+            print ("** Error: 'data_type' not specified in dataset definition")
+            print ("definition is:")
             pp.pprint(df)
             error_exit()
         # Now, some simple validation
         if dsinfo['dtype'] and not valid_dtype(dsinfo['ddt'], dsinfo['dtype']):
             msg = ("'%s': default dataset type is '%s', but value passed"
                 " is '%s'") % (self.full_path, dsinfo['ddt']['orig'], dsinfo['dtype'])
-            self.file.warning.append(msg)  
+            self.file.warning.append(msg)
+        # check for value is array, but should be scalar (no dimensions specified)
+        if dsinfo['shape'] != "scalar" and "dimensions" not in df:
+            msg = ("%s: expected scalar type '%s', but found array (shape %s) type '%s'" %
+                  (self.full_path, dsinfo['ddt']['type'], dsinfo['shape'], dsinfo['dtype']))
+            self.file.error.append(msg)
         # make sure everything defined in dataset definition is valid
         for key in df.keys():
             if (key in ('dimensions', 'data_type', 'attributes', 'autogen',
                 '_source_id', '_qty') or
                 key in atags or key in dsinfo['dimensions']):
                 continue
-            print "** Error, invalid key (%s) in dataset definition" % key
-            print "dataset definition is:"
+            print ("** Error, invalid key (%s) in dataset definition" % key)
+            print ("dataset definition is:")
             pp.pprint(df)
             error_exit()
         return dsinfo                                 
@@ -4977,9 +4992,9 @@ def decode_data_type(dt_spec, path):
         size = int(size) if size else None
         is_min = match.group(3)
     else:
-        print "%s: Invalid specification for data type: '%s'" % (path, dt_spec)
-        print "should be like: 'int', 'int32', 'int32!', 'uint8', 'float64!'"
-        print "Number if specified is default size. '!' means is minimum size"
+        print ("%s: Invalid specification for data type: '%s'" % (path, dt_spec))
+        print ("should be like: 'int', 'int32', 'int32!', 'uint8', 'float64!'")
+        print ("Number if specified is default size. '!' means is minimum size")
         error_exit()
     if size and size % 8 != 0 and type not in ('text', 'binary'):
         raise ValueError('Size specified for datatype must be multiple of 8: "%s"' % dt_spec)
@@ -5050,7 +5065,7 @@ def patch_json_vals(json, replace):
   
 def error_exit(msg = None):
     if msg:
-        print("** Error: " + msg)
+        print("** Error: %s" % msg)
     print("Stack trace follows")
     print("-------------------")
     traceback.print_stack()
@@ -5123,9 +5138,9 @@ class Group(Node):
                 # found autogen.  Make sure member does not have a variable name
                 v_id = re.match( r'^<[^>]+>/?$', id)   # True if variable_id (in < >)
                 if v_id:
-                    print ("%s: %s  - Cannot use autogen to fill value of variable named "
+                    print (("%s: %s  - Cannot use autogen to fill value of variable named "
                         "(i.e. name in <>) node because autogen has no way of knowing what "
-                        "the name should be.") % (self.full_path, id)
+                        "the name should be.") % (self.full_path, id))
                     error_exit()
                 # has a fixed name.  Save it for later processing
                 # make full path to future
@@ -5266,7 +5281,7 @@ class Group(Node):
                     # NO LONGER, now using separate identifiers for extensions (extension_node_identifier)             
                     # if aid == self.file.options['schema_id_attr']:
                     #    continue
-                    print 'conflicting attribute found when merging into self.attributes: %s' % aid
+                    print ('conflicting attribute found when merging into self.attributes: %s' % aid)
 #                     import pdb; pdb.set_trace()
                     error_exit()
                 self.attributes[aid] = self.expanded_def['attributes'][aid]
@@ -5414,13 +5429,13 @@ class Group(Node):
                     # is dimension
                     continue
                 else:
-                    print ("Unable to determine if member (id='%s') is dataset, "
-                        "group or dimension.  expanded_def=:") % id
+                    print (("Unable to determine if member (id='%s') is dataset, "
+                        "group or dimension.  expanded_def=:") % id)
                     pp.pprint(self.expanded_def)
 #                     import pdb; pdb.set_trace()
                     error_exit()
             if id not in self.id_sources:
-                print "id %s not found in id_sources:" % id
+                print ("id %s not found in id_sources:" % id)
                 pp.pprint(self.id_sources)
                 import pdb; pdb.set_trace()
             assert id in self.id_sources, ("%s: id '%s' not found it id_sources when "
@@ -5468,7 +5483,7 @@ class Group(Node):
                 # df = copy.deepcopy(sdef['df'])
                 # self.modify(df, modifiers)
                 # this feature currently not used, disable for now.
-                print "Includes with modifiers not implemented: %s" % modifiers
+                print ("Includes with modifiers not implemented: %s" % modifiers)
                 pp.pprint(df)
                 # import pdb; pdb.set_trace()
                 # self.file.merge(df, modifiers)  # merges modifiers into definition
@@ -5514,13 +5529,13 @@ class Group(Node):
             # pp.pprint(df)
             # qty = '!'  # assume includes are required
             if id in self.mstats.keys():
-                print "%s: Duplicate id (%s) in group, referenced by include" % (self.full_path, id)
+                print ("%s: Duplicate id (%s) in group, referenced by include" % (self.full_path, id))
 #                 import pdb; pdb.set_trace()
                 error_exit()
             alt_id = id.rstrip('/') if id.endswith('/') else id+'/'
             if alt_id in self.mstats.keys():
-                print "%s: Group and dataset have same name (%s), referenced by include" %(
-                    self.full_path, id)
+                print ("%s: Group and dataset have same name (%s), referenced by include" %(
+                    self.full_path, id))
 #                 import pdb; pdb.set_trace()
                 error_exit()
             # save include information along with other keys in mstats entry
@@ -5538,20 +5553,20 @@ class Group(Node):
         
     def display(self):
         """ Displays information about group (used for debugging)"""
-        print "\n\n***********************\n"
-        print "Info about group %s, name=%s, path=%s" % (self.sdef['id'], 
-            self.name, self.path)
-        print "sdef="
+        print ("\n\n***********************\n")
+        print ("Info about group %s, name=%s, path=%s" % (self.sdef['id'],
+            self.name, self.path))
+        print ("sdef=")
         pp.pprint(self.sdef)
-        print "expanded_def="
+        print ("expanded_def=")
         pp.pprint (self.expanded_def)
-        print "includes="
+        print ("includes=")
         pp.pprint (self.includes)
 #         print "parent_attributes="
 #         pp.pprint (self.parent_attributes)
-        print "attributes="
+        print ("attributes=")
         pp.pprint (self.attributes)
-        print "mstats="
+        print ("mstats=")
         pp.pprint (self.mstats)
 
 

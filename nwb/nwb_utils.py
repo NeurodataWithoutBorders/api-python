@@ -67,7 +67,7 @@ def add_epoch_ts(e,  start_time, stop_time, in_epoch_name, timeseries):
         # ts is path to node rather than node.  Get the node
         timeseries = e.file.get_node(timeseries)
     elif "h5gate.Group" not in str(type(timeseries)):  # change to use string, was: is not h5gate.Group:
-        print "Don't recognize timeseries parameter as group or path, type=%s" % type(timeseries)
+        print ("Don't recognize timeseries parameter as group or path, type=%s" % type(timeseries))
         sys.exit(1)
     timeseries_path = timeseries.full_path   
     if timeseries_path not in tse_cache:
@@ -175,8 +175,8 @@ def get_tse_overlap_info(timestamps, timeseries_path):
     if num_nans == 0 or num_nans == len(timestamps) or num_nans > tse_max_num_nans:
         info = {'num_nans': num_nans, 'timestamps': timestamps}
         if num_nans > tse_max_num_nans:
-            print "Warning: more than %i NaN's (%i) in timestamps for %s, not caching" % (
-                tse_max_num_nans, num_nans, timeseries_path)
+            print ("Warning: more than %i NaN's (%i) in timestamps for %s, not caching" % (
+                tse_max_num_nans, num_nans, timeseries_path))
         tse_cache[timeseries_path] = info
         return
     # ok, are some NaN's, but not too many

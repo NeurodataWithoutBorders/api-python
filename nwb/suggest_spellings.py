@@ -36,7 +36,7 @@ def test_get_possible_matches():
     words = ["stimuls", "hipppocampus", "mose", "modlue", "interfaces"]
     for word in words:
         possible_matches = get_possible_matches(word, choices)
-        print "%s found %s" % (word, possible_matches)
+        print ("%s found %s" % (word, possible_matches))
 
 
 if __name__ == '__main__':

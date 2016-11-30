@@ -36,12 +36,12 @@ pp = pprint.PrettyPrinter(indent=4)
     
 def show_links(links):
     """ Display different structures in links"""
-    print "********* Link groups **************"
+    print ("********* Link groups **************")
     lg = links['lg']
     for type in lg:
-        print "****** %s links:" % type
+        print ("****** %s links:" % type)
         num_locations = len(lg[type].keys())
-        print "%i locations with %s link" % (num_locations, type)
+        print ("%i locations with %s link" % (num_locations, type))
         if num_locations == 0:
             continue
         multi_locs = {}
@@ -51,13 +51,13 @@ def show_links(links):
             if len(paths) > 1 or type == "soft": # soft links always have more than one since target is also
                 multi_locs[loc] = paths
         if multi_locs:
-            print "%i have multiple paths:" % len(multi_locs)
+            print ("%i have multiple paths:" % len(multi_locs))
             pp.pprint(multi_locs)
         else:
-            print "none have multiple paths"
+            print ("none have multiple paths")
     # soft links
     sl = links['sl_from_to']
-    print "***** %i soft links.  (from -> to) below:" % len(sl)
+    print ("***** %i soft links.  (from -> to) below:" % len(sl))
     pp.pprint(sl)
     
 def add_item(dict, key, val):
@@ -87,7 +87,7 @@ def save_info(objtype, objno, path, target, links):
         type = 'ext'
         add_item(links['lg'][type], target, path)
     else:
-        print "Unknown object type: '%s'" % objtype
+        print ("Unknown object type: '%s'" % objtype)
         sys.exit(1)
 
 
@@ -379,11 +379,11 @@ def show_stats(links):
     hp = len(links['path2lg']['hard'])
     sp = len(links['path2lg']['soft'])
     ft = len(links['sl_from_to'])
-    print "Num groups: %i hard, %i soft" % (hlg, slg)
-    print "path2lg: %i hard, %i soft" % (hp, sp)
-    print "Soft link from-to: %i" % ft
+    print ("Num groups: %i hard, %i soft" % (hlg, slg))
+    print ("path2lg: %i hard, %i soft" % (hp, sp))
+    print ("Soft link from-to: %i" % ft)
     slinks = shorten_dict(links)
-    print "links is:"
+    print ("links is:")
     pp.pprint(slinks)
     
    
@@ -700,8 +700,8 @@ def gnfpt(node, path_parts):
         ppg = pp + "/"  # groups have trailing slash
         id = pp if pp in node.mstats else (ppg if ppg in node.mstats else None)
         if not id:
-            print ("Unable to find member id %s in autogen at: %s\n"
-                " available members are: %s") % (pp, node.full_path, node.mstats.keys())
+            print (("Unable to find member id %s in autogen at: %s\n"
+                " available members are: %s") % (pp, node.full_path, node.mstats.keys()))
             # import pdb; pdb.set_trace()
             sys.exit(1)
         # found member in mstats.  Get nodes
@@ -764,11 +764,11 @@ def fill_missing_links(f):
                     ### Actually, don't save link info.  It's already saved when reading
                     # save_info("link", None, from_node.full_path, target_node.full_path, f.links)
     if missing_targets['hard'] or missing_targets['soft']:
-        print "*** Link targets were missing when reading file:"
+        print ("*** Link targets were missing when reading file:")
         for link_type in ('hard', 'soft'):
             for loc in missing_targets[link_type]:
                 from_paths = f.links['missing_links'][link_type][loc]
-                print "loc '%s', from paths:" % loc
+                print ("loc '%s', from paths:" % loc)
                 pp.pprint(from_paths)
         sys.exit(1)
 
@@ -904,10 +904,11 @@ def check_for_autogen(dict, aid, path, ctype, f):
     
 def show_autogen(f):
     """ Displays stored autogen, for testing"""
-    print "found autogens:"
+    print ("found autogens:")
     for a in f.autogen:
         attr = "attribute (%s)" % a['aid']
-        print a['ctype'], a['agtype'], a['node_path'], attr,  a['agtarget'], a['aid']
+        print ("%s %s %s %s %s %s" %
+            (a['ctype'], a['agtype'], a['node_path'], attr,  a['agtarget'], a['aid']))
   
 
 # def create_autogen_datasets(f):
@@ -1185,7 +1186,7 @@ def compute_autogen(f, a):
         else:
             try:
                 length = len(val)
-            except TypeError, e:
+            except TypeError as e:
                 msg = "%s: autogen unable to determine length of '%s' error is: '%s'" % (
                     a['node_path'], path, e)
                 f.warning.append(msg)
@@ -1586,10 +1587,19 @@ def compare_autogen_values(f, a, value):
         severity = 'error'
     edesc = "unexpected" if severity == "warning" else "incorrect"
     msg = ("values %s.\nexpected:%s (type %s)\n"
-        "found:%s (type %s)") % (edesc, a['agvalue'], type(a['agvalue']), value, type(value))
+        "found:%s (type %s)") % (edesc, a['agvalue'], detailed_type(a['agvalue']),
+        value, detailed_type(value))
     report_autogen_problem(f, a, msg, severity)
     
-    
+def detailed_type(val):
+    """ Returned a more detailed description of the type of val, if the type is
+    np.ndarray"""
+    if isinstance(val, np.ndarray):
+        vtype = "<type 'numpy.ndarray', dtype='%s'>" % val.dtype
+    else:
+        vtype = type(val)
+    return vtype
+
 def report_autogen_problem(f, a, msg, severity):
     assert severity in ('warning', 'error')
     if a['aid']:
@@ -1602,6 +1612,7 @@ def report_autogen_problem(f, a, msg, severity):
     if severity == 'warning':
         f.warning.append(output_msg)
     else:
+        # import pdb; pdb.set_trace()
         f.error.append(output_msg)
 
 def update_autogen(f, a):
@@ -1764,15 +1775,15 @@ def get_param(dict, key, default):
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
-        print "format is:"
-        print "pyhton %s <hdf5_file_name>" % sys.argv[0]
+        print ("format is:")
+        print ("pyhton %s <hdf5_file_name>" % sys.argv[0])
         sys.exit(0)
     fname = sys.argv[1]
     try:
         fp = h5py.File(fname, "r")
         # f = h5py.h5f.open(fname, h5py.h5f.ACC_RDONLY)
     except IOError:
-        print "Unable to open file '%s'" % fname
+        print ("Unable to open file '%s'" % fname)
         sys.exit(1)
     links = initialize()
     find(fp, links)

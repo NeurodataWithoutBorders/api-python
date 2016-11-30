@@ -59,7 +59,7 @@ def combine_messages(messages):
                 ti['tn2dm'][tn] = {digits: mn}
             else:
                 if digits in ti['tn2dm'][tn]:
-                    print "duplicate message found: %s" % msg
+                    print ("duplicate message found: %s" % msg)
                     break
                 ti['tn2dm'][tn][digits] = mn
     # done building needed structures.  Now generate 'output' (i.e. ti['mfin'] and ti['mout']
