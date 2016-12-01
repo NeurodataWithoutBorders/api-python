@@ -1754,7 +1754,7 @@ def make_link(id):
 
 def make_id_doc(f, id, id_info, ids_documented, sdef=None):
     """ make documentation about id.  Add to ids_documented (dict mapping id
-    to documentation about id (an Id_doc object).  sdef is structure definition if
+    to documentation about id (an Id_doc object)).  sdef is structure definition if
     obtained for id not created (not an absolute path without a variable-id).
     ids that are created in mstats have a absolute path, definition for
     them is in the mstats entry; sdef is not used.

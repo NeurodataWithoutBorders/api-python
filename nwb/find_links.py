@@ -1543,7 +1543,7 @@ def compare_autogen_values(f, a, value):
                         id+"/" in enclosing_node.mstats and enclosing_node.mstats[id]['created']):
                         added_invalid.append(id)
                 if added_invalid:
-                    import pdb; pdb.set_trace()      
+                    # import pdb; pdb.set_trace()
                     plural_s, plural_are = get_plural(added_invalid)
                     msg = ("contains identifier%s %s which %s actually present.\n"
                         "expected:%s\n"
@@ -1583,12 +1583,21 @@ def compare_autogen_values(f, a, value):
         # timeseries num_samples.  Should modify specification language
         # to allow specifying either a warning or an error in autogen
         severity = 'warning'
+    elif (isinstance(value, np.ndarray) and isinstance(a['agvalue'], np.ndarray) and
+        value.shape == (0,) and a['agvalue'].shape == (0,)):
+        # both expected and found are empty 1-d arrays.  Report this as a warning (not an
+        # error) even though there is not a match to the type of the array.  This done
+        # because the type of the array may not be important anyway since it's empty,
+        # and in h5py (possibly other api's too) creating non-float empty arrays (datasets)
+        # in hdf5 requires more work than creating the default type which is float.
+        severity = 'warning'
     else:
         severity = 'error'
     edesc = "unexpected" if severity == "warning" else "incorrect"
     msg = ("values %s.\nexpected:%s (type %s)\n"
         "found:%s (type %s)") % (edesc, a['agvalue'], detailed_type(a['agvalue']),
         value, detailed_type(value))
+    # import pdb; pdb.set_trace()
     report_autogen_problem(f, a, msg, severity)
     
 def detailed_type(val):

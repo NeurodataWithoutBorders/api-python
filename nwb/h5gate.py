@@ -392,7 +392,7 @@ class File(object):
             fp.close()
             name_spaces = self.fsname2ns[file_name]
             base_name = os.path.basename(file_name)
-            self.set_dataset(qsid, content, name=base_name, attrs={'namespaces': str(name_spaces)})
+            self.set_dataset(qsid, content, name=base_name, attrs={'namespaces': name_spaces})
             
     def load_specifications_from_h5_file(self, fs_var):
         # load specifications from created hdf5 file
@@ -3512,7 +3512,7 @@ class File(object):
         if len(matches) > 1:
             print ("Found more than one match to node. (%s)" % matches)
             print ("Perhaps specification is ambigious.")
-            import pdb; pdb.set_trace()
+            # import pdb; pdb.set_trace()
             error_exit()
         if len(matches) == 1:
             return matches[0]
@@ -4455,7 +4455,12 @@ class Node(object):
                 msg = ("'%s': expecting type '%s' assigned to attribute [%s], but value being stored"
                     " is type '%s'") % (self.full_path, ddt['orig'], aid, dtype)
                 self.file.error.append(msg)
-            if not shape == "scalar":
+            if shape == "scalar":
+                if "dimensions" in ats[aid]:
+                    msg = ("%s: scalar stored in attribute '%s', value=%s, but expecting array since "
+                        "dimensions=%s") % (self.full_path, aid, nv, ats[aid]["dimensions"])
+                    self.file.error.append(msg)
+            else:
                 if not "dimensions" in ats[aid]:
                     msg = ("%s: array (shape %s) being stored in attribute '%s', but"
                         " no dimensions specified; new value=%s") % (self.full_path, shape, aid, nv)
@@ -5437,7 +5442,8 @@ class Group(Node):
             if id not in self.id_sources:
                 print ("id %s not found in id_sources:" % id)
                 pp.pprint(self.id_sources)
-                import pdb; pdb.set_trace()
+                # import pdb; pdb.set_trace()
+                # error_exit()
             assert id in self.id_sources, ("%s: id '%s' not found it id_sources when "
                 "makeing mstats") % (self.sdef['id'], id)
             id_source = self.id_sources[id]
