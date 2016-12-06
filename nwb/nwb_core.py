@@ -11,9 +11,9 @@
 
 "info": {
     "name": "NWB file format specification",
-    "version": "1.0.5h_beta",
-    "date": "Nov 30, 2016",
-    "author": "Keith Godfrey.  Converted to format specification by Jeff Teeters.",
+    "version": "1.0.5i_beta",
+    "date": "Dec 6, 2016",
+    "author": "The many scientists who helped make the NWB:Neurophysiology format a reality.",
     "contact": "jteeters@berkeley.edu, keithg@alleninstitute.org",
     "description": "Specification for the core NWB (Neurodata Withoug Borders) format."
 },
@@ -701,7 +701,6 @@
                     "COMMENT: Attribute is only present if links "
                     "are present. List should include the path to this TimeSeries also."),
                 "data_type": "text",
-                # commented out dimension to make a single string
                 "dimensions": ["num_tslinks"],
                 "autogen": {
                     "type": "links",
@@ -953,7 +952,6 @@
             "references": "indexed_timeseries/data.num_times"},
         "indexed_timeseries/": {
             "description": "HDF5 link to TimeSeries containing images that are indexed.",
-            # "link": {"target_type": "<ImageSeries>/", "allow_subclasses": True } },
             "link": {"target_type": "<TimeSeries>/", "allow_subclasses": True } },
         "indexed_timeseries_path": {
             "description": "Path to linked TimeSeries",
@@ -2084,7 +2082,6 @@
                 "type": "names",
                 "target":"<unit_N>",
                 "trim": True,
-                # "tsig": {"type": "group"}, # would be good to require member "times" data set.
                 "qty": "*"},
             "references": "<unit_N>/"},  # 1-to-1 is relationship type. To be implemented.
         "<unit_N>/+": {
@@ -2523,6 +2520,11 @@ advice.</p>
         "location": {"id":"Acknowledgements", "position": "after"},
         "level": 0,
         "content": """
+ <p style="margin-bottom: 0in">1.0.5i_beta, Dec 6, 2016</p>
+ <p>Remove some comments.  Modify author string in info section.
+ </p>
+ <p style="margin-bottom: 0in"></p><br/>
+
 <p style="margin-bottom: 0in">1.0.5h_beta, Nov 30, 2016</p>
  <p>Add dimensions to /acquisition/images/&lt;image_X&gt;
  </p>
