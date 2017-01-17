@@ -133,7 +133,7 @@ An example of calling nwb_file.open is given below;
 	settings["file_name"] = "filename.nwb"
 	settings["identifier"] = utils.create_identifier("some string; will be added to unique identifier")
 	settings["mode"] = "w"
-	settings["start_time"] = "2016-04-07T03:16:03.604121"
+	settings["start_time"] = "2016-04-07T03:16:03.604121Z"
 	settings["description"] = "Description of the file"
 
 	# specify an extension (Could be more than one).
