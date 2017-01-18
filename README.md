@@ -11,13 +11,15 @@ The Python API for the NWB format is a write API that can be used to create NWB 
 
 ## 2. Installaton.
 
+Note: at present this requires Python 2, but Python 3 support is being worked on and should be ready soon.
+
 ```
 git clone https://github.com/NeurodataWithoutBorders/api-python nwb_api-python
 ```
 
 (The last parameter is optional.  Providing it, will cause the software to be stored in a directory named "nwb_api-python" rather than 'api-python').
 
-After you get the latest software, to install it using:
+After you get the latest software, install it using:
 
 ```
 python setup.py install
@@ -32,6 +34,34 @@ git pull origin
 then re-run ```python setup.py install``` to install the updates.
 
 Try running the examples in directory examples/create_scripts directory and also the unit tests in the unittest directory.
+
+### Installing using conda
+
+The NWB API depends on HDF5 (accessed via the h5py library) and with the
+default install will use whatever version is installed on your system.
+You can install it within a [conda] environment to keep it isolated from
+other software, for instance if you wish to use a different version of HDF5,
+or not have h5py installed globally.
+
+Once you have [installed conda], you can use the following commands to set
+up an environment for NWB:
+
+```
+conda create -n nwb python=2.7 h5py
+# Activate the conda environment with one of the following two lines
+source activate nwb # Linux, Mac OS
+activate nwb        # Windows
+# Build & install the API within the environment
+cd nwb_api-python
+pip install -e .
+```
+
+With this approach (in particular the `-e` flag) updates to the API obtained
+with `git pull` will automatically be reflected in the version installed in
+the environment.
+
+[conda]: http://conda.pydata.org/docs/get-started.html
+[installed conda]: http://conda.pydata.org/docs/install/quick.html
 
 ## 3. Using the API.
 

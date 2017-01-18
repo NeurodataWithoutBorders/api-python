@@ -60,7 +60,7 @@ location of the Python interpreter   is:
     executable: '/Users/jt/anaconda/bin/python'
        library: '/Users/jt/anaconda/lib/libpython2.7.dylib'
           home: '/Users/jt/anaconda'
-      isloaded: 1
+      isloaded: 0
 
    If the location of the executable displayed by "pyversion" matches the location
    you found in step 2, then matlab is already setup to use the correct Python
@@ -77,7 +77,16 @@ location of the Python interpreter   is:
 4. Add the 'matlab_bridge_api' directory to your matlab path.  Do this by
    clicking on the "Set Path" icon in MatLab, and navigating to directory
    "matlab_bridge/matlab_bridge_api", and add that directory to your matlab
-   search path. 
+   search path.
+
+5. Tell Matlab not to abort if the Python API uses a different HDF5 version.
+   Matlab has its own copy of the HDF5 library internally, but the NWB
+   Python API will be using your system's HDF5 library (or one in a conda
+   environment, depending on how you built the API). If these are different
+   versions, by default HDF5 will make Matlab abort. You can disable this
+   check with the Matlab command `setenv('HDF5_DISABLE_VERSION_CHECK', '1')`
+   before using any NWB features. Different versions of HDF5 in the 1.8
+   series are usually compatible enough to work together.
 
 If everything is working you should be able to run the matlab unit tests
 by going to directory
