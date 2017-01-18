@@ -11,6 +11,8 @@ The Python API for the NWB format is a write API that can be used to create NWB 
 
 ## 2. Installaton.
 
+Note: at present this requires Python 2, but Python 3 support is being worked on and should be ready soon.
+
 ```
 git clone https://github.com/NeurodataWithoutBorders/api-python nwb_api-python
 ```
