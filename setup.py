@@ -1,4 +1,4 @@
-from distutils.core import setup
+from setuptools import setup
 
 setup(
     name = 'nwb',
@@ -8,5 +8,6 @@ setup(
     author_email='jteeters@berkeley.edu',
     description = 'Python API for Neurodata Without Borders (NWB) format',
     packages = ['nwb'],
+    install_requires = ['h5py']
     )
 
