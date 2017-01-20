@@ -918,10 +918,10 @@
                     "description": "Value is float('NaN') since this does not apply.",
                     "value": "float('NaN')"},
                 "resolution": {
-                    "description": "Value is float('nan')since this does not apply",
+                    "description": "Value is float('NaN') since this does not apply.",
                     "value": "float('NaN')"},
                 "unit": {
-                    "description": "Value is \"n/a\" to indicate that this does not apply",
+                    "description": "Value is \"n/a\" to indicate that this does not apply.",
                     "value": "n/a"}}},
     },
     "<IndexSeries>/": {
