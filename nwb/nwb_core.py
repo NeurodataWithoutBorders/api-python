@@ -925,13 +925,13 @@
                     "value": "n/a"}}},
     },
     "<IndexSeries>/": {
-        "description": ("Stores indices to image frames stored in an ImageSeries. The purpose "
-            "of the ImageIndexSeries is to allow a static image stack to be stored somewhere, "
+        "description": ("Stores indices to (typically image) frames stored in another TimeSeries. "
+            "Its purpose is to allow a static image stack to be stored somewhere, "
             "and the images in the stack to be referenced out-of-order. This can be for the "
             "display of individual images, or of movie segments (as a movie is simply a "
             "series of images). The data field stores the index of the frame in the "
-            "referenced ImageSeries, and the timestamps array indicates when that image "
-            "was displayed."),
+            "referenced TimeSeries, and the timestamps array indicates when that frame "
+            "was displayed. Can also be used for non-image data."),
         "merge": ["<TimeSeries>/"],
         "attributes": {
             "ancestry": {
