@@ -73,7 +73,7 @@
             "files. This will allow keeping bulky raw data out of the file while preserving the option "
             "of keeping some/all in the file. "
             "MORE_INFO: Acquired data includes tracking and experimental data streams (ie, "
-            "everything measured from the system)."
+            "everything measured from the system). "
             "If bulky data is stored in the /acquisition group, the data can exist in a "
             "separate HDF5 file that is linked to by the file being used for processing "
             "and analysis."),
@@ -500,10 +500,10 @@
                     "unit": {
                         "description": ("Base unit that coordinates are stored in "
                             "(e.g., Meters)"),
-                            "data_type": "text", "value": "Meter"},
+                        "data_type": "text", "value": "Meter"},
                     "conversion": {
                         "description": ("Multiplier to get from stored values to specified "
-                            "unit (e.g., 1e-3 for millimeters)"),
+                            "unit (e.g., 1000 for millimeters)"),
                         "data_type": "float", "value": 1.0}},
                 "xyz" : {  # definition of dimension xyz
                      "type": "structure",
