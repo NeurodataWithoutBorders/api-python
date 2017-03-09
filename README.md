@@ -296,6 +296,7 @@ An h5gate Group object is returned by h5gate File methods “make_group” and �
 3. set_dataset
 4. set_custom_dataset
 5. set_attr
+6. get_node
 
 The name of the first four of these methods are the same as the name of methods of the h5gate File object. The difference between the File and Group object methods is that the h5gate File methods are used to create groups and datasets that are not inside groups that are defined as part of the format specification whereas the Group methods are used to create groups and datasets inside the current group, that is, inside the Group object used to call the methods.  The h5gate Group methods are described below:
 
@@ -358,6 +359,18 @@ aid – attribute id (name of the attribute).
 value – value to store in the attribute.
 
 custom – a logical value (default “False”) which indicates whether or not the attribute is a  custom attribute (that is, not part of the file format specification).  Setting a value of “True” when setting a custom attribute prevents a warning message from being displayed for the attribute when closing the file.
+
+#### 3.5.6 h5gate Group get_node method
+
+This is a shorthand wrapper for the `File.get_node` method for accessing Groups or Datasets within the current Group.
+It has the following signature:
+
+``` python
+   n = g.get_node(path, abort)
+```
+
+In the above `g` is an h5gate Group object.  Parameters are as for `File.get_node` except that the `path` may be a
+relative path, in which case it is resolved relative to `g`.
 
 ### 3.6.  nwb_utils.py functions
 
