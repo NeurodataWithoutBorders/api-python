@@ -73,7 +73,7 @@
             "files. This will allow keeping bulky raw data out of the file while preserving the option "
             "of keeping some/all in the file. "
             "MORE_INFO: Acquired data includes tracking and experimental data streams (ie, "
-            "everything measured from the system)."
+            "everything measured from the system). "
             "If bulky data is stored in the /acquisition group, the data can exist in a "
             "separate HDF5 file that is linked to by the file being used for processing "
             "and analysis."),
@@ -500,10 +500,10 @@
                     "unit": {
                         "description": ("Base unit that coordinates are stored in "
                             "(e.g., Meters)"),
-                            "data_type": "text", "value": "Meter"},
+                        "data_type": "text", "value": "Meter"},
                     "conversion": {
                         "description": ("Multiplier to get from stored values to specified "
-                            "unit (e.g., 1e-3 for millimeters)"),
+                            "unit (e.g., 1000 for millimeters)"),
                         "data_type": "float", "value": 1.0}},
                 "xyz" : {  # definition of dimension xyz
                      "type": "structure",
@@ -918,20 +918,20 @@
                     "description": "Value is float('NaN') since this does not apply.",
                     "value": "float('NaN')"},
                 "resolution": {
-                    "description": "Value is float('nan')since this does not apply",
+                    "description": "Value is float('NaN') since this does not apply.",
                     "value": "float('NaN')"},
                 "unit": {
-                    "description": "Value is \"n/a\" to indicate that this does not apply",
+                    "description": "Value is \"n/a\" to indicate that this does not apply.",
                     "value": "n/a"}}},
     },
     "<IndexSeries>/": {
-        "description": ("Stores indices to image frames stored in an ImageSeries. The purpose "
-            "of the ImageIndexSeries is to allow a static image stack to be stored somewhere, "
+        "description": ("Stores indices to (typically image) frames stored in another TimeSeries. "
+            "Its purpose is to allow a static image stack to be stored somewhere, "
             "and the images in the stack to be referenced out-of-order. This can be for the "
             "display of individual images, or of movie segments (as a movie is simply a "
             "series of images). The data field stores the index of the frame in the "
-            "referenced ImageSeries, and the timestamps array indicates when that image "
-            "was displayed."),
+            "referenced TimeSeries, and the timestamps array indicates when that frame "
+            "was displayed. Can also be used for non-image data."),
         "merge": ["<TimeSeries>/"],
         "attributes": {
             "ancestry": {
