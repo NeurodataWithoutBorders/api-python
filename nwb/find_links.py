@@ -1384,6 +1384,8 @@ def values_match(x, y):
         # and x.shape == () and y.shape == ()
         and np.isnan(x) and np.isnan(y)):
         return True
+    if isinstance(y, str) and not isinstance(x, str):
+        return False
     try:
         eq = x==y
     except ValueError:
