@@ -1,6 +1,6 @@
 # Python API for Neurodata Without Borders (NWB) format
 
-Version 0.7 (April 8, 2016)
+Version 0.7 (April 8, 2017)
 
 Note: Version number above is the version of the API software, not the version of the NWB format.  Date is the most recent date this document was modified.
 
