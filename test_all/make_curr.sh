@@ -160,11 +160,11 @@ echo "done processing matlab"
 
 # Python unittests
 
-echo "Running unittests..."
+echo "Running python unittests..."
 unittest_nwb_dir="../unittest"
 cd $unittest_nwb_dir
 rm *.nwb
-./run_tests.sh > ../test_all/curr/unittest/run_tests.txt
+./run_tests.sh 2>&1 | tee ../test_all/curr/unittest/run_tests.txt
 cd $cwd
 
 # run validator on unittests
