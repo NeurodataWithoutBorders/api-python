@@ -1,5 +1,5 @@
 jZSWqA check_schemas.txt
-jskOgq log.txt
+lkLpVy log.txt
 ckBgPE doc/behavior-e.html
 nOEUPO doc/closed_interface-e.html
 ksmjJP doc/core_doc.html
@@ -117,8 +117,6 @@ kPhDpF matlab_bridge/examples/create/crcns_alm_1.txt
 iRHZBG matlab_bridge/examples/h5sig/abstract_feature.txt
 fZFkPU matlab_bridge/examples/h5sig/analysis_e.txt
 bxOqkN matlab_bridge/examples/h5sig/crcns_alm-1/NL_example20140905_ANM219037_20131117.txt
-jDEloG matlab_bridge/examples/h5sig/crcns_alm-1/NL_example20140905_ANM219037_20131117_nwb.txt
-dYuFcx matlab_bridge/examples/h5sig/crcns_alm-1/NL_example20140905_ANM219037_20131117_orig.txt
 lIlkXI matlab_bridge/unittest/unittest_results.txt
 DwdBcw matlab_bridge/unittest/h5sig/s_annotation.txt
 gzfwbV matlab_bridge/unittest/h5sig/s_append.txt

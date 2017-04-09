@@ -117,10 +117,15 @@ else
     echo "Running matlab unittests"
     utd="../matlab_bridge/matlab_unittest"
     cd $utd
+    # clear old nwb files from matlab_unittest directory
+    rm *.nwb
     $matlab -nodisplay -nosplash -nodesktop -r "try, run('run_all_tests.m'), catch me, fprintf('%s / %s\n',me.identifier,me.message), end, exit"
     cd $cwd
 
     echo "run matlab examples"
+    # clear output directories for matlab example create scripts
+    ml_examples_nwb_dir="../matlab_bridge/matlab_examples/created_nwb_files"
+    clear_dir $ml_examples_nwb_dir
     exd="../matlab_bridge/matlab_examples/create_scripts"
     cd $exd
     $matlab -nodisplay -nosplash -nodesktop -r "try, run('run_all_examples.m'), catch me, fprintf('%s / %s\n',me.identifier,me.message), end, exit"
@@ -148,7 +153,6 @@ else
     echo "making signature files for matlab examples"
     curr_ml_examples_sig_dir="$curr_ml_examples_dir/h5sig"
     mkdir -p $curr_ml_examples_sig_dir
-    ml_examples_nwb_dir="../matlab_bridge/matlab_examples/created_nwb_files"
     python ../examples/utility_scripts/make_h5sig.py $ml_examples_nwb_dir $curr_ml_examples_sig_dir
 
 
