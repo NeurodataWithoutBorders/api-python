@@ -6,6 +6,8 @@ import inspect
 # import nwb
 
 def print_error(context, err_string):
+#     tes = traceback.extract_stack()
+#     print(traceback.extract_stack())
     func = traceback.extract_stack()[-3][2]
     print("----------------------------------------")
     print("**** Failed unit test %s" % inspect.stack()[0][1])
@@ -15,6 +17,7 @@ def print_error(context, err_string):
     print("Stack:")
     traceback.print_stack()
     print("----------------------------------------")
+    import pdb; pdb.set_trace()
     sys.exit(1)
 
 def error(context, err_string):

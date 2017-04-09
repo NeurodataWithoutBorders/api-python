@@ -7,10 +7,22 @@ import h5py
 import copy
 import numpy as np
 import operator
+# import warnings
+
+from . import value_summary as vs
+
+from sys import version_info  # py3
 
 import pprint
 pp = pprint.PrettyPrinter(indent=4)
-    
+
+# set unicode to str if using Python 3 (which does not have unicode class)
+try:
+    unicode
+except NameError:
+    unicode = str
+
+
 # def get_group_info(f, h5_node):
 #     """ Return information about h5_node"""
 #     paths = h5py.h5i.h5_node.name
@@ -60,12 +72,22 @@ def show_links(links):
     print ("***** %i soft links.  (from -> to) below:" % len(sl))
     pp.pprint(sl)
     
+# def add_item_old(dict, key, val):
+#     """ Append value to list at dict[key].  (dict is a dictionary).  Created
+#     dict[key] first if it does not exist"""
+#     if key not in dict:
+#         dict[key] = []
+#     dict[key].append(val)
+    
 def add_item(dict, key, val):
     """ Append value to list at dict[key].  (dict is a dictionary).  Created
-    dict[key] first if it does not exist"""
-    if key not in dict:
-        dict[key] = []
-    dict[key].append(val)
+    dict[key] first if it does not exist.  For py3: Make sure key and values are str
+    (unicode py3, bytes py2)"""
+    skey = vs.make_str3(key)  #py3, make sure is str type
+    sval = vs.make_str3(val)  #py3, make sure is str type
+    if skey not in dict:
+        dict[skey] = []
+    dict[skey].append(sval)
     
 
 def save_info(objtype, objno, path, target, links):
@@ -79,7 +101,8 @@ def save_info(objtype, objno, path, target, links):
         type = "soft"
         add_item(links['lg'][type], target, path)
         # save soft link from and to
-        links['sl_from_to'][path] = target
+        # links['sl_from_to'][path] = target
+        add_item(links['sl_from_to'], path, target)  # py3, make sure all are string
     elif objtype == "type":
         # ignore hdf5 type type
         pass
@@ -114,7 +137,7 @@ def find_links(fp, links):
     to the same target through a chain of soft links."""
     global h5_ntypes
     fid = fp.id
-    root = h5py.h5g.open(fid, '/')
+    root = h5py.h5g.open(fid, b'/') #py3, b added, was: open(fid, '/')
     np = (root, '/')  # np - node & path, h5 object and path
     # groups_to_visit = [ f["/"],]
     groups_to_visit = [ np,]
@@ -135,13 +158,13 @@ def find_links(fp, links):
                 target = h5g.get_linkval(mname)
             elif mtype == 'ext_link':
                 # target of external link
-                target = "\n".join(h5g.links.get_val(mname))
+                target = b"\n".join(h5g.links.get_val(mname))  #py3, added b
             else:
                 target = None   
             if path == "/":
-                full_path = "/" + mname
+                full_path = b"/" + mname  #py3, b added
             else:
-                full_path = path + "/" + mname
+                full_path = path + b"/" + mname  #py3, b added
             save_info(mtype, objno, full_path, target, links)
             if mtype == 'group':
                 mh5g = h5py.h5g.open(h5g, mname)
@@ -251,7 +274,7 @@ def prune_hard_links(links):
     hl = links['lg']['hard']
     # Step 0. Remove any hard link locations that have only one path
     # (These are not part of an added hard link)
-    for loc in hl.keys():
+    for loc in list(hl):  #py3, was: hl.keys():
         if len(hl[loc]) == 1:
             del hl[loc]
     # Step 1. Make path2loc which maps paths to the location identifier
@@ -735,13 +758,10 @@ def node_matches_tsig(node, tsig):
             if aid in na:
                 value = na[aid]['nv'] if 'nv' in na[aid] else (
                     na[aid]['value'] if 'value' in na[aid] else None)
-                if not value or not values_match(value, tsig['attrs'][aid]):
+                if not value or not vs.values_match(value, tsig['attrs'][aid]):
                     return False
     # everything matches
     return True
-
-
-
 
 def fill_missing_links(f):
     """ Fill in any links that were missing targets at time link source was read in"""
@@ -1150,6 +1170,9 @@ def compute_autogen(f, a):
                     "%s at target:\n%s\nvalue found:%s" % (a['node_path'], type(nv), 
                     path, nv))
                 return
+            # convert any numpy.bytes_ to regular bytes.  This prevents crash in Python 3
+            # when using variable length strings
+            nv = [bytes(x) if isinstance(x, np.bytes_) else x for x in nv]
             snv = set(nv)
             values = values.union(snv)
         lvalues = list(values)
@@ -1352,71 +1375,135 @@ def get_plural(arr):
     if len(arr) > 1:
         return ('s', 'are')
     return ('', 'is')
-        
-    
-def values_match(x, y):
-    """ Compare x and y.  This needed because the types are unpredictable and sometimes
-    a ValueError is thrown when trying to compare.
-    """
-    if x is y:
-        return True
-    # explicit checks for None used to prevent warnings like:
-    # FutureWarning: comparison to `None` will result in an elementwise object comparison in the future.
-    # eq = x==y
-    if x is None:
-        if y is None:
-            return True
-        else:
-            return False
-    if y is None:
-        return False
-    # compare arrays so corresponding NaN values are treated as a match
-    if (isinstance(x, np.ndarray) and isinstance(y, np.ndarray)
-        and np.issubdtype(x.dtype, np.float) and np.issubdtype(y.dtype, np.float)):
-        # from: http://stackoverflow.com/questions/10710328/comparing-numpy-arrays-containing-nan
-        try:
-            np.testing.assert_equal(x,y)
-        except AssertionError:
-            return False
-        return True
-    # check for two scalar NaN.  If found, treat as match
-    if (np.issubdtype(type(x), np.float) and np.issubdtype(type(y), np.float)
-        # and x.shape == () and y.shape == ()
-        and np.isnan(x) and np.isnan(y)):
-        return True
-    if isinstance(y, str) and not isinstance(x, str):
-        return False
-    try:
-        eq = x==y
-    except ValueError:
-        # ValueError: shape mismatch: objects cannot be broadcast to a single shape
-        return False
-    if isinstance(eq, bool):
-        return eq
-    return eq.all()
-    
-    
+
+
+# def values_match(x, y):
+#     """ Compare x and y.  This needed because the types are unpredictable and sometimes
+#     a ValueError is thrown when trying to compare.
+#     """
+#     # convert to matching types (unicode) if one is unicode and the other bytes
+#     x0 = base_val(x)  # type of value in array or scalar
+#     y0 = base_val(y)
+#     if isinstance(x0, bytes) and isinstance(y0, unicode):
+#         x = vs.make_str2(x)
+#     elif isinstance(x0, unicode) and isinstance(y0, bytes):
+#         y = vs.make_str2(y)
+#     # start comparisons
+#     if x is y:
+#         return True
+#     # explicit checks for None used to prevent warnings like:
+#     # FutureWarning: comparison to `None` will result in an elementwise object comparison in the future.
+#     # eq = x==y
+#     if x is None:
+#         if y is None:
+#             return True
+#         else:
+#             return False
+#     if y is None:
+#         return False
+#     # compare arrays so corresponding NaN values are treated as a match
+#     if (isinstance(x, np.ndarray) and isinstance(y, np.ndarray)
+#         and np.issubdtype(x.dtype, np.float) and np.issubdtype(y.dtype, np.float)):
+#         # from: http://stackoverflow.com/questions/10710328/comparing-numpy-arrays-containing-nan
+#         try:
+#             np.testing.assert_equal(x,y)
+#         except AssertionError:
+#             return False
+#         return True
+#     # check for two scalar NaN.  If found, treat as match
+#     if (np.issubdtype(type(x), np.float) and np.issubdtype(type(y), np.float)
+#         # and x.shape == () and y.shape == ()
+#         and np.isnan(x) and np.isnan(y)):
+#         return True
+#     try:
+#         with warnings.catch_warnings():
+#             # Filter warnings to remove message:
+#             # "FutureWarning: elementwise comparison failed; returning scalar instead,
+#             #   but in the future will perform elementwise comparison"
+#             # In either case (scalar False, or elementwise with an element False will return
+#             # False vie either the eq bool value (scalar) or the eq.all()
+#             warnings.simplefilter("ignore")
+#             eq = x==y
+#     except ValueError:
+#         # ValueError: shape mismatch: objects cannot be broadcast to a single shape
+#         return False
+#     if (isinstance(x, (np.string_, str)) and isinstance(y, np.ndarray)) or (
+#         isinstance(y, (np.string_, str)) and isinstance(x, np.ndarray)):
+#         # this added to force mismatch in Python 2, if:
+#         # x == '[]', type(x) == <type 'numpy.string_'> and
+#         # y == array([], dtype='|S1'), type(y) == <type 'numpy.ndarray'>.  Also:
+#         # x type np.ndarray, y type str.  These
+#         # match in Python 2. They do not match in python 3.  Not matching is desired result.
+#         return False
+#     if isinstance(eq, bool):
+#         return eq
+#     return eq.all()
     
 def val_is_int(val):
     """return True if value is type int or numpy int"""
     is_int = (isinstance(val, int)
         or (type(val).__module__ == 'numpy' and np.issubdtype(val, np.integer)))
     return is_int
-    
-  
-#     if x is y:
-#         return True
-#         return x==y
-#     if (isinstance(x, (list, tuple, np.ndarray))
-#         and isinstance(y, (list, tuple, np.ndarray))):
-#         eq = x==y
-#         if isinstance(eq, bool):
-#             return eq
-#         return eq.all()
-#     if isinstance(x, basestring) and isinstance(y, basestring):
-#         return x == y
-#     # don't have same shape or type
-#     return False
+
+
+# py3, convert bytes to strings, including if in a list or tuple
+# def make_str(val):
+#     base_v = base_val(val)
+#     if isinstance(base_v,  bytes):
+#         val = make_str2(val)
+#     return val
+
+# def make_str_orig(val):
+#     base_v = base_val(val)
+#     if (isinstance(base_v,  bytes) and version_info[0] > 2) or (
+#         isinstance(val, unicode) and version_info[0] < 3):
+#         val = make_str2(val)
+#     return val
+
+# def make_str(val):
+#     base_v = base_val(val)
+#     if isinstance(base_v,  (bytes, unicode)):
+#         # convert ndarray to list, py2 strings to bytes, py3 strings to unicode
+#         val = make_str2(val)
+#     return val
+# 
+# # recursive convert everything from bytes to str (unicode) for Python 3
+# # convert numpy ndarray to list if has str as base_val even if python 2
+# # this done so output from python2 and python3 will be identical because
+# # str(numpy.ndarray) does not have commas in the generated string,
+# # while str(list) does
+# def make_str2(val):
+#     if isinstance(val, (list, tuple, np.ndarray)) and len(val) > 0:
+#         return [make_str2(v) for v in val]
+#     elif isinstance(val, bytes) and version_info[0] > 2:
+#         try:
+#             uval = val.decode('utf-8')
+#         except UnicodeDecodeError as e:
+#             # value is a binary string.  Leave as bytes
+#             return val
+#         return uval
+#     elif isinstance(val, unicode) and version_info[0] < 3:
+#         return val.encode('utf-8')
+#     else:
+#         return val
+# 
+# # py3: convert bytes to str (unicode) if Python 3, or unicode to bytes if Python 2 
+# def make_str3(val):
+#     if isinstance(val, bytes) and version_info[0] > 2:
+#         return val.decode('utf-8')
+#     elif isinstance(val, unicode) and version_info[0] < 3:
+#         return val.encode('utf-8')
+#     else:
+#         return val
+# 
+# 
+# # get a scalar value, either from scalar or from list or tuple
+# def base_val(val):
+#     if isinstance(val, (list, tuple, np.ndarray)) and len(val) > 0:
+#         return base_val(val[0])
+#     else:
+#         return val
+#  
     
 
 # def validate_autogen_old(f):
@@ -1511,7 +1598,7 @@ def compare_autogen_values(f, a, value):
     a - row of f.autogen
     value - value in (or being stored in) hdf5 file for autogen field
     """
-#     if a['node_path'] == '/processing/brain_observatory_pipeline/DfOverF/imaging_plane_1/num_samples':
+#     if a['node_path'] =='/processing/ISI/ImageSegmentation':
 #         import pdb; pdb.set_trace()
     if value is None and not a['agvalue'] and not a['include_empty']:
         # was no value and should not be since agvalue is False
@@ -1519,7 +1606,8 @@ def compare_autogen_values(f, a, value):
         # So don't bother comparing (it's ok because nothing was stored and nothing
         # should be stored).
         return
-    if values_match(value, a['agvalue']):
+    value = vs.make_str(value)  # py3, convert bytes to str
+    if vs.values_match(value, a['agvalue']):
         # value match, check for value required but missing
         if value is None and a['qty'] == '!':
             msg = "value required but is empty."
@@ -1529,7 +1617,8 @@ def compare_autogen_values(f, a, value):
     # check for autogen "missing" type with option "allow_others"
     if a['agtype'] == 'missing' and a['allow_others']:
         try:
-            is_string_list = all(isinstance(item, (basestring, np.string_)) for item in value)
+            # is_string_list = all(isinstance(item, (basestring, np.string_)) for item in value)
+            is_string_list = all(isinstance(item, (unicode, bytes, np.string_)) for item in value)
         except TypeError as e:
             is_string_list = False
         if is_string_list:
@@ -1541,21 +1630,27 @@ def compare_autogen_values(f, a, value):
                 enclosing_node = f.path2node[a['node_path']]
                 added_invalid = []
                 for id in additions:
-                    if (id in enclosing_node.mstats and enclosing_node.mstats[id]['created']) or (
-                        id+"/" in enclosing_node.mstats and enclosing_node.mstats[id]['created']):
-                        added_invalid.append(id)
+                    try:
+                        if (id in enclosing_node.mstats and enclosing_node.mstats[id]['created']) or (
+                            id+"/" in enclosing_node.mstats and enclosing_node.mstats[id]['created']):
+                            added_invalid.append(id)
+                    except Exception as e:
+                        # import pdb; pdb.set_trace()
+                        raise ValueError('Unable to check for id %s in mstats' % id)
                 if added_invalid:
                     # import pdb; pdb.set_trace()
                     plural_s, plural_are = get_plural(added_invalid)
                     msg = ("contains identifier%s %s which %s actually present.\n"
                         "expected:%s\n"
-                        "found:%s") % (plural_s, added_invalid, plural_are, a['agvalue'], value)
+                        "found:%s") % (plural_s, added_invalid, plural_are,
+                        a['agvalue'], value)
                     report_autogen_problem(f, a, msg, 'error')
                 else:
                     plural_s, plural_are = get_plural(additions)
                     msg = ("contains identifier%s %s that %s not recommended or required.\n"
                         "expected:%s\n"
-                        "found:%s") % (plural_s, additions, plural_are, a['agvalue'], value)
+                        "found:%s") % (plural_s, additions, plural_are,
+                        a['agvalue'], value)
                     report_autogen_problem(f, a, msg, 'warning')
                 return
     # check for link_path missing leading '/'
@@ -1569,13 +1664,14 @@ def compare_autogen_values(f, a, value):
     # check if match when values are sorted
     if isinstance(value, (list, np.ndarray)):
         sorted_value = natural_sort(value)
-        if values_match(sorted_value, a['agvalue']):
+        if vs.values_match(sorted_value, a['agvalue']):
             # sorted values match
             if a['sort']:
                 msg = ("values are correct, but not sorted:\n"
                     "expected:%s (type %s)\n"
-                    "found:%s (type %s)") % (a['agvalue'], 
-                    type(a['agvalue']), value, type(value))
+                    "found:%s (type %s)") % (vs.make_str(a['agvalue']),  # py3, make_str
+                    detailed_type(a['agvalue']), vs.make_str(value),
+                    detailed_type(value)) # py3, type changed to detailed_type
                 report_autogen_problem(f, a, msg, 'warning')
             return
     # neither original or sorted values match
@@ -1597,12 +1693,12 @@ def compare_autogen_values(f, a, value):
         severity = 'error'
     edesc = "unexpected" if severity == "warning" else "incorrect"
     msg = ("values %s.\nexpected:%s (type %s)\n"
-        "found:%s (type %s)") % (edesc, a['agvalue'], detailed_type(a['agvalue']),
-        value, detailed_type(value))
+        "found:%s (type %s)") % (edesc, vs.make_str(a['agvalue']), detailed_type(a['agvalue']),
+        vs.make_str(value), detailed_type(value))
     # import pdb; pdb.set_trace()
     report_autogen_problem(f, a, msg, severity)
     
-def detailed_type(val):
+def detailed_type_old(val):
     """ Returned a more detailed description of the type of val, if the type is
     np.ndarray"""
     if isinstance(val, np.ndarray):
@@ -1611,7 +1707,27 @@ def detailed_type(val):
         vtype = type(val)
     return vtype
 
+def detailed_type(val):
+    """ Returned a more detailed description of the type of val, if the type is
+    np.ndarray"""
+    if isinstance(val, np.ndarray):
+        vtype = "<type 'numpy.ndarray', dtype='%s'>" % val.dtype
+    else:
+        # convert to type "str" if class str or type str or other string type
+        # this done so validate output in Python2 and Python3 will match
+        vtype = str(type(val))
+        if vtype in ("<class 'str'>", "<type 'unicode'>", "<class 'numpy.bytes_'>",
+            "<type 'numpy.string_'>"):
+            vtype =  "<type 'str'>"
+        else:
+            # replace 'class' with 'type' so python2 and python3 output match, e.g.:
+            # "<class 'list'>" -> "<type 'list'>"; "<class 'NoneType'>" -> "<type 'NoneType'>", ...
+            vtype = vtype.replace('class', 'type')
+    return vtype
+
+
 def report_autogen_problem(f, a, msg, severity):
+    # import pdb; pdb.set_trace()
     assert severity in ('warning', 'error')
     if a['aid']:
         # value stored in attribute
@@ -1635,6 +1751,8 @@ def update_autogen(f, a):
     if a['aid']:
         # value is stored in attribute
         aid = a['aid']
+#         if aid == "tags":
+#             import pdb; pdb.set_trace()
         node = f.path2node[a['node_path']]
         ats = node.attributes[aid]
         if 'nv' in ats:
@@ -1644,7 +1762,7 @@ def update_autogen(f, a):
         # value = ats['nv'] if 'nv' in ats else (
         #    ats['value'] if 'value' in ats else None)
         value = ats['value'] if 'value' in ats else None
-        if not values_match(value, a['agvalue']):
+        if not vs.values_match(value, a['agvalue']):
             # values do not match, update them
             ats['nv'] = a['agvalue']
             if not a['agvalue'] and not a['include_empty']:
@@ -1661,7 +1779,7 @@ def update_autogen(f, a):
         # dataset exists
             ds = f.file_pointer[a['node_path']]
             value = ds.value
-            if not values_match(value, a['agvalue']):
+            if not vs.values_match(value, a['agvalue']):
                 # don't generate error or warning now.  Let validate_autogen do that
                 pass
                 # f.error.append(("%s autogen dataset values do not match.  Unable to update.\n"

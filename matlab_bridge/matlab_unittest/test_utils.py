@@ -3,13 +3,15 @@ import numpy as np
 import sys
 import traceback
 import inspect
+import nwb.value_summary as vs
 # import nwb
 
 def print_error(context, err_string):
-    func = traceback.extract_stack()[-3][2]
+    # func = traceback.extract_stack()[-3][2]
     print("----------------------------------------")
-    print("**** Failed unit test %s" % inspect.stack()[0][1])
-    print("**** Error in function '%s'" % func)
+    # print("**** Failed unit test %s" % inspect.stack()[0][1])
+    print("**** Failed unit test")
+    # print("**** Error in function '%s'" % func)
     print("Context: " + context)
     print("Error: " + str(err_string))
     print("Stack:")
@@ -140,6 +142,7 @@ def verify_present(hfile, group, field):
     else:
         val = obj.value
     f.close()
+    val = vs.make_str(val)
     return val
 
 def verify_attribute_present(hfile, obj, field):
@@ -157,6 +160,7 @@ def verify_attribute_present(hfile, obj, field):
         error("Verifying presence of attribute '"+field+"'", "Field absent")
     val = g.attrs[field]
     f.close()
+    val = vs.make_str(val)
     return val
 
 def verify_absent(hfile, group, field):

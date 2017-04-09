@@ -51,6 +51,7 @@ def test_general_top():
 def create_general_top(fname):
     settings = {}    
     settings["file_name"] = fname
+    settings["start_time"] = "2008-09-15T15:53:00-08:00"
     settings["identifier"] = utils.create_identifier("general top test")
     settings["mode"] = "w"
     settings["description"] = "test top-level elements in /general"

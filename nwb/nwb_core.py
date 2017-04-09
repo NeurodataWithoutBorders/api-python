@@ -11,8 +11,8 @@
 
 "info": {
     "name": "NWB file format specification",
-    "version": "1.0.5i_beta",
-    "date": "Dec 6, 2016",
+    "version": "1.0.6",
+    "date": "April 8, 2017",
     "author": "The many scientists who helped make the NWB:Neurophysiology format a reality.",
     "contact": "jteeters@berkeley.edu, keithg@alleninstitute.org",
     "description": "Specification for the core NWB (Neurodata Withoug Borders) format."
@@ -966,7 +966,7 @@
     "<IntervalSeries>/": {
         "description": ("Stores intervals of data. The timestamps field stores the beginning "
             "and end of intervals. The data field stores whether the interval just started "
-            "(>0 value) or ended (<0 value). Different interval types can be represented in "
+            "(&lt;0 value) or ended (&gt;0 value). Different interval types can be represented in "
             "the same series by using multiple key values (eg, 1 for feature A, 2 for feature "
             "B, 3 for feature C, etc). The field data stores an 8-bit integer. This is largely "
             "an alias of a standard TimeSeries but that is identifiable as representing time "
@@ -983,7 +983,7 @@
                 "value": "Stores the start and stop times for events",
                 "const": True}},
         "data": {
-            "description": (">0 if interval started, <0 if interval ended."),
+            "description": ("&gt;0 if interval started, &lt;0 if interval ended."),
             "dimensions": ["num_times"],
             "attributes": {
                 "conversion": {
@@ -2520,6 +2520,21 @@ advice.</p>
         "location": {"id":"Acknowledgements", "position": "after"},
         "level": 0,
         "content": """
+
+<p style="margin-bottom: 0in">1.0.6, April 8, 2017</p>
+Minor fixes:
+ <ul>
+ <li>Modify &lt;IntervalSeries&gt;/ documentation to use html entities for &lt;
+ and &gt;.</li>
+ <li>Fix indentation of unit attribute data_type, and conversion attribute description in
+/general/optophysiology/&lt;imaging_plane_X&gt;/manifold.</li>
+<li>Fix typos in &lt;AnnotationSeries&gt;/ conversion, resolution and unit attributes.</li>
+<li>Update documentation for IndexSeries to reflect more general usage.</li>
+<li>Change to all numerical version number to remove warning message when installing
+ using setuptools.</li>
+</ul>
+ <p style="margin-bottom: 0in"></p><br/>
+
  <p style="margin-bottom: 0in">1.0.5i_beta, Dec 6, 2016</p>
  <p>Remove some comments.  Modify author string in info section.
  </p>

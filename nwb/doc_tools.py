@@ -3,14 +3,23 @@
 
 import sys
 import cgi
-import urllib
+# import urllib
 import pprint
 import re
 import os.path
 pp = pprint.PrettyPrinter(indent=4)
-import h5gate
+# import h5gate
+from . import h5gate
 import traceback
 import copy
+
+from sys import version_info  # py3
+if version_info[0] > 2:
+    # py3 quote
+    from urllib.parse import quote
+else:
+    # py2 quote
+    from urllib import quote
 
     
 def get_lids(f):
@@ -919,7 +928,7 @@ def add_id_doc(doc_parts, toc, ids_documented):
         increase_indent = prev_level is None or level > prev_level
         decrease_indent = prev_level is not None and level < prev_level
         same_indent = prev_level is not None and level == prev_level
-        if prev_level > 1 and decrease_indent:
+        if decrease_indent and prev_level > 1:
             close_toc_ul(doc_parts, level, prev_level)
         if level >= 2:
             # only use <ul> for level >= 2
@@ -1030,7 +1039,6 @@ def insert_doc_content(dinfo, toc, ids_documented, ns):
             ns, doc_id, location, position))
         sys.exit(1)
 
-
 def ns_color(f, ns):
     """ Return color associated with namespace ns.  Color is used to highlight
     specification parts from extensions."""
@@ -1048,7 +1056,8 @@ def ns_color(f, ns):
 
 def make_safe_anchor(text):
     """ replace spaces by underscore then url escape special chars"""
-    safe_anchor = urllib.quote(remove_spaces(text))
+    # safe_anchor = urllib.quote(remove_spaces(text))
+    safe_anchor = quote(remove_spaces(text))
     return safe_anchor
 
 
@@ -1588,7 +1597,9 @@ def make_tree_doc(f, ids_documented):
         id = remove_trailing_slash(id)
         id_toc.append(id)
         if id not in ids_documented:
-            import pdb; pdb.set_trace()
+            # this should not happen
+            # import pdb; pdb.set_trace()
+            raise ValueError("id '%s' not in ids_documented." % id)
         ids_documented[id].level = level
     # id_toc.extend(tc)
     # put any ids in ids_documented not yet included in a table of contents in ophan_toc
@@ -2425,8 +2436,8 @@ def get_description(df, in_group=True, by_include=False):    # more_info=False):
     elif idx_more_info != -1:
         description = description[idx_more_info + len(more_info_str):]
     # add any css to description
-    description = add_css_to_escaped_html(description)
-    # description = add_css(description)
+    # description = add_css_to_escaped_html(description)  # was used when converting to py3
+    description = add_css(description)
     return description
 
 def add_css_to_escaped_html(str):
@@ -2469,128 +2480,16 @@ def splitParagraphIntoSentences(paragraph):
 
        
 
-def generate_ids_old(f):
-    """ Generate documentation from specification language file"""
-    doc = []
-    doc.append("generating documentation for: %s" % f.spec_files)
-    id_lookups = f.id_lookups
-    for ns in id_lookups:
-        doc.append("***** Namespace %s" % ns)
-        for id in sorted(id_lookups[ns].keys()):
-            doc.append(id)
-    doc = "\n".join(doc)
-    return doc
+# def generate_ids_old(f):
+#     """ Generate documentation from specification language file"""
+#     doc = []
+#     doc.append("generating documentation for: %s" % f.spec_files)
+#     id_lookups = f.id_lookups
+#     for ns in id_lookups:
+#         doc.append("***** Namespace %s" % ns)
+#         for id in sorted(id_lookups[ns].keys()):
+#             doc.append(id)
+#     doc = "\n".join(doc)
+#     return doc
     
- ########### OLD
  
-#  def make_id_doc(f, id, id_info, ids_documented, sdef=None):
-#     """ make documentation about id.  Add to ids_documented (dict mapping id
-#     to documentation about id (a string).  sdef is structure definition if
-#     obtained for id not created (not an absolute path without a variable-id).
-#     ids that are created in mstats have a absolute path, definition for
-#     them is in the mstats entry; sdef is not used.
-#     In any case, sdef only used to find overlapping definitions for variable-id
-#     items for merging extensions."""
-# #     if "EventWaveform" in id:
-# #         import pdb; pdb.set_trace()
-#     global merges_found
-#     global created_ids
-#     # make qualified id (qualified by namespace if not default)
-#     ns = id_info['ns']
-#     qid = id if ns == f.default_ns else "%s:%s" % (ns, id)
-#     qid = remove_trailing_slash(qid)
-#     if qid in ids_documented:
-#         # already have documented this id
-#         return
-#     # make entry to ids_documented so do not try to document this id again when processing members
-#     ids_documented[qid] = "doc for %s being made" % qid
-# #     safe_id = cgi.escape(id)
-#     html = []
-# #     anchor = "<a name=\"%s\"></a>" % safe_id
-# #     html.append(anchor)
-# #     header = "<h2>%s</h2>" % safe_id
-# #     html.append(header)
-#     type = id_info['type']
-#     df = id_info['df']
-#     qty = id_info['qty']
-# #     print "make_id_doc, id=%s ns=%s qty=%s df=" % (id, ns, qty)
-# #     pp.pprint(df)
-#     if sdef and '<' in sdef['id']:
-# #         print "found sdef, id=%s, sdef['id']=%s" % (id, sdef['id'])
-#         # found variable id to merge
-#         if sdef['id'][0] == '/':
-#             # has absolute path, ignore for now
-# #             print "%s: found absolute path, sdef[id]= %s" % (id, sdef['id'])
-#             pass
-#         else:
-#             # does not have absolute path, try to find extensions to merge
-#             # import pdb; pdb.set_trace()
-#             to_merge = f.find_overlapping_structures(sdef, None)
-#             if to_merge:
-# #                 print "%s: found overlapping structures: %s" % (id, to_merge)
-#                 df = dict(df)  # make copy so don't modify original
-#                 to_include = []
-#                 id_sources = {}
-#                 f.process_merge(df, to_merge, to_include, id_sources, ns, qid)
-#                 id_info = dict(id_info)  # copy so don't change original
-#                 id_info['df'] = df
-#                 if to_include:
-#                     # not sure what to do with to_include right now
-#                     print "Did merge of %s into %s, found to_include=%s" % (
-#                         to_merge, qid, to_include)
-#                     sys.exit(1)
-#                 if id_sources:
-#                     # add id_sources to id_info so can display source of extension id's
-#                     assert 'id_sources' not in id_info, "id_sources already in id_info: %s" % id_info
-#                     id_info['id_sources'] = id_sources
-# #                    import pdb; pdb.set_trace()
-# #                     print "Did merge of %s into %s, found ns_sources=%s" % (
-# #                         to_merge, qid, ns_sources)
-#     # description = cgi.escape(get_description(df, more_info=True))
-#     description = get_description(df, in_group=False)
-#     html.append("<p>%s</p>" % description)
-#     if type == 'group':
-#         merge = get_element(df, 'merge', None)
-#         # include = get_element(df, 'include', None)
-#         # required = get_element(df,'_required', None)
-#         if merge:
-#             ml = []
-#             for mqid in merge:
-#                 # save merges found for later ordering id's and making table of contents
-#                 if id in merges_found:
-#                     merges_found[id].append(mqid)
-#                 else:
-#                     merges_found[id] = [mqid, ]
-#                 mlink = make_link(mqid)
-# #                 safe_id = cgi.escape(remove_trailing_slash(mqid))
-# #                 mlink = "<a href=\"#%s\">%s</a>" % (safe_id.strip("<>"), safe_id)
-# #                 import pdb; pdb.set_trace()
-#                 ml.append(mlink)
-#                 # make sure documentation about this merged id is included
-#                 mns, mid = f.parse_qid(mqid, ns)
-#                 msdef = f.get_sdef(mid, mns, "referenced in doc_tools, make_id_doc, merge")
-#                 mtype = msdef['type']
-#                 mdf = msdef['df']
-#                 mid_info = { 'ns': mns, 'df': mdf, 'type': mtype, 'qty': '!' }
-#                 make_id_doc(f, mid, mid_info, ids_documented, msdef)
-#             if len(ml) == 1:
-#                 ml = ml[0]
-#             html.append("<p><i>%s</i> includes all elements of <i>%s</i> plus "
-#                 "the following:</p>" % (cgi.escape(qid), ml))
-#     tbl = Table()
-# #    table_start = ("<table>\n<tr><th>id</th><th>type</th><th>description</th><th>required</th></tr>")
-# #    html.append(table_start)
-#     level = 0  # indicate top level members of group or dataset
-#     if type == 'group':
-#         add_group_doc(f, id, id_info, tbl, level, ids_documented)
-#     else:
-#         add_dataset_doc(f, id, id_info, tbl, level)
-#     # html.append("</table>")
-#     html.append(tbl.make_table())
-# #     if type == 'group' and merge:
-# #         html.append("Merge: %s" % ml)
-#     # Uncomment the following two lines to display the definition of each id
-# #     ppdf = pp.pformat(df)
-# #     html.append("<pre>\n%s\n</pre>" % cgi.escape(ppdf))
-#     ids_documented[qid] = Id_doc(qid, html)     # do not know table of contents level
-#  

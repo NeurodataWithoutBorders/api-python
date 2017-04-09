@@ -1,6 +1,6 @@
 # Python API for Neurodata Without Borders (NWB) format
 
-Version 0.8 (June 9, 2016)
+Version 0.7 (April 8, 2016)
 
 Note: Version number above is the version of the API software, not the version of the NWB format.  Date is the most recent date this document was modified.
 
@@ -8,10 +8,12 @@ Note: Version number above is the version of the API software, not the version o
 
 The Python API for the NWB format is a write API that can be used to create NWB files (it does not provide functionality for reading).  It is implemented using a specification language and API that are domain-independent.  The API provides a small set of generic functions for storing data in the file (that is, creating HDF5 groups and datasets).  The specialization of the API to create NWB files is achieved by having the format defined using the specification language.
 
-
 ## 2. Installaton.
 
-Note: at present this requires Python 2, but Python 3 support is being worked on and should be ready soon.
+Note: API works with both Python 2 and Python 3.
+
+
+To get the source code for installation, do:
 
 ```
 git clone https://github.com/NeurodataWithoutBorders/api-python nwb_api-python
@@ -33,7 +35,19 @@ git pull origin
 
 then re-run ```python setup.py install``` to install the updates.
 
-Try running the examples in directory examples/create_scripts directory and also the unit tests in the unittest directory.
+Note: If there is a previous version installed, to ensure that the new version is used, remove the previous version.  This can be done by finding the location the previous version was installed in, then removing it.  The location the previous version was installed in can be found by printing nwb.__path__ from inside a python shell that is started in a directory other than that containing the nwb api source code.  The commands look like the following:
+
+```
+python
+>>> import nwb
+>>> print(nwb.__path__)
+['/Path/to/site-packages/nwb']
+>>> quit()
+rm -rf /Path/to/site-packages/nwb*
+```
+
+After installing, try running the "test_all.sh" script in the "test_all" directory to test the installation.  See the 0_README.txt file in that directory for instructions.
+
 
 ### Installing using conda
 
@@ -69,7 +83,7 @@ See the scripts in examples/create_scripts directory for examples of using the A
 
 * *Validate an NWB file:*
 
-  ```python -m nwb.nwb_validate filename.nwb```
+  ```python -m nwb.validate filename.nwb```
 
   See "validate_all.sh" script in examples/utility_scripts for specific examples.
 
@@ -83,11 +97,11 @@ See the scripts in examples/create_scripts directory for examples of using the A
 
   ```python -m mwb.make_doc extension.py > doc.html```
 
-  See "make_docs.sh" in examples/utility_scrips for specific examples.
+  See "make_docs.py" in examples/utility_scrips for specific examples.
 
 * *Compare two HDF5 files displaying differences in detail:*
 
-  ```python -m nwb.h5diffci file1.nwb file2.nwb```
+  ```python -m nwb.h5diffsig file1.nwb file2.nwb```
 
   (The .nwb extension is used for NWB files, which are in hdf5 format.)
 

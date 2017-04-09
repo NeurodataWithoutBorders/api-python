@@ -8,7 +8,7 @@ import datetime
 def load_file(filename):
     """ Load content of a file.  Useful 
     for setting metadata to content of a text file"""
-    f = open(filename)
+    f = open(filename, "rb") # py3, added rb mode
     content = f.read()
     f.close()
     return content
@@ -394,7 +394,7 @@ def add_masks(seg_iface, image_plane, name, desc, pixel_list, weights, img, star
         # if empty, create empty list with proper shape to avoid errors with dimension mismatch
         dt = np.dtype((np.uint16, (2)))
         pixel_list = np.array([], dtype=dt)
-    pm = roi_folder.set_dataset("pix_mask", pixel_list, compress=True) 
+    pm = roi_folder.set_dataset("pix_mask", pixel_list, compress=True)
     #- pm.attrs["weight"] = weights
     roi_folder.set_dataset("pix_mask_weight", weights)
     #- pm.attrs["help"] = "Pixels stored as (x, y). Relative weight stored as attribute."

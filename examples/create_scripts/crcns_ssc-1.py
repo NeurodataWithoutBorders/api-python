@@ -9,15 +9,15 @@ import getpass
 import datetime
 import os
 import numpy as np
-from sets import Set
+# from sets import Set  # py3, use builtin set also for python 2.7
 
 # path to source files
-path = "../source_data/crcns_ssc-1/"
+path = "../source_data_2/crcns_ssc-1/"
 
 if not os.path.exists(path):
-    print "Source files for script '%s' not present" % os.path.basename(__file__)
-    print "Download and put them in the 'examples/source_data' directory as instructed"
-    print "in file examples/0_README.txt"
+    print ("Source files for script '%s' not present" % os.path.basename(__file__))
+    print ("Download and put them in the 'examples/source_data' directory as instructed")
+    print ("in file examples/0_README.txt")
     sys.exit(1) 
 
 
@@ -29,15 +29,15 @@ if not os.path.exists(OUTPUT_DIR):
     os.makedirs(OUTPUT_DIR)
 
 if not file_list:
-    print "*** Error:"
-    print "No files found at '%s'.  Cannot run this script." % path
+    print ("*** Error:")
+    print ("No files found at '%s'.  Cannot run this script." % path)
     sys.exit(1)
 
 def check_entry(file_name,obj):
     try:
         return file_name[obj]
     except KeyError:
-        print str(obj) +" does not exist"
+        print (str(obj) +" does not exist")
         return []
 
 def parse_h5_obj(obj, level = 0, output = []):
@@ -53,15 +53,16 @@ def parse_h5_obj(obj, level = 0, output = []):
                 output.append(full_name[-1])
         elif isinstance(obj, h5py.highlevel.Group):
             level = level+1
-            if not obj.keys():
+            # if not obj.keys():
+            if not list(obj):  # py3, use just list, not keys
                 output.append([])
             else:
-                for key in obj.keys():
+                for key in list(obj):  # py3, use list not keys
                     parse_h5_obj(obj[key], level, output)
         else:
             output.append([])
     except KeyError:
-        print "Can't find" + str(obj)
+        print ("Can't find" + str(obj))
         output.append([])
     return output
 
@@ -74,7 +75,7 @@ plane_map = {}
 def add_plane_map_entry(h5_plane_name, filename):
     toks = filename.split("fov_")
     if len(toks) != 2:
-        print "Error parsing %s for imaging plane name" % filename
+        print ("Error parsing %s for imaging plane name" % filename)
         sys.exit(1)
     univ_name = "fov_" + toks[1][:5]
     if univ_name not in plane_map:
@@ -83,15 +84,17 @@ def add_plane_map_entry(h5_plane_name, filename):
     return univ_name
 
 def create_plane_map():
-    num_subareas = len(orig_h5['timeSeriesArrayHash/descrHash'].keys()) - 1
+    num_subareas = len(list(orig_h5['timeSeriesArrayHash/descrHash'])) - 1  # py3, list not keys
     for subarea in range(num_subareas):
         # fetch time array
         grp = orig_h5['timeSeriesArrayHash/value/%d/imagingPlane' %(subarea + 2)]
         grp2 = orig_h5['timeSeriesArrayHash/descrHash/%d/value/1' %(subarea + 2)]
-        if grp2.keys()[0] == 'masterImage':
+        # if grp2.keys()[0] == 'masterImage':
+        if list(grp2)[0] == 'masterImage':  # py3, use list not keys
             num_planes = 1
         else:
-            num_planes = len(grp2.keys())
+            # num_planes = len(grp2.keys())
+            num_planes = len(list(grp2))  #py3, use list not keys
         for plane in range(num_planes):
             # if num_planes == 1:
             #     pgrp = grp
@@ -224,12 +227,18 @@ def create_reference_image(orig_h5, simon, area, plane, num_plane = 3):
     else:
         plane_grp = area_grp["value/1"]["%d"%(plane)]
     master = plane_grp["masterImage"]["masterImage"].value
-    green = np.zeros((512, 512))
-    red = np.zeros((512, 512))
+    # green = np.zeros((512, 512))  # this defaults to floats.  use np.uint8 for binary data
+    green8 = np.zeros((512, 512), dtype=np.uint8)
+    red8 = np.zeros((512, 512), dtype=np.uint8)
+    green16 = np.zeros((512, 512), dtype=np.uint16)  # 16 bits used for reference images
+    red16 = np.zeros((512, 512), dtype=np.uint8)
+    max_16bits = 255*255
     for i in range(512):
         for j in range(512):
-            green[i][j] = master[i][j][0]
-            red[i][j] = master[i][j][1]
+            green8[i][j] = np.uint8(min(master[i][j][0], 255))
+            red8[i][j] = np.uint8(min(master[i][j][1], 255))
+            green16[i][j] = np.uint16(min(master[i][j][0], max_16bits))
+            red16[i][j] = np.uint16(min(master[i][j][1], max_16bits))
     # convert from file-specific area/plane mapping to
     #   inter-session naming convention
     #image_plane = "area%d_plane%d" % (area, plane)
@@ -239,15 +248,15 @@ def create_reference_image(orig_h5, simon, area, plane, num_plane = 3):
     fmt = "raw"
     desc = "Master image (green channel), in 512x512, 8bit"
     #- simon.create_reference_image(green, name, fmt, desc, 'uint8')
-    simon.set_dataset("<image_X>", green, name=name, dtype='uint8', attrs={
+    simon.set_dataset("<image_X>", green8, name=name, dtype='uint8', attrs={
         'description':desc, 'format': fmt})
-    reference_image_green[image_plane] = green
+    reference_image_green[image_plane] = green16
     name = image_plane + "_0002"
     desc = "Master image (red channel), in 512x512, 8bit"
     #- simon.create_reference_image(red, name, fmt, desc, 'uint8')
-    simon.set_dataset("<image_X>", red, name=name, dtype='uint8', attrs={
+    simon.set_dataset("<image_X>", red8, name=name, dtype='uint8', attrs={
         'description':desc, 'format': fmt})    
-    reference_image_red[image_plane] = red
+    reference_image_red[image_plane] = red16
 
 # pull out all ROI pixel maps for a particular subarea and imaging plane
 #   and store these in the segmentation module
@@ -282,13 +291,17 @@ def fetch_rois(orig_h5, seg_iface, area, plane, num_planes=3):
         assert x == int(rid)
         pix = parse_h5_obj(record["indicesWithinImage"])[0]
         # pix = record["indicesWithinImage/indicesWithinImage"].value
-        pixmap = []
+        # dt = np.dtype((np.uint16, (2)))
+        pixmap = np.zeros([len(pix),2], dtype=np.uint16)
         for j in range(len(pix)):
             v = pix[j]
             px = int(v / 512)
             py = int(v) % 512
-            pixmap.append([py,px])
-        weight = np.zeros(len(pixmap)) + 1.0
+            # pixmap.append([py,px])
+            pixmap[j][0] = np.uint16(py)
+            pixmap[j][1] = np.uint16(px)
+        # weight = np.zeros(len(pixmap)) + 1.0
+        weight = np.zeros(len(pix)) + 1.0
         #- seg_iface.add_roi_mask_pixels(image_plane, "%d"%x, "ROI %d"%x, pixmap, weight, 512, 512)
         ut.add_roi_mask_pixels(seg_iface, image_plane, "%d"%x, "ROI %d"%x, pixmap, weight, 512, 512)
 
@@ -414,7 +427,7 @@ def read_whisker(orig_h5, simon):
     # protraction touches
     t = grp2["eventTimes/1/1"].value * 0.001
     # times are stored as 'on' in even intervals, 'off' in odd intervals
-    on_off = np.zeros(len(t))
+    on_off = np.zeros(len(t), dtype=np.int8)
     on_off += -1
     on_off[::2] *= -1
     pole_touch =  pole_iface.make_group("<IntervalSeries>", "pole_touch_protract")
@@ -428,7 +441,7 @@ def read_whisker(orig_h5, simon):
     # retraction touches
     t = grp2["eventTimes/2/2"].value * 0.001
     # times are stored as 'on' in even intervals, 'off' in odd intervals
-    on_off = np.zeros(len(t))
+    on_off = np.zeros(len(t), dtype=np.int8)
     on_off += -1
     on_off[::2] *= -1
     pole_touch = pole_iface.make_group("<IntervalSeries>", "pole_touch_retract")
@@ -505,7 +518,8 @@ epoch_roi_list = {}
 epoch_roi_planes = {}
 def create_trial_roi_map(orig_h5, simon):
     fp = simon.file_pointer
-    num_subareas = len(orig_h5['timeSeriesArrayHash/descrHash'].keys()) - 1
+    # num_subareas = len(orig_h5['timeSeriesArrayHash/descrHash'].keys()) - 1
+    num_subareas = len(list(orig_h5['timeSeriesArrayHash/descrHash'])) - 1  #py3, use list not keys
     for i in range(num_subareas):
         area = i + 1
         grp_name = "timeSeriesArrayHash/value/%d" % (area + 1)
@@ -515,10 +529,11 @@ def create_trial_roi_map(orig_h5, simon):
         # create way to map ROI onto plane
         planemap = {}
         plane_path = 'timeSeriesArrayHash/descrHash/%d/value/1' %(area + 1)
-        if orig_h5[plane_path].keys()[0] == 'masterImage':
+        # if orig_h5[plane_path].keys()[0] == 'masterImage':
+        if list(orig_h5[plane_path])[0] == 'masterImage':  # py3, list not keys
             num_planes = 1
         else:
-            num_planes = len(orig_h5[plane_path].keys())
+            num_planes = len(list(orig_h5[plane_path]))  #py3, list not keys
         for j in range(num_planes):
             plane = j + 1
             # if num_planes == 1:
@@ -536,7 +551,7 @@ def create_trial_roi_map(orig_h5, simon):
             #name = "Trial_%d" % trials[j]
             if name not in trial_list:
                 trial_list[name] = j
-        for trial_name in trial_list.keys():
+        for trial_name in list(trial_list):  #py3, list not keys
             roi_list = []
             plane_list = []
             valid_whisker = get_valid_trials(orig_h5, "whisker")
@@ -589,19 +604,21 @@ def get_trial_types(orig_h5, simon):
 def get_valid_trials(orig_h5, data):
     ts_path = "timeSeriesArrayHash/descrHash/"
     val = []
-    num_subareas = len(orig_h5['timeSeriesArrayHash/descrHash'].keys()) - 1
+    num_subareas = len(list(orig_h5['timeSeriesArrayHash/descrHash'])) - 1  # py3, list not keys
     if data == "whisker":
         ids = parse_h5_obj(orig_h5[ts_path + '1/value'])[0]
         # ids = list(orig_h5[ts_path + "1/value/value"].value)
         val = val + list(ids)
-        val = list(Set(val))
+        # val = list(Set(val))
+        val = list(set(val))  #py3, use builtin set
     if data == "Ca":
         for i in range(2,num_subareas+1):
             ids_path = ts_path + "%d/value/2" % i
             ids = parse_h5_obj(orig_h5[ids_path])[0]
             # ids = list(orig_h5[ids_path].value)
             val = val + list(ids)
-        val = list(Set(val))
+        # val = list(Set(val))
+        #val = list(set(val))  #py3, use builtin set
     return val
         
 
@@ -615,7 +632,7 @@ def get_valid_trials(orig_h5, data):
 for i in range(len(file_list)):
     fname = file_list[i][len(path):]
     INFILE = file_list[i]
-    print INFILE
+    print (INFILE)
     orig_h5 = h5py.File(INFILE, "r")
     session_id = fname[0:-3]
 
@@ -628,7 +645,7 @@ for i in range(len(file_list)):
 
     # create output file
     file_name = OUTPUT_DIR + session_id + ".nwb"
-    print file_name
+    print (file_name)
     vargs = {}
     vargs["file_name"] = file_name
     vargs["start_time"] = find_exp_time(orig_h5)
@@ -649,7 +666,7 @@ for i in range(len(file_list)):
     gd.set_dataset("<device_X>", desc, name="two-photon microscope")
     sg = gg.make_group("subject")
 
-    print "Reading meta data"
+    print ("Reading meta data")
     meta = parse_h5_obj(orig_h5['metaDataHash/value'])[0]
     species = meta[0]
     # species = orig_h5["metaDataHash/value/1/1"].value[0,0]
@@ -691,7 +708,7 @@ for i in range(len(file_list)):
     gg.set_dataset("data_collection", ut.load_file(path + "svoboda_files/data_collection.txt"))
 
 
-    print "Reading time series"
+    print ("Reading time series")
     read_whisker(orig_h5, simon)
     read_licks(orig_h5, simon)
     
@@ -713,7 +730,7 @@ for i in range(len(file_list)):
     grp1 = orig_h5["eventSeriesArrayHash/value/1"]
     time = grp1["eventTimes/eventTimes"].value * 0.001
     # create dummy data: 1 for 'on', -1 for 'off'
-    on_off = np.zeros(len(time))
+    on_off = np.zeros(len(time), dtype=np.int8)
     on_off += -1
     on_off[::2] *= -1
     pole_acc.set_dataset("data", on_off)
@@ -726,7 +743,7 @@ for i in range(len(file_list)):
     grp7 = orig_h5["eventSeriesArrayHash/value/7"]
     time = grp7["eventTimes/eventTimes"].value * 0.001
     # create dummy data: 1 for 'on', -1 for 'off'
-    on_off = np.zeros(len(time))
+    on_off = np.zeros(len(time), dtype=np.int8)
     on_off += -1
     on_off[::2] *= -1
     aud_cue_ts.set_dataset("data", on_off)
@@ -739,7 +756,7 @@ for i in range(len(file_list)):
     grp5 = orig_h5["eventSeriesArrayHash/value/5"]
     time = grp5["eventTimes/eventTimes"].value * 0.001
     # create dummy data: 1 for 'on', -1 for 'off'
-    on_off = np.zeros(len(time))
+    on_off = np.zeros(len(time), dtype=np.int8)
     on_off += -1
     on_off[::2] *= -1
     water_left_ts.set_dataset("data", on_off)
@@ -752,7 +769,7 @@ for i in range(len(file_list)):
     grp6 = orig_h5["eventSeriesArrayHash/value/6"]
     time = grp6["eventTimes/eventTimes"].value * 0.001
     # create dummy data: 1 for 'on', -1 for 'off'
-    on_off = np.zeros(len(time))
+    on_off = np.zeros(len(time), dtype=np.int8)
     on_off += -1
     on_off[::2] *= -1
     water_right_ts.set_dataset("data", on_off)
@@ -761,36 +778,36 @@ for i in range(len(file_list)):
     water_right_ts.set_attr("source", "Intervals are as reported in Simon's data file")
     #- water_right_ts.finalize()
 
-    print "Creating map between trials and ROIs"
+    print ("Creating map between trials and ROIs")
     create_trial_roi_map(orig_h5, simon)
     
-    print "Creating epochs"
+    print ("Creating epochs")
     get_trial_types(orig_h5, simon)
     create_trials(orig_h5, simon)
 
     # store master images
-    print "Creating reference images"
-    num_subareas = len(orig_h5['timeSeriesArrayHash/descrHash'].keys()) - 1
+    print ("Creating reference images")
+    num_subareas = len(list(orig_h5['timeSeriesArrayHash/descrHash'])) - 1  # py3, list not keys
     for subarea in range(num_subareas):
         plane_path = 'timeSeriesArrayHash/descrHash/%d/value/1' %(subarea + 2)
-        if orig_h5[plane_path].keys()[0] == 'masterImage':
+        if list(orig_h5[plane_path])[0] == 'masterImage':  #py3, list not keys
             num_planes = 1
         else:
-            num_planes = len(orig_h5[plane_path].keys())
+            num_planes = len(list(orig_h5[plane_path]))  # py3, list not keys
         for plane in range(num_planes):
             sys.stdout.write('_')
-    print ""
+    print ("")
     for subarea in range(num_subareas):
         plane_path = 'timeSeriesArrayHash/descrHash/%d/value/1' %(subarea + 2)
-        if orig_h5[plane_path].keys()[0] == 'masterImage':
+        if list(orig_h5[plane_path])[0] == 'masterImage':  # py3, list not keys
             num_planes = 1
         else:
-            num_planes = len(orig_h5[plane_path].keys())
+            num_planes = len(list(orig_h5[plane_path]))  # py3, list not keys
         for plane in range(num_planes):
             create_reference_image(orig_h5, simon, subarea+1, plane+1, num_planes)
             sys.stdout.write('.')
             sys.stdout.flush()
-    print ""
+    print ("")
     # create empty time series for whisker video
     whisker_vid = simon.make_group("<ImageSeries>", "whisker_video", path="/acquisition/timeseries")
     whisker_vid.set_dataset("format", "unknown");
@@ -817,40 +834,40 @@ for i in range(len(file_list)):
     seg_iface = mod.make_group("ImageSegmentation", attrs={"source": "Simon's datafile"})
     # pull out image segmentation data. do it by subarea and imaging plane,
     #   as that's how data is stored in the source file
-    print "Reading ROI and dF/F"
+    print ("Reading ROI and dF/F")
     for subarea in range(num_subareas):
         plane_path = 'timeSeriesArrayHash/descrHash/%d/value/1' %(subarea + 2)
-        if orig_h5[plane_path].keys()[0] == 'masterImage':
+        if list(orig_h5[plane_path])[0] == 'masterImage':  #py3, list not keys
             num_planes = 1
         else:
-            num_planes = len(orig_h5[plane_path].keys())
+            num_planes = len(list(orig_h5[plane_path]))  #py3, list not keys
         for plane in range(num_planes):
             sys.stdout.write('_')
-    print ""
+    print ("")
     for subarea in range(num_subareas):
         plane_path = 'timeSeriesArrayHash/descrHash/%d/value/1' %(subarea + 2)
-        if orig_h5[plane_path].keys()[0] == 'masterImage':
+        if list(orig_h5[plane_path])[0] == 'masterImage':  #py3, list not keys
             num_planes = 1
         else:
-            num_planes = len(orig_h5[plane_path].keys())
+            num_planes = len(list(orig_h5[plane_path]))  #py3, list not keys
         for plane in range(num_planes):
             fetch_rois(orig_h5, seg_iface, subarea+1, plane+1, num_planes)
             fetch_dff(orig_h5, dff_iface, seg_iface, subarea+1, plane+1, num_planes)
 
             sys.stdout.write('.')
             sys.stdout.flush()
-    print ""
-    print "Writing ROI and dF/F"
+    print ("")
+    print ("Writing ROI and dF/F")
     #- mod.finalize()
 
-    print "Defining imagine planes"
+    print ("Defining imagine planes")
     # define imaging planes in general
     for subarea in range(num_subareas):
         plane_path = 'timeSeriesArrayHash/descrHash/%d/value/1' %(subarea + 2)
-        if orig_h5[plane_path].keys()[0] == 'masterImage':
+        if list(orig_h5[plane_path])[0] == 'masterImage':  # py3, list not keys
             num_planes = 1
         else:
-            num_planes = len(orig_h5[plane_path].keys())
+            num_planes = len(list(orig_h5[plane_path]))  # py3, list not keys
         for plane in range(num_planes):
             # get plane name and map it to stable inter-experiment name
             oname = "area%d_plane%d" % (subarea+1, plane+1)
@@ -859,7 +876,7 @@ for i in range(len(file_list)):
 
     # add reference images to image segmentation
     # TODO
-    for k in plane_map.keys():
+    for k in list(plane_map):  # py3, list not keys
         plane = plane_map[k]
         img = reference_image_red[plane]
         #- seg_iface.add_reference_image(plane, "%s_0002"%plane, img)
@@ -880,16 +897,16 @@ for i in range(len(file_list)):
     #                imagingPlane
     #                    1-3
     #                        sourceFileList
-    print "Creating entries for source .tif"
+    print ("Creating entries for source .tif")
     for subarea in range(num_subareas):
         plane_path = 'timeSeriesArrayHash/descrHash/%d/value/1' %(subarea + 2)
-        if orig_h5[plane_path].keys()[0] == 'masterImage':
+        if list(orig_h5[plane_path])[0] == 'masterImage':  #py3, list not keys
             num_planes = 1
         else:
-            num_planes = len(orig_h5[plane_path].keys())
+            num_planes = len(list(orig_h5[plane_path]))  #py3, list not keys
         for plane in range(num_planes):
             sys.stdout.write('_')
-    print ""
+    print ("")
     for subarea in range(num_subareas):
         # fetch time array
         grp = orig_h5["timeSeriesArrayHash"]["value"]["%d"%(subarea+2)]
@@ -898,10 +915,10 @@ for i in range(len(file_list)):
         #   2photon image stacks
         grp = grp["imagingPlane"]
         plane_path = 'timeSeriesArrayHash/descrHash/%d/value/1' %(subarea + 2)
-        if orig_h5[plane_path].keys()[0] == 'masterImage':
+        if list(orig_h5[plane_path])[0] == 'masterImage':  #py3, list not keys
             num_planes = 1
         else:
-            num_planes = len(orig_h5[plane_path].keys())
+            num_planes = len(list(orig_h5[plane_path]))
         for plane in range(num_planes):
             # if num_planes == 1:
             #                 pgrp = grp
@@ -966,11 +983,11 @@ for i in range(len(file_list)):
             create_2p_tsa(simon, nname, external_file, starting_frame, timestamps)
             sys.stdout.write('.')
             sys.stdout.flush()
-    print ""
+    print ("")
 
-    print "Closing file"
+    print ("Closing file")
 
     simon.close()
-    print "Done"
+    print ("Done")
     #break
 

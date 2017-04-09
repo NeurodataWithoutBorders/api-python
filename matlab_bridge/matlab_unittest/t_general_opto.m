@@ -45,7 +45,7 @@ end
 function create_general_optogen(fname)
     settings = {'file_name', fname, 'mode', 'w', 'verbosity', verbosity, ...
         'identifier', nwb_utils.create_identifier('metadata optogenetic test'), ...
-        'description','test elements in /general/optophysiology'};
+        'description','test elements in /general/optogentics'};
     f = nwb_file(settings{:});
     
 %     neurodata.set_metadata(OPTOGEN_CUSTOM('optogen_custom'), 'OPTOGEN_CUSTOM')

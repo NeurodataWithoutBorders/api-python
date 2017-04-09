@@ -11,8 +11,18 @@ if nargin < 1
 end
 
 % make manifold 3-d array global so can use for storing and testing
-manifold = [1 2 3 ; 2 3 4];
-manifold(:,:,2) = [3,4,5 ; 4,5,6];
+% old version, incorrect - does not match Python version dimensions
+% man_v1 = [1 2 3 ; 2 3 4];
+% man_v1(:,:,2) = [3,4,5 ; 4,5,6];
+
+% build 3d array equivalant to following in Python
+% [[[1,2,3],[2,3,4]],[[3,4,5],[4,5,6]]]
+man1 = [1 2; 3 4];
+man2 = [2 3; 4 5];
+man3 = [3 4; 5 6];
+manifold = cat(3, man1, man2, man3); 
+
+
 
 function test_field(fname, name, subdir)
     val = test_utils.verify_present(fname, ['general/optophysiology/', subdir, '/'], lower(name));
@@ -38,6 +48,9 @@ function test_general_intra()
     test_field(fname, 'INDICATOR', 'p1')
     test_field(fname, 'LOCATION', 'p1')
     val = test_utils.verify_present(fname, 'general/optophysiology/p1/', 'manifold');
+    % convert from row major order to column major order
+    % not needed, done in test_utils.verify_present
+    % val2 = nwb_utils.h5reshape(val);
     % if length(val) ~= 2 || len(val(1)) ~= 2 || len(val(1, 1)) ~= 3
     if ~isequal(val, manifold)
         test_utils.error('Checking manifold', 'value stored does not match')
@@ -94,7 +107,7 @@ function create_general_intra(fname)
     %
     
     % using h5reshape causes this to fail, not sure why
-    % p1.set_dataset('manifold', nwb_utils.h5reshape(manifold));
+    %p1.set_dataset('manifold', nwb_utils.h5reshape(manifold));
     p1.set_dataset('manifold', manifold);
     p1.set_dataset('indicator', 'INDICATOR');
     p1.set_dataset('excitation_lambda','EXCITATION_LAMBDA');

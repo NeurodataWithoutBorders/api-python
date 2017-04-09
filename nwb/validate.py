@@ -3,7 +3,7 @@
 
 import sys
 import nwb.nwb_file as nwb_file
-
+# import cProfile  # for profiling
 
 def validate_file(name, core_spec="nwb_core.py", extensions=None, verbosity="all"):
     """
@@ -55,5 +55,7 @@ if __name__ == "__main__":
     if extensions == [] and core_spec == "-":
         print("Loading specifications from file '%s'" % file_name)
     validate_file(file_name, core_spec=core_spec, extensions=extensions)
+    # replace above call with following to generate execution time profile
+    # cProfile.run('validate_file("%s", core_spec="%s")' % (file_name, core_spec))
 
 

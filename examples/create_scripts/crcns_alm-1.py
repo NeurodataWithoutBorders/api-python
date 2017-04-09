@@ -3,6 +3,7 @@
 
 import sys 
 import os
+import re
 
 from nwb import nwb_file
 from nwb import nwb_utils as ut
@@ -11,17 +12,18 @@ import h5py
 import datetime
 import getpass
 import numpy as np
-from sets import Set
+# from sets import Set   #py3, use builtin set
+from sys import version_info  # py3
 
 # paths to source files
-SOURCE_DATA_DIR = "../source_data/crcns_alm-1/"
+SOURCE_DATA_DIR = "../source_data_2/crcns_alm-1/"
 INFILE = SOURCE_DATA_DIR + "data_structure_NL_example20140905_ANM219037_20131117.h5"
 META = SOURCE_DATA_DIR + "meta_data_NL_example20140905_ANM219037_20131117.h5"
 
 if not os.path.exists(INFILE) or not os.path.exists(META):
-    print "Source files for script '%s' not present" % os.path.basename(__file__)
-    print "Download and put them in the 'examples/source_data' directory as instructed"
-    print "in file examples/0_README.txt"
+    print ("Source files for script '%s' not present" % os.path.basename(__file__))
+    print ("Download and put them in the 'examples/source_data_2' directory as instructed")
+    print ("in file examples/0_README.txt")
     sys.exit(1) 
 
 
@@ -29,18 +31,43 @@ OUTPUT_DIR = "../created_nwb_files/crcns_alm-1/"
 if not os.path.exists(OUTPUT_DIR):
     os.makedirs(OUTPUT_DIR)
 
+# py3, set unicode to str if using Python 3 (which does not have unicode class)
+try:
+    unicode
+except NameError:
+    unicode = str
+    
 def find_exp_time(ifile):
     d = ifile['dateOfExperiment']["dateOfExperiment"].value[0]
     t = ifile['timeOfExperiment']["timeOfExperiment"].value[0]
     dt=datetime.datetime.strptime(d+t, "%Y%m%d%H%M%S")
-    return dt.strftime("%a %b %d %Y %H:%M:%S")
+    # return dt.strftime("%a %b %d %Y %H:%M:%S")
+    return dt.strftime("%Y-%m-%d %H:%M:%S")
 
 def check_entry(file_name,obj):
     try:
         return file_name[obj]
     except KeyError:
-        print str(obj) +" does not exist"
+        print (str(obj) +" does not exist")
         return []
+
+# these (natural_sort and sortkey_natural) added to sort object names in parse_h5_obj
+# so that numerical object names, like "1" "2" "10", "11", "22" are sorted according
+# to their numeric value (int) instead of their string sort order
+def natural_sort(vals):
+    """return sorted numerically if all integers, otherwise, sorted alphabetically"""
+    all_str = all(isinstance(x, (str, unicode)) for x in vals)
+    sv = sorted(vals, key=sortkey_natural) if all_str else sorted(vals)
+    return sv
+    
+    
+# function used for natural sort ke
+# from: http://stackoverflow.com/questions/2545532/python-analog-of-natsort-function-sort-a-list-using-a-natural-order-algorithm
+def sortkey_natural(s):
+    return tuple(int(part) if re.match(r'[0-9]+$', part) else part
+                for part in re.split(r'([0-9]+)', s))  
+
+
 
 def parse_h5_obj(obj, level = 0, output = []):
     if level == 0:
@@ -58,12 +85,22 @@ def parse_h5_obj(obj, level = 0, output = []):
             if not obj.keys():
                 output.append([])
             else:
-                for key in obj.keys():
+                # need to sort ints
+#                 if 'siteLocations' in obj.name:
+#                     showKey = True
+#                     print ("obj.name='%s', siteLocations Keys appending are:" % obj.name)
+#                 else:
+#                     showKey = False
+                keys = natural_sort(list(obj.keys()))
+                # for key in obj.keys():
+                for key in keys:
+#                     if showKey:
+#                         print ("%s - %s" % (key, obj[key]))
                     parse_h5_obj(obj[key], level, output)
         else:
             output.append([])
     except KeyError:
-        print "Can't find" + str(obj)
+        print ("Can't find" + str(obj))
         output.append([])
     return output
 
@@ -73,17 +110,63 @@ def extract_encoded_str(uarr):
     assert uarr.shape == (1,)
     assert isinstance(uarr[0], unicode)
     return uarr[0].encode('utf-8')
-    
+
+def make_str(val):
+    """ Format string value as python str (python 3) or as bytes (python 2) """
+    if version_info[0] > 2:
+        # python 3, make sure str type
+        if isinstance(val, bytes):
+            val = val.decode('utf-8')
+        else:
+            assert isinstance(val, str)
+    else:
+        # python 2, convert unicode to bytes
+        if isinstance(val, unicode):
+            val = val.encode('utf-8')
+        else:
+            assert isinstance(val, bytes)
+    return val
+
+
 def format_item(arr, options=[]):
     """ Formats an array as a comma separated list, as a string enclosed in brackets """
-    if isinstance(arr, unicode):
-        return arr.encode('utf-8')
-    fstr = ', '.join(("'" + n.encode('utf-8') + "'") if isinstance(n, unicode) else str(n) for n in arr)
+    quote = '' if 'no_quote' in options else "'"
+    if version_info[0] > 2:
+        # Python 3, return as string (unicode)
+        if isinstance(arr, str):
+            return arr
+        fstr = ', '.join((quote + n + quote) if isinstance(n, str) else str(n) for n in arr)
+    else:
+        # Python 2, return as utf encoded byte string
+        if isinstance(arr, unicode):
+            return arr.encode('utf-8')
+        fstr = ', '.join((quote + n.encode('utf-8') + quote) if isinstance(n, unicode) else str(n) for n in arr)
     if 'no_brackets' in options:
         return fstr
     else:
-        return '[' + fstr + ']'
+        return '[%s]' % fstr
+
+def format_1d_array(arr):
+    # format 1d array of numbers arr so it will match that
+    # created in matlab.  This done so comparision of matalb
+    # and Python output will match
+    svals = []
+    for ifda in range(len(arr)):
+        svals.append('%g' % arr[ifda])
+    sval = ", ".join(svals)
+    arrstr = '[%s]' % sval
+    return arrstr
+
      
+# Original version of format_item:
+#     if isinstance(arr, unicode):
+#         return arr.encode('utf-8')
+#     # fstr = ', '.join(("'" + n.encode('utf-8') + "'") if isinstance(n, unicode) else str(n) for n in arr)
+#     fstr = ', '.join(("'" + n.encode('utf-8') + "'") if isinstance(n, unicode) else str(n) for n in arr)
+#     if 'no_brackets' in options:
+#         return fstr
+#     else:
+#         return '[' + fstr + ']'  
 
 # initialize trials with basic fields and behavioral data    
 def create_trials(orig_h5, nuo):
@@ -101,7 +184,7 @@ def create_trials(orig_h5, nuo):
     for i in range(len(trial_id)):  # use: in range(5): to reduce run time
         tid = trial_id[i]
         trial = "Trial_%d%d%d" % (int(tid/100), int(tid/10)%10, tid%10)
-        # print trial # DEBUG
+        # print (trial) # DEBUG
         start = trial_t[i]
         stop = trial_t[i+1]
         epoch = ut.create_epoch(nuo, trial, start, stop)
@@ -122,11 +205,21 @@ def create_trials(orig_h5, nuo):
         # raw data path
         raw_path = "descrHash/value/%d" % (trial_id[i])
         # try:
+#         if trial == "Trial_005":
+#             import pdb; pdb.set_trace()
         raw_file = parse_h5_obj(orig_h5[raw_path])[0]
-        if len(raw_file) == 1:
-            raw_file = 'na'
+        # if present, raw_file will be type unicode inside ndarray
+        if ((isinstance(raw_file, np.ndarray) and len(raw_file) == 1)
+            and isinstance(raw_file[0], unicode)):
+            # raw_file is like: array(['raw_trace_966_trial_5.mat'], dtype=object)
+            # extract file name
+            raw_file = raw_file[0]
         else:
-            raw_file = str(raw_file)
+        # if len(raw_file) == 1:
+            # import pdb; pdb.set_trace()
+            raw_file = 'na'
+#         else:
+#             raw_file = str(raw_file)
         # except KeyError:
         #         raw_path = "descrHash/value/%d/" %(trial_id[i])
         #         try:
@@ -142,7 +235,7 @@ def create_trials(orig_h5, nuo):
         #         raw_file = ''
 #        epoch.set_dataset("description", "Raw Voltage trace data files used to acuqire spike times data: " + raw_file + "\n\
 # ignore intervals: mark start and stop times of bad trials when mice are not performing")
-        epoch.set_dataset("description", "Raw Voltage trace data files used to acuqire spike times data: " + raw_file)
+        epoch.set_dataset("description", "Raw Voltage trace data files used to acquire spike times data: " + raw_file)
         #epoch.set_ignore_intervals(ignore_intervals)
         # collect behavioral data
         ts = "/stimulus/presentation/auditory_cue"
@@ -207,7 +300,8 @@ def get_trial_units(orig_h5, nuo, unit_num):
         grp_name = "eventSeriesHash/value/%d" % i
         grp_top_folder = orig_h5[grp_name]
         trial_ids = grp_top_folder["eventTrials/eventTrials"].value
-        trial_ids = Set(trial_ids)
+        # trial_ids = Set(trial_ids)
+        trial_ids = set(trial_ids)  # py3, use builtin set
         for trial_num in trial_ids:
             tid = trial_num
             trial_name = "Trial_%d%d%d" % (int(tid/100), int(tid/10)%10, tid%10)
@@ -238,14 +332,15 @@ vargs["file_name"] = OUTPUT_DIR + bfile_name
 nuo = nwb_file.open(**vargs)
 
 nuo.set_dataset("session_id", session_id)
-print "Reading meta data"
+print ("Reading meta data")
 #general
 an_gene_copy = parse_h5_obj(meta_h5["animalGeneCopy"])[0][0]
 an_gene_bg= parse_h5_obj(meta_h5["animalGeneticBackground"])[0]
 an_gene_mod = parse_h5_obj(meta_h5["animalGeneModification"])[0]
-an_gene = "Animal gene modification: " + extract_encoded_str(an_gene_mod) +\
-";\nAnimal genetic background: " + extract_encoded_str(an_gene_bg) +\
-";\nAnimal gene copy: " + str(an_gene_copy)
+# py3: added make_str to following to convert bytes to string in python 3
+an_gene = "%s%s%s" % ("Animal gene modification: %s" % make_str(extract_encoded_str(an_gene_mod)),
+    ";\nAnimal genetic background: %s" % make_str(extract_encoded_str(an_gene_bg)),
+    ";\nAnimal gene copy: %s" % an_gene_copy)
 
 gg = nuo.make_group("general", abort=False)
 s = gg.make_group('subject')
@@ -261,7 +356,7 @@ nuo.set_dataset("description", subject)
 citation = parse_h5_obj(meta_h5["citation"])[0]
 citation = extract_encoded_str(citation)
 nuo.set_dataset('related_publications', citation)
-exp_type = map(str, parse_h5_obj(meta_h5["experimentType"])[0])
+exp_type = list(map(str, parse_h5_obj(meta_h5["experimentType"])[0]))  #py3, added list
 exp_type_desc = "Experiment type: "
 for i in range(len(exp_type)):
     exp_type_desc += exp_type[i] + ", "
@@ -275,7 +370,7 @@ ref_atlas = extract_encoded_str(ref_atlas)
 nuo.set_custom_dataset("reference_atlas", ref_atlas)
 sex = parse_h5_obj(meta_h5["sex"])[0]
 sex = extract_encoded_str(sex)
-print "sex='%s', type=%s" % (sex, type(sex))
+# print ("sex='%s', type=%s" % (sex, type(sex)))
 s.set_dataset("sex", sex)
 s.set_dataset("age", ">P60")
 species = parse_h5_obj(meta_h5["species"])[0]
@@ -303,7 +398,6 @@ for i in range(len(sites)):
     probe.append(sites[i])
     probe[-1] = probe[-1] * 1.0e-6
 probe = np.asarray(probe)
-
 shank = []
 for i in range(8): shank.append("shank0")
 for i in range(8): shank.append("shank1")
@@ -323,7 +417,7 @@ def create_empty_acquisition_series(name, num):
     vs.set_attr("comments","Acquired at 19531.25Hz")
     vs.set_attr("source", "Device 'ephys-acquisition'")
     vs.set_dataset("data", data, attrs={"unit": "none", "conversion": 1.0, "resolution": float('nan')})
-    timestamps = [0]
+    timestamps = [0.0]
     vs.set_dataset("timestamps", timestamps)
     el_idx = 8 * num + np.arange(8)
     vs.set_dataset("electrode_idx", el_idx) 
@@ -351,8 +445,8 @@ create_electrode_group_location("shank3", "P: 2.5, Lat:-1.8. vS1, C2, Paxinos. R
 create_empty_acquisition_series("shank3", 3)
 
 # behavior
-task_kw = map(str,parse_h5_obj(meta_h5["behavior/task_keyword"])[0])
-print "task_keyword='%s'" % task_kw
+task_kw = list(map(str,parse_h5_obj(meta_h5["behavior/task_keyword"])[0])) #py3, added list
+# print ("task_keyword='%s'" % task_kw)
 nuo.set_custom_dataset("task_keyword", task_kw)
 
 #virus
@@ -369,14 +463,17 @@ virus_tit = parse_h5_obj(meta_h5["virus/virusTiter"])[0]
 virus_lotNr = format_item(virus_lotNr)
 if virus_lotNr == 'virusLotNumber':
     virus_lotNr = '*unspecified*'
-virus_text = " Infection Coordinates: " + format_item(inf_coord) +\
-"\nInfection Location: " + format_item(inf_loc) +\
-"\nInjection Date: " + format_item(inj_date) +\
-"\nInjection Volume: "  + format_item(inj_volume) +\
-"\nVirus ID: " + format_item(virus_id) +\
+    # virus_lotNr = ''
+#format_item(inf_loc, options=['no_brackets']) +\
+virus_text = "Infection Coordinates: " + format_item(inf_coord[0]) +\
+format_item(inf_coord[1]) +\
+"\nInfection Location: " + format_item(inf_loc, options=['no_brackets', 'no_quote']) +\
+"\nInjection Date: " + format_item(inj_date, options=['no_brackets', 'no_quote']) +\
+"\nInjection Volume: "  + format_item(inj_volume, options=['no_brackets', 'no_quote']) +\
+"\nVirus ID: " + format_item(virus_id, options=['no_brackets', 'no_quote']) +\
 "\nVirus Lot Number: " + virus_lotNr +\
-"\nVirus Source: " + format_item(virus_src) +\
-"\nVirus Titer: " + format_item(virus_tit)
+"\nVirus Source: " + format_item(virus_src, options=['no_brackets', 'no_quote']) +\
+"\nVirus Titer: " + format_item(virus_tit, options=['no_brackets', 'no_quote'])
 
 # virus_text = " Infection Coordinates: " + str(inf_coord) +\
 # "\nInfection Location: " + inf_loc +\
@@ -390,6 +487,7 @@ virus_text = " Infection Coordinates: " + format_item(inf_coord) +\
 
 nuo.set_dataset("virus", virus_text)
 
+# import pdb; pdb.set_trace()
 #fiber
 ident_meth = parse_h5_obj(check_entry(meta_h5, "photostim/identificationMethod"))
 ident_text = ""
@@ -415,10 +513,10 @@ opto = nuo.make_group("optogenetics")
 s1 = opto.make_group("<site_X>", "site 1")
 s1.set_dataset("description", loc_text+"\n"+ident_text)
 stim_loc = parse_h5_obj(check_entry(meta_h5,"photostim/photostimLocation"))[0]
-stim_loc = format_item(stim_loc, options=['no_brackets'])
+stim_loc = format_item(stim_loc, options=['no_brackets', 'no_quote'])
 stim_coord = parse_h5_obj(check_entry(meta_h5,"photostim/photostimCoordinates"))[1]
 stim_lambda = parse_h5_obj(check_entry(meta_h5,"photostim/photostimWavelength"))[0]
-stim_text = "Stim location: %s\nStim coordinates: %s" % (stim_loc, format_item(stim_coord))
+stim_text = "Stim location: %s\nStim coordinates: %s" % (stim_loc, format_1d_array(stim_coord))
 s1.set_dataset("location", str(stim_text))
 s1.set_dataset("excitation_lambda", str(stim_lambda[0])+" nm")
 s1.set_dataset("device", "optogenetic-laser")
@@ -438,6 +536,8 @@ s1.set_dataset("device", "optogenetic-laser")
 
 
 
+
+
 #photostim
 phst_id_method = parse_h5_obj(meta_h5["photostim/identificationMethod"])[0]
 phst_coord = parse_h5_obj(meta_h5["photostim/photostimCoordinates"])[0]
@@ -452,16 +552,21 @@ stim_method = parse_h5_obj(meta_h5["photostim/stimulationMethod"])[0]
 # "\nStimulation Method: " + stim_method
 
 phst_coord = parse_h5_obj(meta_h5["photostim/photostimCoordinates"])  # get both coordinates
-photostim_text = "Identification Method: " + phst_id_method +\
-"\nPhotostimulation Coordinates: " + [str(x) for x in phst_coord] +\
-"\nPhotostimulation Location: " + phst_loc +\
-"\nPhotostimulation Wavelength: " + str(phst_wavelength) +\
-"\nStimulation Method: " + stim_method
+photostim_text = []
+for i in range(len(phst_coord)):
+    photostim_text.append("Identification Method: " + phst_id_method[i] +
+    "\nPhotostimulation Coordinates: " + format_1d_array(phst_coord[i]) +
+    "\nPhotostimulation Location: " + phst_loc[i] +
+    "\nPhotostimulation Wavelength: " + str(phst_wavelength) +
+    "\nStimulation Method: " + stim_method[i])
 
 # photostim_text is a 2-element array of unicode values.  Convert to uft-8 string
-photostim_text = ";\n".join([x.encode('utf-8') for x in photostim_text])
+# photostim_text = ";\n".join([x.encode('utf-8') for x in photostim_text])
+# photostim_text = ";\n".join([format_as_str(x) for x in photostim_text])
+photostim_text = ";\n".join([make_str(x) for x in photostim_text])
 
 nuo.set_dataset("stimulus", photostim_text)
+# import pdb; pdb.set_trace()
 
 #extracellular
 ad_unit = parse_h5_obj(meta_h5["extracellular/ADunit"])[0]
@@ -484,7 +589,7 @@ spk_sorting = parse_h5_obj(meta_h5["extracellular/spikeSorting"])[0]
 # raw data section
 # lick trace is stored in acquisition
 # photostimulation wave forms is stored in stimulus/processing
-print "Reading raw data"
+print ("Reading raw data")
 # get times
 grp_name = "timeSeriesArrayHash/value/time/time"
 timestamps = orig_h5[grp_name].value
@@ -494,8 +599,8 @@ lick_trace = orig_h5[grp_name][:,0]
 aom_input_trace = orig_h5[grp_name][:,1]
 laser_power = orig_h5[grp_name][:,2]
 # get descriptions
-comment1 = parse_h5_obj(orig_h5["timeSeriesArrayHash/keyNames"])[0]
-comment2 = parse_h5_obj(orig_h5["timeSeriesArrayHash/descr"])[0]
+comment1 = parse_h5_obj(orig_h5["timeSeriesArrayHash/keyNames"])[0][0]
+comment2 = parse_h5_obj(orig_h5["timeSeriesArrayHash/descr"])[0][0]
 comments = comment1 + ": " + comment2
 grp_name = "timeSeriesArrayHash/value/idStrDetailed"
 descr = parse_h5_obj(orig_h5[grp_name])[0]
@@ -576,7 +681,7 @@ aud_cue_ts.set_attr("source", "Times are as reported in Nuo's data file, but rel
 # Interface 'EventWaveform' contains waveform data and electrode information
 # Electrode depths and cell types are collected in string arrays at the top level
 # of the module
-print "Reading Event Series Data"
+print ("Reading Event Series Data")
 # create module unit
 mod_name = "Units"
 mod = nuo.make_group("<Module>", mod_name)
@@ -614,7 +719,7 @@ for i in range(unit_num):
     # read in cell types and update cell_type array
     cell_type = parse_h5_obj(grp_top_folder["cellType"])[0]
     if  'numpy' in str(type(cell_type)):
-        cells_conc = ' and '.join(map(str, cell_type))
+        cells_conc = ' and '.join(list(map(str, cell_type)))  #py3, added list
         cell_type = cells_conc
     else:
         cell_type = str(cell_type)
@@ -655,12 +760,12 @@ spk_times_iface.set_custom_dataset("ElectrodeDepths", electrode_depths)
 # read_pole_position(orig_h5, nuo)
 # read_cue(orig_h5, nuo)
 
-print "Creating epochs"
+print ("Creating epochs")
 get_trial_types(orig_h5, nuo)
 get_trial_units(orig_h5, nuo, unit_num)
 create_trials(orig_h5, nuo)
 
-print "Collecting Analysis Information"
+print ("Collecting Analysis Information")
 trial_start_times = orig_h5["trialStartTimes/trialStartTimes"].value
 trial_types_all = []
 trial_type_strings = parse_h5_obj(orig_h5['trialTypeStr'])[0]
@@ -679,8 +784,8 @@ grp.set_custom_dataset("trial_type_string", trial_types_all)
 grp.set_custom_dataset("trial_type_mat", trial_type_mat)
 grp.set_custom_dataset("good_trials", good_trials)
 
-print "Closing file"
+print ("Closing file")
 
 nuo.close()
-print "Done"
+print ("Done")
 

@@ -120,9 +120,13 @@ end
 
 function create_isi_iface(fname, name)
     
-    settings = {'file_name', fname, 'mode', 'w', 'verbosity', verbosity, ...
+    settings = { ...
+        'file_name', fname, ...
+        'mode', 'w', ...
+        'verbosity', verbosity, ...
         'identifier', nwb_utils.create_identifier('reference image test'), ...
-        'description','isi reference image test'};
+        'description','isi reference image test'...
+        };
     f = nwb_file(settings{:});
     
 %     module = neurodata.create_module(name)
@@ -139,30 +143,35 @@ function create_isi_iface(fname, name)
     module = f.make_group('<Module>', name);
     iface = module.make_group('ImagingRetinotopy');
     % iface.add_axis_1_phase_map([[1.0, 1.1, 1.2],[2.0,2.1,2.2]], 'altitude', .1, .1)
+    % cast dimensions as int32.  For some reason, int64 throws a python
+    % error.  int32 seems to be stored as int64 in the hdf5 file.
     iface.set_dataset('axis_1_phase_map', [1.0, 1.1, 1.2; 2.0,2.1,2.2], 'attrs', ...
-        {'dimension', [2,3], 'field_of_view', [0.1, 0.1], 'unit', 'degrees', 't2d', [2,3; 5,7]});
+        {'dimension', int32([2,3]), 'field_of_view', [0.1, 0.1], 'unit', 'degrees'});
+    % above was: {'dimension', [2,3], 'field_of_view', [0.1, 0.1], 'unit', 'degrees', 't2d', [2,3; 5,7]});
+    % not sure what 't2d' is.  That's not in the Python version of the test
 
     % iface.add_axis_2_phase_map([[3.0, 3.1, 3.2],[4.0,4.1,4.2]], 'azimuth', .1, .1, unit='degrees')
     iface.set_dataset('axis_2_phase_map', [3.0, 3.1, 3.2; 4.0,4.1,4.2], 'attrs', ...
-        {'dimension', [2,3], 'field_of_view', [0.1, 0.1], 'unit', 'degrees'});
+        {'dimension', int32([2,3]), 'field_of_view', [0.1, 0.1], 'unit', 'degrees'});
 
     iface.set_dataset('axis_descriptions', {'altitude', 'azimuth'});
     
     % iface.add_axis_1_power_map([[0.1, 0.2, 0.3],[0.4, 0.5, 0.6]], .1, .1)
     iface.set_dataset('axis_1_power_map', [0.1, 0.2, 0.3; 0.4, 0.5, 0.6], 'attrs', ...
-        {'dimension', [2,3], 'field_of_view', [0.1, 0.1]});
+        {'dimension', int32([2,3]), 'field_of_view', [0.1, 0.1]});
         
     % iface.add_sign_map([[-.1, .2, -.3],[.4,-.5,.6]])
     iface.set_dataset('sign_map', [-.1, .2, -.3; .4,-.5,.6], 'attrs', ...
-        { 'dimension', [2,3]});
+        { 'dimension', int32([2,3])});
         
     % iface.add_vasculature_image([[1,0,129],[2,144,0]], height=.22, width=.35)
-    iface.set_dataset('vasculature_image', [1,0,129; 2,144,0], 'attrs', ...
-        {'field_of_view', [0.22, 0.35], 'bits_per_pixel', 8, 'dimension', [2,3], 'format', 'raw'});
+    % for some reason, uint16 is being passed to Python as int64. todo: fix
+    iface.set_dataset('vasculature_image', uint16([1,0,129; 2,144,0]), 'attrs', ...
+        {'field_of_view', [0.22, 0.35], 'bits_per_pixel', int32(8), 'dimension', int32([2,3]), 'format', 'raw'});
         
     % iface.add_focal_depth_image([[1,0,129],[2,144,0]], bpp=8)
-    iface.set_dataset('focal_depth_image', [1,0,129; 2,144,0], 'attrs', ...
-        {'bits_per_pixel',8, 'dimension',[2,3], 'format', 'raw'});
+    iface.set_dataset('focal_depth_image', uint16([1,0,129; 2,144,0]), 'attrs', ...
+        {'bits_per_pixel',int32(8), 'dimension',int32([2,3]), 'format', 'raw'});
         
     % iface.finalize()
     % module.finalize()

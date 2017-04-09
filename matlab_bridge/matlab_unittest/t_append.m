@@ -83,7 +83,7 @@ function create_annotation_series(fname, name, target, newfile)
 end
 
 test_append()
-fprintf('%s PASSED', script_name);
+fprintf('%s PASSED\n', script_name);
 end
 
 

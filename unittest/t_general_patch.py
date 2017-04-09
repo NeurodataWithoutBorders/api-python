@@ -49,6 +49,7 @@ def test_general_intra():
 def create_general_intra(fname):
     settings = {}
     settings["file_name"] = fname
+    settings["start_time"] = "2008-09-15T15:53:00-08:00"
     settings["identifier"] = utils.create_identifier("general intracellular test")
     settings["mode"] = "w"
     settings["description"] = "test elements in /general/intracellular_ephys"

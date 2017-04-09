@@ -8,8 +8,8 @@
 # to run, type ./check_schemas.sh
 
 # check core schema
-python -m nwb.check_schema -
-# echo "result is $result"
+echo "doing: python -m nwb.check_schema N"
+python -m nwb.check_schema N
 
 # get list of extensions to check
 extensions=`ls ../create_scripts/extensions/e-*.py`
@@ -17,6 +17,7 @@ extensions=`ls ../create_scripts/extensions/e-*.py`
 # check schema for each extension
 for fn in $extensions
 do
+  echo "doing: python -m nwb.check_schema $fn"
   python -m nwb.check_schema $fn
 done
 

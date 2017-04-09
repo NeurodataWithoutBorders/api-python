@@ -74,7 +74,7 @@ abs.set_dataset("feature_units", units)
 abs.set_attr("source", "Simulated data. Normally this would be the device presenting stimulus")
 
 # create some pretend data
-data = np.arange(4000).reshape(1000, 4)
+data = np.arange(4000, dtype=np.float32).reshape(1000, 4)
 
 # add data to the time series. for now, ignore the last 3 parameters
 t = np.arange(1000) * 0.001

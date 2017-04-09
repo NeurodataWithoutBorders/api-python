@@ -29,7 +29,7 @@ To setup the matlab_bridge, do the following:
    shell:
     python
     import sys
-    print sys.executable
+    print (sys.executable)
    
    The first command will start the Python interpreter  .  The third command
    will display the location of the Python interpreter  .
@@ -97,25 +97,26 @@ Output should be like the following:
 
 >> run_all_tests
 t_annotation.m PASSED
-t_general_image.m PASSED
-t_general_top.m PASSED
-t_no_data.m PASSED
-t_starting_time.m PASSED
-t_append.m PASSEDt_general_opto.m PASSED
-t_if_add_ts.m PASSED
-t_no_time.m PASSED
-t_timeseries_link.m PASSED
+t_append.m PASSED
+t_array_layout.m PASSED
 t_epoch_tag.m PASSED
-t_general_patch.m PASSED
-t_if_isi.m PASSED
-t_ref_image.m PASSED
-t_top_datasets.m PASSED
 t_general_ephys.m PASSED
+t_general_image.m PASSED
+t_general_opto.m PASSED
+t_general_patch.m PASSED
 t_general_species.m PASSED
+t_general_top.m PASSED
+t_if_add_ts.m PASSED
+t_if_isi.m PASSED
 t_modification_time.m PASSED
+t_no_data.m PASSED
+t_no_time.m PASSED
+t_ref_image.m PASSED
 t_softlink.m PASSED
+t_starting_time.m PASSED
+t_timeseries_link.m PASSED
+t_top_datasets.m PASSED
 t_unittimes.m PASSED
-
 
 You should also be able to run the sample scripts in directory
 "matlab_bridge/matlab_examples/create_scripts".  Example output from

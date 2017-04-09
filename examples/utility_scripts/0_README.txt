@@ -18,3 +18,15 @@ validate_internal.sh  - Demo of validating file using internally stored format s
 
 check_schemas.sh  - Validate schema files (nwb_core.py and example extensions).
 
+cmp_created.sh  - compare (diff) nwb files with the same names in two different directories, save
+                  output in third directory.
+
+install_source_data.py  - download and install example/source_data_2 directory (which is needed
+                 to run some of the ../create_scripts
+
+make_h5sig.py  - generate 'h5sig' (hdf5 signature) of nwb files that are in a directory, storing the
+                generated signatures in an output directory.
+
+validate_others.sh - validates all nwb files in a directory, saving validation outout in an output
+                     directory.
+

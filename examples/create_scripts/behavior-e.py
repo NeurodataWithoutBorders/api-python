@@ -60,7 +60,7 @@ interval.set_dataset("data", evts)
 
 # note: some timestamps will be duplicated if two different events start 
 #   and/or stop at the same time
-t = [ 1, 2, 2, 3, 5, 6, 6, 7, 8, 8, 10, 10, 11, 15 ]
+t = [ 1.0, 2.0, 2.0, 3.0, 5.0, 6.0, 6.0, 7.0, 8.0, 8.0, 10.0, 10.0, 11.0, 15.0 ]
 interval.set_dataset("timestamps", t)
 
 # Add additional information to the BehavioralEpochs interface.  This is defined in

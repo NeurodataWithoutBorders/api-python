@@ -48,8 +48,8 @@ def create_notime_series(fname, name, target):
     notime = f.make_group("<TimeSeries>", name, path=target)
     # following used for testing more missing_fields
     # notime = f.make_group("<VoltageClampSeries>", name, path=target)
-    notime.set_dataset("data", [0], attrs={"unit":"n/a",
-        "conversion":1, "resolution":1})
+    notime.set_dataset("data", [0.0], attrs={"unit":"n/a",
+        "conversion":1.0, "resolution":1.0})
 
     #
     # notime.finalize()

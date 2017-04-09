@@ -10,20 +10,20 @@ import numpy as np
 #BASE = "ec013.156"
 BASE = "ec013.157"
 
-print "Warning -- experiment time is hard-coded. Needs to be read from file"
+print ("Warning -- experiment time is hard-coded. Needs to be read from file")
 if BASE == "ec013.156":
     DATE = "Sat Jul 08 2006 12:00:00"
 else:   # ec013.157
     DATE = "Sat Jul 08 2006 12:30:00"
 
 # paths to source files
-SOURCE_DATA_DIR = "../source_data/crcns_hc-3/"
+SOURCE_DATA_DIR = "../source_data_2/crcns_hc-3/"
 PATH = SOURCE_DATA_DIR + BASE
 
 if not os.path.exists(PATH):
-    print "Source files for script '%s' not present" % os.path.basename(__file__)
-    print "Download and put them in the 'examples/source_data' directory as instructed"
-    print "in file examples/0_README.txt"
+    print ("Source files for script '%s' not present" % os.path.basename(__file__))
+    print ("Download and put them in the 'examples/source_data' directory as instructed")
+    print ("in file examples/0_README.txt")
     sys.exit(1) 
 
 
@@ -66,7 +66,7 @@ sg.set_dataset("weight", "250-400 g")
 buz.set_dataset("virus", "n/a")
 buz.set_dataset("slices", "n/a")
 
-print "Warning -- electrode map is hard-coded. Needs to be read from XML"
+print ("Warning -- electrode map is hard-coded. Needs to be read from XML")
 electrode_map = [
     [     0, 0, 0 ], [ 20e-6, 0, 0 ], [ 40e-6, 0, 0 ], [ 60e-6, 0, 0 ],
     [ 80e-6, 0, 0 ], [100e-6, 0, 0 ], [120e-6, 0, 0 ], [140e-6, 0, 0 ],
@@ -141,7 +141,7 @@ if BASE == "ec013.156":
 elif BASE == "ec013.157":
     SAMPLES = 789000 
 else:
-    print "Unrecognized file -- need to determine number of LFP samples"
+    print ("Unrecognized file -- need to determine number of LFP samples")
     sys.exit(1)
 
 lfp_t = np.arange(SAMPLES) / 1250.0
@@ -151,10 +151,10 @@ for i in range(8):
         fname = "%s/%s.fet.%d" % (PATH, BASE, i+1)
         f = open(fname, "r")
     except IOError:
-        print "Error reading " + fname
+        print ("Error reading " + fname)
         sys.exit(1)
     cnt = int(f.readline())
-    num_electrodes = (cnt - 5) / 3
+    num_electrodes = int((cnt - 5) / 3)  # py3 - added int function
     features = []
     times = []
     feature_types = [ "PC1", "PC2", "PC3" ]
@@ -173,7 +173,7 @@ for i in range(8):
     lfp_data = np.zeros((SAMPLES, num_electrodes))
     try:
         fname = "%s/%s.eeg" % (PATH, BASE)
-        f = open(fname, "r")
+        f = open(fname, "rb")  # py3, was "r"
         # SAMPLES is pre-computed for each file
         # 65 channels of data seem to be in the file. there's no
         #   documentation saying what LFP channel maps to what electrode,
@@ -184,7 +184,7 @@ for i in range(8):
                 lfp_data[k][j] = x[electrode_idx[j]]
         f.close()
     except IOError:
-        print "Error reading " + fname
+        print ("Error reading " + fname)
         sys.exit(1)
     lfp_data *= 3.052e-7    # volts per bit
 
@@ -192,7 +192,7 @@ for i in range(8):
         fname = "%s/%s.clu.%d" % (PATH, BASE, i+1)
         f = open(fname, "r")
     except IOError:
-        print "Error reading " + fname
+        print ("Error reading " + fname)
         sys.exit(1)
     clu_cnt = int(f.readline())    # pull number of clusters from head of file
     nums = []
@@ -208,7 +208,7 @@ for i in range(8):
     spk_data = np.zeros((num_events, n, 32))
     try:
         fname = "%s/%s.spk.%d" % (PATH, BASE, i+1)
-        f = open(fname, "r")
+        f = open(fname, "rb")  # py3, was "r"
         for k in range(num_events):
             x = np.fromstring(f.read(32*n*2), dtype=np.int16, count=32*n)
             # TODO FIXME make sure alignment is correct
@@ -219,22 +219,22 @@ for i in range(8):
                     spk_data[k][cc][tt] = y[tt][cc]
         f.close()
     except IOError:
-        print "Error reading " + fname
+        print ("Error reading " + fname)
         sys.exit(1)
     spk_data *= 3.052e-7
 
     try:
-        fname = "%s/%s.threshold.%d" % (PATH, BASE, i+1)
-        f = open(fname, "r")
+        fname = ("%s/%s.threshold.%d" % (PATH, BASE, i+1))
+        f = open(fname, "rb")  # py3, was "r"
         thresh = float(f.readline())
         f.close()
     except IOError:
-        print "Error reading " + fname
+        print ("Error reading " + fname)
         sys.exit(1)
 
     ####################################################################
     mod_name = "shank_%d" % i
-    print "creating", mod_name
+    print ("creating %s" % mod_name)
     mod = buz.make_group("<Module>", mod_name)
     fet_iface = mod.make_group("FeatureExtraction")
     fet_iface.set_dataset("times", times)
@@ -302,7 +302,7 @@ pos = []
 postime = []
 try:
     fname = "%s/%s.whl" % (PATH, BASE)
-    with open(fname, "r") as f:
+    with open(fname, "r") as f:  #py3, was "r"
         for line in f:
             toks = line.split('\t')
             x0 = float(toks[0])
@@ -320,7 +320,7 @@ try:
                 postime.append(posticks / 39.06)
             posticks += 1
 except IOError:
-    print "Error reading " + fname
+    print ("Error reading " + fname)
     sys.exit(1)
 
 
@@ -350,7 +350,7 @@ pos_ts.set_dataset("data", pos, attrs={"resolution": 0.001})
 # iface.add_timeseries(pos_ts)
 # mod.finalize();
 
-epoch = ut.create_epoch(buz, "Linear track", 0, postime[-1]+60)
+epoch = ut.create_epoch(buz, "Linear track", 0.0, postime[-1]+60)
 epoch.set_dataset("description", "This folder would normally be one of several (eg, sleep_1, enclosure_1, sleep_2, track_1, etc) and each would provide windows into the different acquisition and stimulus streams. Since only one epoch (linear track) was imported into the sample NWB file, the functionality of epochs is not visible")
 # epoch.finalize()
 

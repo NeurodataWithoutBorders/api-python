@@ -17,6 +17,7 @@ else:
 # borg = ut.create_new_file(fname, "Epoch tags")
 
 f = nwb_file.open(fname,
+    start_time="2008-09-15T15:53:00-08:00",
     mode="w",
     identifier=utils.create_identifier("Epoch tags"),
     description="softlink test",

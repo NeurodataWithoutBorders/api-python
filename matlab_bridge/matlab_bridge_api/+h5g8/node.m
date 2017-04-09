@@ -23,8 +23,14 @@ classdef node < handle
             arg_default={ false };
             arg_vals = obj.ml_file.parse_arguments(varargin, arg_names, arg_types, arg_default);
             custom = arg_vals.custom;
+            % flatten attribute value if necessary
+            [val1d, shape] = obj.ml_file.flatten(value);
+%             attrs = {aid, value};
+%             [atrs1d, attrs_shape] = obj.ml_file.flatten_attrs(attrs); % modifies attrs
+%             fvalue = atrs1d(2);  % flattened value
             % call python code in h5g8
-            obj.fg_node.set_attr(aid, value, custom);
+            % obj.fg_node.set_attr(aid, value, custom);
+            obj.fg_node.set_attr(aid, val1d, custom, shape);
             % this call the matlab group constructor
             % obj.ml_file.process_h5commands()
             % return original node object to allow stacking calls to this

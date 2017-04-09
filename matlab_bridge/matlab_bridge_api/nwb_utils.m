@@ -43,7 +43,8 @@ classdef nwb_utils
                 row_major = col_major;
             else
                 row_order = fliplr(1:length(shape));
-                row_major = reshape(permute(col_major, row_order), size(col_major));
+                % row_major = reshape(permute(col_major, row_order), size(col_major));
+                row_major = permute(col_major, row_order);
             end
         end
         function [dtype] = min_idtype(iarr)
@@ -74,12 +75,17 @@ classdef nwb_utils
                 % no need to convert, is not python type
                 ml_data = py_data;
             else
+                if startsWith(ptype,'py.numpy.float') || ...
+                   startsWith(ptype,'py.numpy.int') || ...
+                   startsWith(ptype,'py.numpy.uint')
+                   ptype = 'py.numpy.number';  % for switch case below
+                end
                 switch ptype
                     case {'py.str', 'py.numpy.string_'}
                         ml_data = char(py_data);
                     case {'py.list' }
                         ml_data = nwb_utils.convert_py_list(py_data);
-                    case {'py.numpy.ndarray'}
+                    case {'py.numpy.ndarray', 'py.numpy.number'}
                         ml_data = nwb_utils.convert_py_ndarray(py_data);
                     otherwise
                         fprintf('data cannot convert is:');
@@ -97,9 +103,35 @@ classdef nwb_utils
                 cellP(n) = {strP};
             end
         end
+        function [ml_data] = convert_pycell(fitype, cell_1d)
+            % convert cell array containing python integer values to type
+            % specified by function fitype.  fitype should be function
+            % like: @int32, @uint32, @uint8
+            % this needed because Python 3 returns integer data as int64
+            % eventhough numpy ndarray dtype for the data may be different.
+            % So, in for Python 3 data, need to convert first to int64
+            % then to the more specialized integer type.
+            try
+                ml_data = cellfun(fitype, cell_1d);
+            catch ME
+                % above failed.  Must by Python 3.  Need to convert to
+                % int64 first, then the more specialized type
+                ml_data = fitype(cellfun(@int64, cell_1d));
+            end
+        end
         function [ml_data] = convert_py_ndarray(pydata)
             dtype = char(pydata.dtype.name);
-            shape = cellfun(@int32, cell(pydata.shape));
+            % cps = cell(pydata.shape);
+            shape = nwb_utils.convert_pycell(@int32, cell(pydata.shape));
+%             % get shape, need to allow for both Python 2 and Python 3
+%             try
+%                 % Python 2 returns 32 bit integers for shape
+%                 shape = cellfun(@int32, cps);
+%             catch ME
+%                 % Python 3 returns 64 bit integers for shape
+%                 shape = cellfun(@int64, cps);
+%             end  
+            % shape = cellfun(@int32, cell(pydata.shape));
             is_int = any(strfind(dtype, 'int'));
             is_float = any(strfind(dtype, 'float'));
             is_numeric = is_int || is_float;
@@ -110,21 +142,39 @@ classdef nwb_utils
             end
             cell_1d = cell(pydata.flatten().tolist());
             switch dtype
-                case {'float32', 'float64'}
-                    % ml_data = cellfun(@float32, cell_1d);  % not sure why this does not work
+                case {'float64'}
                     ml_data = cellfun(@double, cell_1d);
+                case {'float32'}
+                    ml_data = cellfun(@single, cell_1d);
+                case {'int64'}
+                    % ml_data = cellfun(@int32, cell_1d);
+                    ml_data = nwb_utils.convert_pycell(@int64, cell_1d);
                 case {'int32'}
-                    ml_data = cellfun(@int32, cell_1d);
+                    % ml_data = cellfun(@int32, cell_1d);
+                    ml_data = nwb_utils.convert_pycell(@int32, cell_1d);
+                case {'uint32'}
+                    % ml_data = cellfun(@uint32, cell_1d);
+                    ml_data = nwb_utils.convert_pycell(@uint32, cell_1d);
+                case {'int16'}
+                    % ml_data = cellfun(@int16, cell_1d);
+                    ml_data = nwb_utils.convert_pycell(@int16, cell_1d);
                 case {'uint16'}
-                    ml_data = cellfun(@uint16, cell_1d);
+                    % ml_data = cellfun(@uint16, cell_1d);
+                    ml_data = nwb_utils.convert_pycell(@uint16, cell_1d);
+                case {'int8'}
+                    % ml_data = cellfun(@int8, cell_1d);
+                    ml_data = nwb_utils.convert_pycell(@int8, cell_1d);
                 case {'uint8'}
-                    ml_data = cellfun(@uint8, cell_1d);
+                    % ml_data = cellfun(@uint8, cell_1d);
+                    ml_data = nwb_utils.convert_pycell(@uint8, cell_1d);
                 otherwise
                     error('unrecognized dtype: %s', dtype)
             end
             if length(shape) > 1
                 % only reshape if two or more dimensions
-                ml_data = reshape(ml_data, shape);
+                % ml_data = reshape(ml_data, shape);
+                ml_data = reshape(ml_data, flip(shape));
+                ml_data = nwb_utils.h5reshape(ml_data);
             end
         end
 

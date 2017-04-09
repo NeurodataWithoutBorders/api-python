@@ -29,6 +29,7 @@ def test_refimage_series():
 def create_refimage(fname, name):
     settings = {}
     settings["file_name"] = fname
+    settings["start_time"] = "2008-09-15T15:53:00-08:00"
     settings["identifier"] = utils.create_identifier("reference image test")
     settings["mode"] = "w"
     settings["description"] = "reference image test"

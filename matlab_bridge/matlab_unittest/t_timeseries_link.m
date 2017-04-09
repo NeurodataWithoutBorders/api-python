@@ -79,7 +79,7 @@ function create_linked_series(fname, root)
 %     first = neurodata.create_timeseries('TimeSeries', root+'1', 'template')
 %     first.ignore_time()
 %     first.set_value('num_samples', 1)
-%     first.set_data([1], unit='parsec', conversion=1, resolution=1e-12)
+%     first.set_data([1], unit='parsec', conversion=1.0, resolution=1e-12)
 %     first.finalize()
     %
     
@@ -87,7 +87,7 @@ function create_linked_series(fname, root)
     % first.ignore_time()
     % first.set_value('num_samples', 1)
     first.set_dataset('num_samples', 1);
-    d1 = first.set_dataset('data', {1}, 'attrs', {'unit', 'parsec', 'conversion', 1, ...
+    d1 = first.set_dataset('data', {1.0}, 'attrs', {'unit', 'parsec', 'conversion', 1.0, ...
         'resolution', 1e-12});
     % first.finalize()
     
@@ -99,20 +99,20 @@ function create_linked_series(fname, root)
     %
     
     second = f.make_group('<TimeSeries>', [root, '2'], 'path', '/stimulus/presentation');
-    t2 = second.set_dataset('timestamps', {2});
+    t2 = second.set_dataset('timestamps', {2.0});
     second.set_dataset('num_samples', 1);
     second.set_dataset('data', d1); 
     
 %     third = neurodata.create_timeseries('TimeSeries', root+'3', 'acquisition')
 %     third.set_time_as_link(second)
 %     third.set_value('num_samples', 1)
-%     third.set_data([3], unit='parsec', conversion=1, resolution=1e-9)
+%     third.set_data([3], unit='parsec', conversion=1.0, resolution=1e-9)
 %     third.finalize()
 
     third = f.make_group('<TimeSeries>', [root,'3'], 'path', '/acquisition/timeseries');
     third.set_dataset('timestamps', t2);
     third.set_dataset('num_samples', 1);
-    third.set_dataset('data', {3}, 'attrs', {'unit', 'parsec', 'conversion', 1, ...
+    third.set_dataset('data', {3.0}, 'attrs', {'unit', 'parsec', 'conversion', 1.0, ...
         'resolution', 1e-9});
 
     %

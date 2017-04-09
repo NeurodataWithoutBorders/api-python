@@ -11,7 +11,8 @@ function [ ds, md ] = crcns_alm_1( source_dir, session_id )
 
 
 % paths to default source files
-default_source_dir = '../source_data/crcns_alm-1/';
+% default_source_dir = '../source_data/crcns_alm-1/';
+default_source_dir = '../../../examples/source_data_2/crcns_alm-1/';
 default_session_id = 'NL_example20140905_ANM219037_20131117';
 script_base_name = mfilename();
 script_name = strcat(script_base_name, '.m');
@@ -107,7 +108,7 @@ function create_trials(f, epoch_tags, epoch_units)
             % convert from cell array to string
             raw_file = raw_file{1};
         end
-        description = sprintf('Raw Voltage trace data files used to acuqire spike times data: %s', raw_file);
+        description = sprintf('Raw Voltage trace data files used to acquire spike times data: %s', raw_file);
         e.set_dataset('description', description);
         % add links to timeseries
 %         nwb_utils.add_epoch_ts(e, start, stop, 'lick_trace', lick_trace_ts);
@@ -285,7 +286,8 @@ shank = [repmat({'shank0'},1,8), repmat({'shank1'},1,8), ...
 ee = f.make_group('extracellular_ephys');
 
 % electrode_map and electrode_group
-ee.set_dataset('electrode_map', nwb_utils.h5reshape(probe));
+% ee.set_dataset('electrode_map', nwb_utils.h5reshape(probe));
+ee.set_dataset('electrode_map', probe, 'dtype', 'float32');
 ee.set_dataset('electrode_group', shank);
 ee.set_dataset('filtering', 'Bandpass filtered 300-6K Hz');
 
@@ -343,18 +345,32 @@ virus_id = md.virus.virusID{1};
 virus_lotNr = md.virus.virusLotNumber;
 virus_src = md.virus.virusSource{1};
 virus_tit = md.virus.virusTiter{1};
+if isempty(virus_lotNr)
+    virus_lotNr = '*unspecified*';
+    % virus_lotNr =
+end
 
 virus_text = sprintf(['Infection Coordinates: %s' ...
   '\nInfection Location: %s\nInjection Date: %s\nInjection Volume: %s' ... 
   '\nVirus ID: %s\nVirus Lot Number: %s\nVirus Source: %s\nVirus Titer: %s'],...
-  [mat2str(inf_coord{1}) mat2str(inf_coord{2})],...
-  inf_loc, inj_date, [mat2str(inj_volume(1)) mat2str(inj_volume(2))], virus_id, ...
+  [format_1d_array(inf_coord{1}) format_1d_array(inf_coord{2})],...
+  inf_loc, inj_date, [mat2str(inj_volume(1)) ', ' mat2str(inj_volume(2))], virus_id, ...
   char(virus_lotNr), virus_src, virus_tit);
  
 f.set_dataset('virus', virus_text);
 
 
-%fiber
+function [arrstr] = format_1d_array(arr)
+    % format array arr using a manner that will match that
+    % used in Python.  This done so comparision of matalb
+    % and Python output will match
+    svals = cell(1,length(arr));
+    for ifda=1:length(arr)
+        svals{ifda} = sprintf('%g', arr(ifda));
+    end
+    sval = [sprintf('%s, ',svals{1:end-1}),svals{end}];
+    arrstr = sprintf('[%s]', sval);
+end
 
 
 % fiber
@@ -384,7 +400,7 @@ s1.set_dataset('description', sprintf('%s\n%s', loc_text, ident_text));
 stim_coord = md.photostim.photostimCoordinates{2};  % why just second element?
 stim_lambda = md.photostim.photostimWavelength{1};
 %  stim_text = sprintf('Stim location: %s\nStim coordinates: %s',  stim_loc, mat2str(stim_coord));
-stim_text = sprintf('Stim location: %s\nStim coordinates: %s',  location_str, mat2str(stim_coord));
+stim_text = sprintf('Stim location: %s\nStim coordinates: %s',  location_str, format_1d_array(stim_coord));
 s1.set_dataset('location', stim_text);
 s1.set_dataset('excitation_lambda', sprintf('%i nm', stim_lambda));
 s1.set_dataset('device', 'optogenetic-laser');
@@ -410,7 +426,7 @@ for i = 1:length(phst_id_method)
       '\nPhotostimulation Location: %s'...
       '\nPhotostimulation Wavelength: %s' ...
       '\nStimulation Method: %s'],...
-      phst_id_method{i},  mat2str(phst_coord{i}), phst_loc{i},...
+      phst_id_method{i},  format_1d_array(phst_coord{i}), phst_loc{i},...
       mat2str(phst_wavelength), stim_method{i});
   photostim_text{end+1} = pt_text;
 end
@@ -575,7 +591,8 @@ for i = 1:unit_num
     spk.set_custom_dataset('sample_length', int32(sample_length));
     spk.set_attr('source', '---');
     spk.set_dataset('timestamps', timestamps');
-    spk.set_dataset('data', nwb_utils.h5reshape(waveforms), ...
+    % spk.set_dataset('data', nwb_utils.h5reshape(waveforms), ...
+    spk.set_dataset('data', waveforms, ...
         'attrs', {'resolution', NaN, 'unit', 'Volts', 'conversion', 0.1});  % volts plural to match Python version from AIBSs
     spk.set_dataset('electrode_idx', {channel(1)} );  % include in cell array to make array in hdf5
     spk.set_attr('description', cell_type);
@@ -632,7 +649,8 @@ grp = f.make_group('analysis', 'abort', false);
 grp.set_custom_dataset('trial_start_times', trial_start_times);
 grp.set_custom_dataset('trial_type_string', trial_types');
 % grp.set_custom_dataset('trial_type_mat', reshape(trial_type_mat', size(trial_type_mat)), 'dtype', 'uint8');
-grp.set_custom_dataset('trial_type_mat', nwb_utils.h5reshape(trial_type_mat), 'dtype', 'uint8');
+% grp.set_custom_dataset('trial_type_mat', nwb_utils.h5reshape(trial_type_mat), 'dtype', 'uint8');
+grp.set_custom_dataset('trial_type_mat', trial_type_mat, 'dtype', 'uint8');
 grp.set_custom_dataset('good_trials', uint8(good_trials'), 'dtype', 'uint8');  % first uint8 needede to convert logical to integer
 
 

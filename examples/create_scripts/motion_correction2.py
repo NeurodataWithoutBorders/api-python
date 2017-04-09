@@ -152,7 +152,7 @@ orig.set_dataset("dimension", [640, 480])
 orig.set_dataset("pmt_gain", 1.0)
 orig.set_dataset("field_of_view", [0.0003, 0.0003])
 orig.set_dataset("imaging_plane", "camera1")
-orig.set_dataset("scan_line_rate", 16000)
+orig.set_dataset("scan_line_rate", 16000.0)
 
 
 ###########################
@@ -168,7 +168,7 @@ orig.set_dataset("scan_line_rate", 16000)
 # finish the time series so data is written to disk
 #- orig.finalize()
 
-orig_times = orig.set_dataset("timestamps", [0, 1, 2])
+orig_times = orig.set_dataset("timestamps", [0.0, 1.0, 2.0])
 orig.set_dataset("num_samples", 3)
 
 # this example is for storing motion corrected 2-photon images
@@ -301,7 +301,7 @@ orig.set_dataset("dimension", [640, 480])
 orig.set_dataset("pmt_gain", 1.0)
 orig.set_dataset("field_of_view", [0.0003, 0.0003])
 orig.set_dataset("imaging_plane", "camera1")
-orig.set_dataset("scan_line_rate", 16000)
+orig.set_dataset("scan_line_rate", 16000.0)
 
 
 
@@ -318,7 +318,7 @@ orig.set_dataset("scan_line_rate", 16000)
 # finish the time series so data is written to disk
 #- orig.finalize()
 
-orig_times = orig.set_dataset("timestamps", [0, 1, 2])
+orig_times = orig.set_dataset("timestamps", [0.0, 1.0, 2.0])
 orig.set_dataset("num_samples", 3)
 
 

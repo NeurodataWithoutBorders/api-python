@@ -39,6 +39,7 @@ def test_general_optogen():
 
 def create_general_optogen(fname):
     settings = {}
+    settings["start_time"] = "2008-09-15T15:53:00-08:00"
     settings["file_name"] = fname
     settings["identifier"] = utils.create_identifier("metadata optogenetic test")
     settings["mode"] = "w"

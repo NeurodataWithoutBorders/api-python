@@ -58,6 +58,7 @@ def test_general_extra():
 def create_general_extra(fname):
     settings = {}
     settings["file_name"] = fname
+    settings["start_time"] = "2008-09-15T15:53:00-08:00"
     settings["identifier"] = utils.create_identifier("general extracellular test")
     settings["mode"] = "w"
     settings["description"] = "test elements in /general/extracellular_ephys"
@@ -71,7 +72,7 @@ def create_general_extra(fname):
 #     neurodata.set_metadata(EXTRA_CUSTOM("EXTRA_CUSTOM"), "EXTRA_CUSTOM")
 
     g = f.make_group("extracellular_ephys")
-    g.set_dataset("electrode_map", [[1,1,1], [1,2,3]])
+    g.set_dataset("electrode_map", [[1.0,1.0,1.0], [1.0,2.0,3.0]])
     g.set_dataset("electrode_group", ["p1", "p2"])
     g.set_dataset("impedance", [1.0e6, 2.0e6])
     g.set_dataset("filtering", "EXTRA_FILTERING")

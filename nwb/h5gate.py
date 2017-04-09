@@ -16,6 +16,9 @@ import shutil
 import array
 from . import find_links
 from . import combine_messages as cm
+from . import value_summary as vs
+from sys import version_info  # py3
+
 
 import pprint
 pp = pprint.PrettyPrinter(indent=4)
@@ -106,9 +109,8 @@ class File(object):
             self.save_format_specifications(spec_files)
 
     def get_version(self):
-        """Returns version information for this software and also version
-        information for definition files."""
-        version = "h5gate 0.8.0; Feb 1, 2016"
+        """Returns version information for this software."""
+        version = "h5gate 0.7; April 8, 2017"
         return version
     
     def set_close_callback(self, callback):
@@ -343,7 +345,7 @@ class File(object):
                     " the following errors:\n%s" % (file_name, errors)))
                 error_exit()
             # save map from file name to name spaces stored in that file
-            name_spaces = ddefin.keys()  # e.g. "core".  Usually only one namespace, but could be more
+            name_spaces = list(ddefin) #py3, was ddefin.keys()  # e.g. "core".  Usually only one namespace, but could be more
             self.fsname2ns[file_name] = name_spaces
             # find_links.add_item(self.fsname2ns, file_name, name_spaces)
             # also save map from name space to file name
@@ -417,7 +419,7 @@ class File(object):
                 specs_location, self.file_name))
         # Now load each specification
         for file_name in specs_group:
-            file_contents = specs_group[file_name].value
+            file_contents = vs.make_str3(specs_group[file_name].value)
             try:
                 # vals = eval(file_contents)
                 vals = ast.literal_eval(file_contents)
@@ -546,6 +548,61 @@ class File(object):
                 # http://docs.h5py.org/en/latest/strings.html
                 sdata = np.void(data)
                 dtype = None
+            else:
+                # if string, convert to form optimized for hdf5
+                sdata = str2h5(data)
+# following was in code, moved to str2h5
+#             elif isinstance(data, list) and len(data) > 0 and isinstance(data[0], unicode) and dtype is None:
+#                 # assume data is a list of elements type unicode.  Convert to list of strings as described in
+#                 # https://github.com/h5py/h5py/issues/289
+#                 # other option is to specify dtype, described in: http://docs.h5py.org/en/latest/strings.html
+#                 # dtype = h5py.special_dtype(vlen=unicode)  # does not work for unicode type
+#                 sdata = [s.encode('utf8') if isinstance(s, unicode) else s for s in data]
+# #             elif 'int' in str(dtype) and np.issubdtype(type(data), np.float) and np.isnan(data):
+# #                 # attempting to save float (nan) but dtype is int.  Change dtype to None
+# #                 # this happend when saving a nan to an integer.  Need to leave type as float
+# #                 # for NWB project, it happens if autogen cannot determine length of timestamps
+# #                 # for num_samples
+# #                 dtype = None
+# #                 sdata = data
+#             else:
+#                 sdata = data
+            if isinstance(dtype, str) and dtype == '':
+                # fix for matlab calls in which dtype is empty string
+                dtype = None
+            # py3 - check for array of unicode, if found replace by array of utf8
+# - following was in code
+#             if isinstance(sdata, list) and len(sdata) > 0 and isinstance(sdata[0], unicode):
+#                 # replace unicode by array of utf8 because h5py does not allow unicode values in lists
+#                 sdata = [v.encode('utf8') for v in sdata]
+            self.file_pointer.create_dataset(path, data=sdata, dtype=dtype, 
+                compression=compress, maxshape=maxshape)
+        elif self.options['storage_method'] == 'commands':
+            # save command for later processing
+            self.h5commands.append(("create_dataset", path, data, dtype, compress, maxshape))
+        else:
+            raise Exception('Invalid option value for storage_method (%s)' % self.options['storage_method'])
+        self.file_changed = True
+
+    def create_dataset_old(self, path, data, dtype=None, compress=False, maxshape=None):
+        """ Creates a dataset using the selected storage_method option.  If storage_method
+        is 'hdf5', dataset is created in the hdf5 file using h5py.  If storage method is
+        'commands', command to create the group is saved for later processing by a
+        calling program, e.g. MatLab.  This is the only function used to create a dataset"""
+        if self.reading_file or self.options['mode'] == 'no_file':
+            return
+        if self.options['storage_method'] == 'hdf5':
+            # execute h5py command
+            # compress if requested
+            compress = "gzip" if compress else None
+            # Need to check for dtype type string because could be special h5py dtype
+            # used for a text type with dimension is *unlimited*
+            # set in function get_default_dtype  
+            if isinstance(dtype, str) and dtype == 'binary':
+                # binary data.  use np.void on data as described in:
+                # http://docs.h5py.org/en/latest/strings.html
+                sdata = np.void(data)
+                dtype = None
             elif isinstance(data, list) and len(data) > 0 and isinstance(data[0], unicode) and dtype is None:
                 # assume data is a list of elements type unicode.  Convert to list of strings as described in
                 # https://github.com/h5py/h5py/issues/289
@@ -564,6 +621,10 @@ class File(object):
             if isinstance(dtype, str) and dtype == '':
                 # fix for matlab calls in which dtype is empty string
                 dtype = None
+            # py3 - check for array of unicode, if found replace by array of utf8
+            if isinstance(sdata, list) and len(sdata) > 0 and isinstance(sdata[0], unicode):
+                # replace unicode by array of utf8 because h5py does not allow unicode values in lists
+                sdata = [v.encode('utf8') for v in sdata]
             self.file_pointer.create_dataset(path, data=sdata, dtype=dtype, 
                 compression=compress, maxshape=maxshape)
         elif self.options['storage_method'] == 'commands':
@@ -572,7 +633,7 @@ class File(object):
         else:
             raise Exception('Invalid option value for storage_method (%s)' % self.options['storage_method'])
         self.file_changed = True
-   
+
     def create_softlink(self, path, target_path):
         """ Creates a softlink using the selected storage_method option.  If storage_method
         is 'hdf5', softlink is created in the hdf5 file using h5py.  If storage method is
@@ -614,7 +675,22 @@ class File(object):
             return
         if self.options['storage_method'] == 'hdf5':
             # execute h5py command
-            self.file_pointer[path].attrs[name] = value
+            # py3 - check for array of unicode, if found replace by array of utf8
+#             if isinstance(value, list) and len(value) > 0 and isinstance(value[0], unicode):
+#                 # replace unicode by array of utf8 because h5py does not allow unicode values in lists
+#                 value = [v.encode('utf8') for v in value]
+            # experimental, convert string to value for optimized storage in hdf5
+            # for testing with variable length strings with script crcns_alm-1.py
+#             if path == '/epochs' and name == 'tags':
+#                 # import pdb; pdb.set_trace()
+#                 dt = h5py.special_dtype(vlen=unicode)
+#                 value = np.array(value, dtype=dt)
+            value2 = str2h5(value)
+            self.file_pointer[path].attrs[name] = value2
+#             try:
+#                 self.file_pointer[path].attrs[name] = value2
+#             except TypeError as e:
+#                 import pdb; pdb.set_trace()
         elif self.options['storage_method'] == 'commands':
             # save command for later processing
             self.h5commands.append(("set_attribute", path, name, value))
@@ -721,7 +797,8 @@ class File(object):
         """ Close file if not already closed.  This called when the File object is
         deleted.  File might not have been closed if an error was found.
         """
-        print ("python __del__ called")
+        # print ("python __del__ called")
+        # Not sure why this is being called twice in Python3, not at all in Python 2.7
         if hasattr(self, 'file_pointer') and self.file_pointer:
             try:
                 self.file_pointer.close()
@@ -799,8 +876,8 @@ class File(object):
         self.save_members_in_idlookup(path, sdef, idlookup)
         idlookups = {ns: idlookup}
         return idlookups
-        
-                
+
+
     def save_members_in_idlookup(self, path, sdef, idlookup):
         """ save members of definition sdef in idlookup.  path is an absolute
         path that is in structures """
@@ -827,7 +904,7 @@ class File(object):
                 new_path = self.make_full_path(path, mid)
                 # make recursive call to save these members
                 self.save_members_in_idlookup(new_path, msdef, idlookup)
-            
+
 
     def save_path_in_idlookup(self, path, idlookup):
         """ Given an absolute path corresponding to a definition of a node (group or
@@ -885,17 +962,17 @@ class File(object):
                 parent_path = "/"
         return (parent_path, name)        
             
-    def add_namespace_to_ids(self, ids, ns):
-        """ ids is a list of id's, possibly qualified with a namespace e.g. core:general/
-        "core:" is the namespace.  Return a list with all id's qualified, made by qualifying
-        any that are not using namespace 'ns'"""
-        qids = ["%s:%s" % (ns,x) if not ':' in x else x for x in ids]
-        dqids = {}  # for now make dictionary to match current 'includes' syntax.  Todo, change to list.
-        for id in qids:
-            dqids[id]={}
-        return dqids
-    
-  
+#     def add_namespace_to_ids(self, ids, ns):
+#         """ ids is a list of id's, possibly qualified with a namespace e.g. core:general/
+#         "core:" is the namespace.  Return a list with all id's qualified, made by qualifying
+#         any that are not using namespace 'ns'"""
+#         qids = ["%s:%s" % (ns,x) if not ':' in x else x for x in ids]
+#         dqids = {}  # for now make dictionary to match current 'includes' syntax.  Todo, change to list.
+#         for id in qids:
+#             dqids[id]={}
+#         return dqids
+
+
     def reformat_structures(self):
         """ Replace any structures that have a key followed by a quantity by
         by removing the quantity and placing it in the "_qty" key of the structure
@@ -914,7 +991,7 @@ class File(object):
         """
         for ns in self.ddef:
             structures = self.ddef[ns]['structures']
-            for top_id in structures.keys():
+            for top_id in list(structures): #py3, was: structures.keys():
                 id, qty = self.parse_qty(top_id, "!")
                 source = "%s:%s" % (ns, id)
                 self.reformat_structure(structures, top_id, source)
@@ -937,7 +1014,7 @@ class File(object):
         to_check = [df]
         while to_check:
             df = to_check.pop(0)
-            for idq in df.keys():
+            for idq in list(df): #py3, was: df.keys():
                 if isinstance(df[idq], dict):
                     to_check.append(df[idq])
                     self.reformat_sid(df, idq, source)
@@ -1070,7 +1147,7 @@ class File(object):
             qid = id if ":" in id else "%s:%s" % (ns, id)
             qids.append(qid)
         return qids 
-    
+
     def expand_targets(self, source_to_target):
         """ Make dictionary mapping each source to an expanded list of targets.
         The expanded list of targets is formed by finding any targets the targets
@@ -1089,7 +1166,7 @@ class File(object):
                             tlist.append(item)
             source_to_expanded_targets[source] = sorted(est)
         return source_to_expanded_targets
-        
+
     def reverse_dict_array(self, da):
         """ Make reverse dictionary array.  da is a dictionary with each key
         mapped to an array of values.  Return (dout) is is a dictionary with keys equal to the
@@ -1101,7 +1178,7 @@ class File(object):
             for value in values:
                 self.add_to_dict_array(dout, value, key)
         return dout
-        
+
     def add_to_dict_array(self, da, key, value):
         """ da is a "dict_array", ie a dictionary mapping each key to an array of values.
         Add key and value to it."""
@@ -1512,23 +1589,50 @@ class File(object):
         full_path = re.sub(r'//+',r'/', full_path)
         self.validate_path(full_path)
         return full_path
+        
+
+    def check_for_not_custom(self, parent, id, name):
+        """Check for attempting to create a custom node, which should not be custom
+        (because it is in the specification)"""
+        # check if id exists in group definition
+        if id in parent.mstats.keys() and 'df' in parent.mstats[id].keys():
+            # this id has a definition.  Generate error
+            msg = []
+            msg.append("Attempting to create custom '%s' (name='%s') inside:" % (id, name))
+            msg.append(parent.full_path)
+            msg.append("But '%s' is defined in the definition (is not custom)" % id)
+            # msg.append("Valid options are: %s" % self.mstats.keys())
+            # print "Extra information (for debugging):  Unable to find definition for node %s" % id
+            # print "mstats="
+            # pp.pprint(self.mstats)
+            msg = "\n".join(msg)
+            raise SchemaIdError(msg)
+            # error_exit()
+
     
     def get_custom_node_info(self, qid, gslash, name, path, parent=None):
         """ gets sdef structure, and if necessary modifies name and path to get
         sdef structure into format needed for creating custom node (group or dataset).
         gslash is '/' if creating a group, '' if creating a dataset.
         parent - parent group if creating node inside (calling from) a group """
+#         if "sex" in qid:
+#             import pdb; pdb.set_trace()
         gqid = qid + gslash
         sdef = self.get_sdef(gqid, self.default_ns)
         if sdef:
             # found id in structure, assume creating pre-defined node in custom location
+            # for example, allow creating TimeSeries in custom location
             id = sdef['id']
             ns = sdef['ns']
             if path == '':
-                print ("** Error")
-                print (("Path must be specified if creating '%s'"
-                    " in a custom location using name space '%s'.") % (id, ns))
-                error_exit()
+                if parent is not None:
+                    # creating node inside group.  Use parent full_path as path
+                    path = parent.full_path
+                else:
+                    print ("** Error")
+                    print (("Path must be specified if creating '%s'"
+                        " in a custom location using name space '%s'.") % (id, ns))
+                    error_exit()
             sdef['custom'] = True
             if parent is None:
                 sdef['top'] = True
@@ -1545,6 +1649,8 @@ class File(object):
                     msg = ("Specified absolute path '%s' when creating node\n"
                         "inside group, with namespace '%s'") % (full_path, ns)
                     error_exit(msg)
+                # make sure this is really custom
+                self.check_for_not_custom(parent, id, name)
                 # ok, relative path is specified, make full path using parent
                 full_path = self.make_full_path(parent.full_path, full_path)                       
             else:
@@ -1565,6 +1671,7 @@ class File(object):
                             "in namespace '%s'") % custom_ns)             
                     default_custom_path = custom_loc[0]
                     full_path = self.make_full_path(default_custom_path, full_path)
+                # todo: check_for_not_custom (creating custom that already exists) under root
             # split full path back to path and group name
             matchObj = re.match( r'^(.*/)([^/]*)$', full_path)
             if not matchObj:
@@ -1603,7 +1710,7 @@ class File(object):
         parent = self.get_parent_group(path, self.default_ns, self.default_ns)
         grp = Group(self, sdef, name, path, attrs, parent)
         return grp
-        
+
     def deflatten(self, value, shape):
         """Convert value from type array.array to numpy array and reshape if shape
         specified.  This included to convert values passed in from matlab
@@ -1619,24 +1726,37 @@ class File(object):
             npval = []  # set to empty list so will generate empty 1-D array in HDF5
             return npval
         else:
-            npval = np.array(value)
+            # force dtype to int32 if type 'i'.
+            # this done because python 2 np.array defaults to int64 which does not match python 3
+            dtype = "int32" if isinstance(value, array.array) and value.typecode=="i" else None
+            try:
+                npval = np.array(value, dtype=dtype)
+            except ValueError as e:
+                print ("Found value error in deflatten, value=%s, type=%s" % (value,
+                    type(value)))
+            # print ("in deflatten, npval=%s, type=%s, dtype=%s" % (npval, type(npval), npval.dtype))
         if isinstance(shape, (tuple, list, array.array)):
             # reverse shape to switch ordering from matlab (column major) to python (row major)
             # rshape = list(reversed(shape))
-            # print "before reshape to shape %s, vals=%s" % (shape, npval[0:15])
+            # print ("before reshape to shape %s, vals=%s" % (shape, npval[0:15]))
             npval = npval.reshape(shape)
         return npval
-        
+
     def deflatten_attrs(self, attrs, attrs_shape):
         """ Convert attribute values passed in from matlab from 1-d array back to
         original array size.  This done because multidimensional arrays cannot be
         passed from matlab to python, only 1-d arrays.  So multidimensional arrays
         are converted to 1-d in matlab (by function flatten_attrs) and converted
-        back to the original shape by this function."""
-#         print "in deflatten_attrs, attrs="
-#         print attrs
-#         print "attrs_shape="
-#         print attrs_shape
+        back to the original shape by this function.
+        attrs is a list of attribute names followed by values.  This is converted
+            from the 'atrs1d' cell array created in nwb matlab_bridge file.m function
+            flatten_attrs.
+        attrs_shape - gives the shape of each attribute value.  It's value is from
+            the variable with the same name in function flatten_attrs."""
+#         print ("in deflatten_attrs, attrs=")
+#         print (attrs)
+#         print ("attrs_shape=")
+#         print (attrs_shape)
         for i in range(len(attrs_shape)):
             cvs_shape = attrs_shape[i]
             if cvs_shape:
@@ -1767,8 +1887,8 @@ class File(object):
         parent = self.get_parent_group(path, self.default_ns, self.default_ns)
         ds = Dataset(self, sdef, name, path, attrs, parent, value, dtype, compress)
         return ds    
-    
-    
+
+
     def validate_file(self):
         """ Validate that required nodes are present.  This is done by checking
         nodes referenced in id_lookup structure (built from 'locations' section
@@ -1874,6 +1994,16 @@ class File(object):
             print ("\n******")
             print ("Validation messages follow.")
             self.display_report_heading(total_errors, "error", zero_msg="Good")
+            # print ("Miscellaneous errors:")
+            # temporary for debugging, write to pkl file to compare
+            # import pickle
+            # py_ver = version_info[0]
+            # file_name = "misc_errors_py%i.pkl" % py_ver
+            # fh = open(file_name, 'wb')
+            # pickle.dump(self.error, fh)
+            # fh.close()
+            # pp.pprint((self.error[200], self.error[500],self.error[1000],));
+            # import pdb; pdb.set_trace();
             self.print_message_list(self.error, "Miscellaneous errors", zero_msg="Good")
             self.report_problems(vi['missing_nodes'], "missing", zero_msg="Good")
             self.print_message_list(vi['missing_attributes'], "attributes missing", zero_msg="Good")
@@ -1947,6 +2077,12 @@ class File(object):
                 print ("passed validation check (no errors)")
             else:
                 print ("failed validation check (at least one error)")
+        # following displays msigs_cache hits:
+        # print ("%i cache hits, %i calls.  %.3f percent" % (self.msigs_cache[">>hits"],
+        #     self.msigs_cache[">>calls"], (100.0* self.msigs_cache[">>hits"] / self.msigs_cache[">>calls"])))
+        # print ("cache keys:")
+        # pp.pprint(sorted(list(self.msigs_cache)))
+ 
         # return dict giving number of total errors, warnings and added
         validation_result = {'errors':total_errors, 'warnings':total_warnings,
             'added': total_added_correctly}
@@ -1998,21 +2134,30 @@ class File(object):
         spath = path if path != "/" else ""
         ninfo = "%s%s/%s" % (sns, spath, id)
         return ninfo
-        
-       
+
+
     def validate_nodes(self, root_node, vi):
         """ Check if node contains all required components or if it is custom."""
         to_check = [root_node]
         while len(to_check) > 0:
             node = to_check.pop(0)
             custom = 'custom' in node.sdef and node.sdef['custom']
+            # assign "has_df" True if definition for node present (from a namespace)
+            # a node can be custom and still have a definition if it's it's a known "top_level"
+            # structure placed in a custom location.  In that case, custom and has_df are both True
+            # has_df = len(node.sdef) > 1
+            # if node is a link, don't validate attributes or check for node identifiers
+            # (which are attributes) since links cannot have attributes
+            is_link = node.link_info is not None
             type = node.sdef['type']
-#             if node.full_path == "/general":
+#             if node.full_path == "/analysis/aibs_spike_times/pto_link":
 #                 import pdb; pdb.set_trace()
             if custom:
-                if (self.options['identify_custom_nodes']):
+                if (self.options['identify_custom_nodes']) and not is_link:
                     caid, cval = self.options['custom_node_identifier']
-                    if not (caid in node.h5attrs and cval == node.h5attrs[caid]):
+                    # if not (caid in node.h5attrs and cval == node.h5attrs[caid]):
+                    if (not (caid in node.h5attrs and # py3, need to use value_match
+                        vs.values_match(cval, node.h5attrs[caid]))):
                         # custom node identifier is missing
                         if type not in ('group', 'dataset') or node.link_info:
                             # type must be external link or is a custom link.  Warning will be
@@ -2042,14 +2187,16 @@ class File(object):
                             self.error.append(msg)
                         else:
                             vi['identified_custom_nodes'][type].append(node.full_path)
-            elif node.sdef['ns'] != self.default_ns and self.options['identify_extension_nodes']:
+            elif (node.sdef['ns'] != self.default_ns and self.options['identify_extension_nodes']
+                and not is_link):
                 # this node defined in an extension and should be identified by an attribute
                 eaid = self.options['extension_node_identifier']
                 found_match = False
                 if eaid in node.h5attrs:
                     found_val = node.h5attrs[eaid]
                     expected_val = "%s:%s" % (node.sdef['ns'], node.sdef['id'])
-                    if found_val == expected_val or found_val == node.sdef['ns']:
+                    if (vs.values_match(found_val, expected_val) or 
+                        vs.values_match(found_val, node.sdef['ns'])): #py3, use values_match
                         found_match = True
                 if found_match:
                     vi['identified_extension_nodes'][type].append(node.full_path)
@@ -2110,7 +2257,10 @@ class File(object):
                                 self.error.append(msg)
                             else:
                                 self.warning.append(msg)
-                    if id.rstrip('/') not in required_referenced and not custom and len(created) == 0:
+                    # if id.rstrip('/') not in required_referenced and not custom and len(created) == 0:
+                    # Don't check for not custom because can be custom and still have a definition
+                    # instead need to check for having a definition (df).  if len(created) == 0 there is a df
+                    if id.rstrip('/') not in required_referenced and len(created) == 0:
                         # this id not referenced in "_required" spec
                         # if it was, don't create error / warning here; let function check_required validate 
                         id_full_path = self.make_full_path(node.full_path, id)
@@ -2119,7 +2269,11 @@ class File(object):
                         elif qty == "^":
                             vi['missing_recommended'][type].append(id_full_path)
                     # add nodes to list to check
-                    to_check.extend(sorted(created))
+                    try:
+                        to_check.extend(sorted(created))
+                    except TypeError as e:
+                        # import pdb; pdb.set_trace()
+                        error_exit('failed extend')
                 # check for "_required" specification
                 self.check_required(node)
             elif type == "dataset":
@@ -2140,6 +2294,8 @@ class File(object):
         """ Check for any attributes that are required or recommended but do not
         have a value *or* are const and have an incorrect value.  Also record
         any described by an extension"""
+#         if node.full_path == '/analysis/aibs_spike_times/pto_link':
+#             import pdb; pdb.set_trace()
         if not hasattr(node, "attributes"):
             # this node does not have any attributes
             return
@@ -2153,7 +2309,12 @@ class File(object):
             cni = self.options['custom_node_identifier'][0]
             if cni not in added_nodes_identifiers:
                 added_nodes_identifiers.append(cni)
-        for aid in ats:
+        for aid in sorted(ats):
+            if node.link_info:
+                # this node is a link, but has attributes.  Should never happen.
+                msg = ("%s: (%s) is link but has attribute (%s)  - links should "
+                    "never have attributes.") %(node.full_path, node.sdef['type'], aid)
+                self.error.append(msg)
             if 'autogen' in ats[aid]:
                 # values in autogen attributes automatically included
                 continue
@@ -2174,7 +2335,7 @@ class File(object):
                 const_val = ats[aid]['value']
             val_present = aid in node.h5attrs
             if val_present:
-                aval = node.h5attrs[aid]  # actual value
+                aval = vs.make_str(node.h5attrs[aid])  # actual value, py3 - convert to bytes to string
             # check if described by extension
             last_source_ns = ats[aid]['source'][-1].split(':')[0] if 'source' in ats[aid] else None
             if val_present and last_source_ns and last_source_ns != self.default_ns:
@@ -2188,13 +2349,13 @@ class File(object):
                         # don't flag the value missing here.  Assume that will be done in routine "validate_node"
                         continue
                     if const:
-                        msg = "%s: (expected %s='%s' %s)" %(node.full_path, aid, eval, type(eval))
+                        msg = "%s: (expected %s='%s' %s)" %(node.full_path, aid, const_val, stype(const_val)) #py3 stype
                     else:
                         msg = "%s - %s" % (node.full_path, aid)
                     elist = 'missing_attributes' if qty == "!" else 'recommended_attributes_missing'
                     vi[elist].append(msg)
                     continue
-                if find_links.values_match(node.h5attrs[aid], ""):
+                if vs.values_match(node.h5attrs[aid], ""):
                     # is present but empty; generate a warning or error.
                     msg = "%s - %s" % (node.full_path, aid)
                     elist = 'required_attributes_empty' if qty == "!" else 'recommended_attributes_empty'
@@ -2202,9 +2363,10 @@ class File(object):
                     continue
             # either qty == '?' or value is present or both
             # if value is present and const, check to see if it matches expected value
-            if val_present and const and not find_links.values_match(aval, const_val):
+            if val_present and const and not vs.values_match(aval, const_val):
                 msg = "%s: %s\nexpected: '%s' %s\nfound: '%s' %s " % (
-                    node.full_path, aid, const_val, type(const_val), aval, type(aval))
+                    node.full_path, aid, const_val,
+                    stype(const_val), aval, stype(aval)) #py3, use stype() not type()
                 vi['incorrect_attribute_values'].append(msg)
                 
     def validate_dataset(self, node):
@@ -2225,6 +2387,8 @@ class File(object):
         if re.match(r'^\|V\d+$', found_dtype):
             # if found dtype like "|V537350" it's type "opaque".  This corresponds to binary
             found_dtype = "binary"
+#         else:
+#             found_dtype = stype2(found_dtype)  # py3, convert strings to common type
         types_match = valid_dtype(ddt, found_dtype)
         if not types_match:
             # types do not match.  This might be caused by a string type, stored
@@ -2504,11 +2668,12 @@ class File(object):
         parent = node.parent
         mstats = parent.mstats
         options = []
-        for id in matching_ids:
+        for id in sorted(matching_ids):
             # subclass = mstats[id]['df']['merge'][0]
             attrs = msigs[id]['attrs']
             options.append(self.get_const_attributes_option(attrs))
-        found = str(h5nsig['attrs'])
+        # found = str(h5nsig['attrs'])
+        found = ppdict(h5nsig['attrs'])  # py3, use ppdict to make deterministic
         msg = "expected one of:\n%s\nfound attributes: %s" % ("\n".join(options), found)
         return msg
 
@@ -2520,7 +2685,7 @@ class File(object):
             if 'const' in attrs[aid] and attrs[aid]['const']:
                 value = attrs[aid]['value']
                 cattrs[aid] = value
-        option = "-- attributes: %s" % (cattrs)
+        option = "-- attributes: %s" % ppdict(cattrs)  # py3, use ppdict to make deterministic
         return option
         
         
@@ -2579,6 +2744,11 @@ class File(object):
                     m += "\n" + explanations[m]
                 i = i + 1
                 mt = m.replace("\n", "\n     ")  # insert tab after new line char
+                # convert message to bytes if Python 2 and message is unicode to prevent error
+                # UnicodeEncodeError: 'ascii' codec can't encode characters in position 44-45: ordinal not in range(128)
+                # when output is being written to a file
+                if isinstance(mt, unicode) and version_info[0] < 3:
+                    mt = mt.encode('utf-8')
                 print ("%3i. %s%s%s" % (i, quote, mt, quote))
                 
                 
@@ -3140,7 +3310,7 @@ class File(object):
         """ Create list of name spaces with default namespace last, so when searching
         for structures that match a read hdf5 node, extensions (user defined name spaces)
         will take precedence"""
-        self.name_spaces = list(self.ddef.keys())
+        self.name_spaces = sorted(list(self.ddef.keys()))  # add sorted so colors consistent when generating docs
         self.name_spaces.remove(self.default_ns)
         self.name_spaces.append(self.default_ns)
          
@@ -3148,6 +3318,9 @@ class File(object):
         """ Reads hdf5 file and figures out what nodes in file correspond to
         structures in specifications.  Stores nodes organized by structure in
         node_tree and id_lookups and dictionary from each path to node in path2nodes. """
+        # msigs_cache used for storing cached msigs in routine add_msigs
+        # Initialize to: {">>hits": 0, ">>calls": 0} for counting hits and total calls
+        self.msigs_cache = {}
         num_groups = self.links['count']['group']
         num_datasets = self.links['count']['dataset']
         if self.options['verbosity'] in ('all', ):
@@ -3157,6 +3330,9 @@ class File(object):
         while groups_to_visit:
             np = groups_to_visit.pop(0)
             h5_group, path = np
+#             if h5_group.name == "/acquisition/timeseries/whisker_video":
+#                 # print ("in load_node, found %s" % full_path)
+#                 import pdb; pdb.set_trace()
             # if 'spontaneous_stimulus/data' in h5_group.name:
             # if h5_group.name == '/stimulus/presentation/spontaneous_stimulus/data':
             # if h5_group.name == '/processing/brain_observatory_pipeline/MotionCorrection/2p_image_series/corrected':
@@ -3165,7 +3341,7 @@ class File(object):
             if node.link_info:
                 # this node was a link.  No further processing
                 continue
-            for mname in h5_group:
+            for mname in sorted(h5_group):  # py3, added sorted
                 mpath = self.make_full_path(path, mname)
                 h5_node, ext_target = self.open_node_member(h5_group, mname)
                 if not h5_node:
@@ -3173,9 +3349,7 @@ class File(object):
                     if ext_target:
                         # this is an external link that's not available.  Make a warning.
                         link_file, link_path = ext_target.split("\n")
-                        msg = "%s: unable to open hdf5 external link, file='%s', path='%s'" % (
-                            mpath, link_file, link_path)
-                        self.warning.append(msg)
+                        self.save_extrn_link_warning(mpath, link_file, link_path)
                     else:
                         msg = ("%s - unable to open node and not external link.  "
                             "Perhaps a dangling link?  Ignoring.") % mpath
@@ -3196,6 +3370,12 @@ class File(object):
                         groups_to_visit.append(np2)
         # fill in any links that did not have target available when reading
         find_links.fill_missing_links(self)
+
+    def save_extrn_link_warning(self, node_path, link_file, link_path):
+        # save warning about external link file or path not available
+        msg = "%s: unable to open hdf5 external link, file='%s', path='%s'" % (
+            node_path, link_file, link_path)
+        self.warning.append(msg)
         
 
     def open_node_member(self, h5group, mname):
@@ -3241,8 +3421,8 @@ class File(object):
             if parent_path == '':
                 parent_path = '/' # at node just under root
             parent = self.path2node[parent_path]
-#         if full_path == "/stimulus/presentation/rec_stim_1/data":
-#             print "in load_node, found %s" % full_path
+#         if full_path == "/acquisition/timeseries/whisker_video/timestamps":
+#             print ("in load_node, found %s" % full_path)
 #             import pdb; pdb.set_trace()
         sdef = self.deduce_sdef(h5_node, full_path, type, parent)
         if type == 'extlink':
@@ -3253,9 +3433,11 @@ class File(object):
         # pp.pprint(sdef)
         v_id = re.match( r'^<[^>]+>/?$', sdef['id']) # True if variable_id (in < >)
         name = node_mname  if v_id else ''
-        attrs = self.get_changed_attributes(h5_node, sdef, parent_path, node_mname ) if h5_node else {}
         # Get link information if this node is a link
         link_info = find_links.deduce_link_info(self, full_path, type, sdef)
+        # get changed attributes, unless this node is a link.  Links do not have attributes
+        attrs = self.get_changed_attributes(h5_node, sdef, parent_path, node_mname ) if (
+            h5_node and not link_info) else {}
         # finally, create the nodes so they are saved in the node tree
         if type == 'group':
             node = Group(self, sdef, name, parent_path, attrs, parent, link_info)
@@ -3277,6 +3459,8 @@ class File(object):
                     assert msg not in self.warning, "warning message already stored:\n%s" % msg
                     self.warning.append(msg)
                     value = "???"
+                if version_info[0] > 2:  # py3, convert from bytes to str (unicode) if needed
+                    value = vs.make_str(value)
                 node.h5attrs[key] = value
         return node
 
@@ -3293,7 +3477,12 @@ class File(object):
         Otherwise, return string describing value; looks like:
            value_info: type="float64", shape="[5]"     (1-d)
            value_info: type="int32", shape="[4 3]"   (2-dimensional)
+        Exception: if np.array of RegionReference's found, return it as-is.
+        The value (region reference) will be processed in function get_dtype_and_shape
+        to return the type and shape of the target region.
         """
+#         if h5_dataset.name == "/identifier":
+#             import pdb; pdb.set_trace()
         shape = h5_dataset.shape
         if len(shape) == 0:
             # shape = 'scalar'
@@ -3311,19 +3500,21 @@ class File(object):
             if matchObj:
                 # found string type
                 dt_name = matchObj.group(2)
-                if dt_name == "str":
+                if dt_name in ("str", "unicode", "bytes"):
                     dt_name = "text"
             else:
                 # check for region reference
                 val = h5_dataset.value
-                if (isinstance(val, np.ndarray) and val.shape == (1,) and val.size == 1 and
+                if (isinstance(val, np.ndarray) and val.shape == (1,) and val.size > 0 and
                     isinstance(val[0], h5py.h5r.RegionReference)):
-                    # found region reference
-                    dt_name = "region_reference"
+                    # found region reference, return it as is
+                    return val
+                    # dt_name = "region_reference"
                 else:
+                    # import pdb; pdb.set_trace()
                     raise SystemError("** Error: Unable to find object base type in %s or %s" %
-                        base_type, type(val))
-        elif dt_name == "string_": 
+                        (base_type, type(val)))
+        elif dt_name in ("string_", "bytes_"): 
         # if dtype in ('object_', 'string_'):
         # if dtype in ('string_',):  # need to add unicode
             dt_name = 'text'
@@ -3375,8 +3566,10 @@ class File(object):
         assert (h5node is None) == (type == "extlink"), "h5node and extlink do not match in deduce_sdef"
         h5nsig = self.make_h5nsig(h5node, node_mname) if h5node else self.make_minimal_msig(node_mname)
         # if h5node and h5node.name == "/processing/brain_observatory_pipeline/MotionCorrection/2p_image_series/corrected":
-        # if h5node and h5node.name == '/processing/custom_module':
         # if h5node and h5node.name == '/processing':
+        # if h5node and h5node.name == '/stimulus/presentation/annot':
+#         if h5node and h5node.name == "/processing/Cells":
+#             import pdb; pdb.set_trace()
         #    import pdb; pdb.set_trace()
         if not parent:
             # is root node.  See if there is a definition for root in structures
@@ -3442,8 +3635,63 @@ class File(object):
             sdef = { 'type': type, 'qid': None, 'id':id + gslash, 'ns':None, 'df': {}, 
                 'custom': True, 'top': True }
             return sdef
-            
+
+
+    def get_variable_path(self, node):
+        """ Returns path of Ids from top of hdf5 file to current node, but using variable
+        Id's when applicable, e.g. "/processing/<module>/CompassDirection/<SpatialSeries>"
+        (the variable id's with angle brackets are part of the path)".  The returned path
+        is used as a key to check for cached "member signatures" (msigs) created by function
+        add_msigs """
+        vpath = []
+        current_node = node
+        while current_node:
+            vpath.append(current_node.sdef['id'])
+            current_node = current_node.parent
+        vpath = "".join(reversed(vpath))
+#         if vpath = "":
+#             vpath = "/"
+        return vpath
+
+
     def add_msigs(self, node):
+        """ Create 'msigs' entry in node (h5gate group object).  The msigs entry maps
+        each id in mstats of node that has a definition to the signature for that id.
+        It is used for searching for the ids that match an hdf5 node inside a group.
+        Store in a chache so nodes in the same variable path can reuse the signatures"""
+        # test without cache
+        # node.msigs = self.make_msigs(node)
+        # return
+        # count total calls
+        # self.msigs_cache[">>calls"] += 1
+        vpath = self.get_variable_path(node)
+        if vpath in self.msigs_cache:
+            msigs = self.msigs_cache[vpath]
+            # count cache hits
+            # self.msigs_cache[">>hits"] += 1
+        else:
+            msigs = self.make_msigs(node)
+            # save in cache
+            self.msigs_cache[vpath] = msigs
+        node.msigs = msigs
+
+    def make_msigs(self, node):
+        """ msigs is a signature of node, used to determine which members are being read
+        when reading an hdf5 file."""
+        msigs = {}
+        for id in node.mstats:
+            info = node.mstats[id]
+            if 'df' in info:
+                ns = info['ns']
+                msigs[id] = self.mk_idsig(ns, id, info['df'], node)
+            else:
+                print ("Did not find definition (df) in mstats entry: %s" % info)
+                # import pdb; pdb.set_trace()
+                error_exit()
+        self.filter_sigs(msigs)
+        return msigs
+        
+    def add_msigs_old(self, node):
         """ Create 'msigs' entry in node (h5gate group object).  The msigs entry maps
         each id in mstats of node that has a definition to the signature for that id.
         It is used for searching for the ids that match an hdf5 node inside a group."""
@@ -3465,13 +3713,13 @@ class File(object):
                 error_exit()
         self.filter_sigs(msigs)
         node.msigs = msigs
-        
+
     def find_matching_id_in_structures(self, h5nsig):
         """ Find structure in any namespace matching h5nsig.  If found, return
         id, ns (id and namespace).  h5nsig is a signature of an h5node, created by
         make_h5nsig."""
         for ns in self.name_spaces:
-            id = self.find_matching_id(h5nsig, self.idsigs[ns], 2)
+            id = self.find_matching_id(h5nsig, self.idsigs[ns], 1) # level == 1
             if id:
                 return (id, ns)
                 
@@ -3564,12 +3812,12 @@ class File(object):
             const = 'const' in idsig['attrs'][key] and idsig['attrs'][key]['const']
             if key in h5nsig['attrs']:
                 h5val = h5nsig['attrs'][key]
-                vals_match = find_links.values_match(idval, h5val)
+                vals_match = vs.values_match(idval, h5val)
                 if vals_match:
                     found_matching_attribute = 1
                     continue
                 elif (const and isinstance(idval, (list, tuple)) and len(idval) == 1 and
-                    isinstance(idval[0], str) and find_links.values_match(idval[0], h5val)):
+                    isinstance(idval[0], str) and vs.values_match(idval[0], h5val)):
                     # idval is a list containing a single string which matches h5val.
                     # treat this as a match
                     found_matching_attribute = 1
@@ -3653,7 +3901,7 @@ class File(object):
             except IOError as e:
                 # assume this error was detected previously in fetch_attributes
                 value = "???"
-            if (key not in fixed_attrs or not find_links.values_match(fixed_attrs[key], value)):
+            if (key not in fixed_attrs or not vs.values_match(fixed_attrs[key]['value'], value)):
                 changed_attrs[key] = value
         return changed_attrs
         
@@ -3666,13 +3914,19 @@ class File(object):
             except IOError as e:
                 # unable to read attribute.  Assume this will be reported in load_node
                 value = "???"
+            if version_info[0] > 2:  # py3, convert from bytes to str (unicode) if needed
+                value = vs.make_str(value)
             attrs[key] = value
         return attrs
             
-    def get_dtype_and_shape(self, val):
+    def get_dtype_and_shape(self, val, path, aid):
         """ Return data type and shape of value val, as a tuple.  This
         called from Dataset object (when writing and reading a file)
-        and also from File object when reading a file."""
+        and also from File object when reading a file.
+        self is the h5gate File object
+        path is path to node containing dataset or attribute val
+        aid is the name of the attribute (if val is an attribute) otherwise None
+        """
         # get type of object as string
         val_type = str(type(val))
         matchObj = re.match(r"<(type|class) '([^']+)'>", val_type)
@@ -3693,20 +3947,41 @@ class File(object):
                 shape = matchObj.group(2)
                 if shape != 'scalar':
                     # convert dimensions from string (like '4 5') to integer list
-                    shape = map(int, shape.split())
+                    shape = list(map(int, shape.split())) #py3, added list() to convert from map to list
                 return (dtype, shape)
         # check data shape and type 
         # TODO: make more general.
-        if val_type in ('str', 'int', 'float', 'long', 'unicode', 'bool', 'int64'):
+        if val_type in ('str', 'int', 'float', 'long', 'unicode', 'bool', 'int64', 'bytes'): # py3 added bytes
             shape = "scalar"
-            dtype = val_type
+            # dtype = val_type
+            dtype = "text" if val_type in ('str', 'unicode', 'bytes') else val_type  # py3, use text
         elif val_type == 'list':
             # convert from list to np array to get shape
             a = np.array(val)
             shape = a.shape
-            dtype = str(a.dtype)
+            # dtype = str(a.dtype)
+            dtype = str(a.dtype) if a.dtype.kind != 'U' else 'text'  # py3 added check for 'U' type
             # print "found list, dtype is %s, shape is:" % dtype
             # pp.pprint (shape)
+        elif ((isinstance(val, np.ndarray) and val.shape == (1,) and val.size >= 1 and
+            isinstance(val[0], h5py.h5r.RegionReference))
+            or isinstance(val, h5py.h5r.RegionReference)):
+            # Found region reference
+            da_msg = "dataset" if aid is None else "attribute '%s'" % aid
+            if isinstance(val, np.ndarray) and val.size > 1:
+                msg = ("%s %s contains array length %s of HDF5 region references. "
+                    " Only the first is checked because only length 1 is supported.") % (path,
+                    da_msg, val.size)
+                self.error.append(msg)
+            ref = val if isinstance(val, h5py.h5r.RegionReference) else val[0]
+            refname = vs.make_str(h5py.h5r.get_name(ref, self.file_pointer.id))
+            refds = self.file_pointer[refname]
+            refreg = refds[ref]
+            shape = refreg.shape
+            dtype = str(refreg.dtype)
+            msg = ("%s %s value is HDF5 region reference with target='%s'; Region references might not be "
+                "handled by read API's." % (path, da_msg, refname))
+            self.warning.append(msg)
         elif 'numpy' in val_type or type(val) is h5py._hl.dataset.Dataset:             
             shape = val.shape
             if len(shape) == 0:
@@ -4229,16 +4504,22 @@ class Node(object):
         self.attrs = self.file.cast_to_dict(attrs)
         self.attributes = {} # for attributes defined in specification language
         self.h5attrs = {}  # attributes that mirrors what is in hdf5 file
-        self.add_node_identifier()
         self.parent = parent
+        assert parent is None or self.full_path.startswith(self.parent.full_path) # safety check
         self.link_info = link_info
+        self.add_node_identifier()
         self.create_link()
         self.check_for_link_expected()
+        self.ensure_link_has_no_attributes()
         self.save_node()
         
     # following allows using "sorted" on list of nodes, sorting by full_path
     def __cmp__(self, other):
         return cmp(self.full_path, other.full_path)
+        
+    # py3 - following needed for "sorted" on list of nodes for Python 3
+    def __lt__(self, other):
+        return self.full_path < other.full_path
         
   
     def create_link(self):
@@ -4288,7 +4569,15 @@ class Node(object):
                 elif link_type == 'soft':
                     # create link to external file
                     #- self.file.file_pointer[self.full_path] =  h5py.ExternalLink(file,path)
-                    self.file.create_external_link(self.full_path, file, path)               
+                    self.file.create_external_link(self.full_path, file, path)
+                    # see if can open external link, if not generate warning
+                    try:
+                        efh = h5py.File(file, 'r')
+                        member = efh[path]
+                        efh.close()
+                    except IOError as e:
+                        # unable to open external link file and path.  Save warning
+                        self.file.save_extrn_link_warning(self.full_path, file, path)
                 else:
                     raise Exception('Invalid option value for link_type (%s)' % link_type)
             else:
@@ -4307,7 +4596,34 @@ class Node(object):
         self.link_info = {"node": None, "error": "Expected link not present"}
         return
         # import pdb; pdb.set_trace()
-        
+    
+    def ensure_link_has_no_attributes(self):
+        """ Make sure there are no attributes or attrs or other invalid fields in the
+        definition of a link.  This is because links cannot have attributes which are
+        independent of the attributes on the target of the link.  Create an error if
+        there is an attempt to make attributes on links"""
+        if self.link_info is None:
+            return
+        if self.attrs:
+            link_target = self.make_link_target_name()
+            node_type = self.sdef['type']  # group or dataset
+            for aid in self.attrs:
+                msg = ("%s attempt to set attribute (%s) on link.  Link target = "
+                    "'%s' (%s).  Links cannot have attributes.") % (self.full_path,
+                    aid, link_target, node_type)
+                self.file.error.append(msg)
+
+    def make_link_target_name(self):
+        """ Create string describing a link target"""
+        assert self.link_info is not None
+        if 'node' in self.link_info:
+            target_node = self.link_info['node']
+            target_path = target_node.full_path if target_node else "unknown"
+        elif 'extlink' in self.link_info:
+            file, path = self.link_info['extlink']
+            target_path = "extlink: %s,%s" % (file, path)
+        return target_path
+
     
     def save_node(self):
         """ Save newly created node in id_lookups (if node is defined structure created
@@ -4371,6 +4687,9 @@ class Node(object):
     def add_node_identifier(self):
         """ If requested in options, add an attribute indicating if this node is custom, defined
         in an extension, or specifying a schema id (namespace:id)"""
+        if self.link_info:
+            # this node is a link.  Do not add node identifier because links cannot have attributes
+            return
         # attribute id to set.  Assume not setting anything
         aid = None
         if self.sdef['df']:
@@ -4428,6 +4747,11 @@ class Node(object):
         """ Update attribute with new value (nv).  Checks to be sure not
         attempting to change a 'const' attribute and also checks for data type"""
         ats = self.attributes   # convenient shorthand
+        nv = vs.make_str(nv)  # py3, make string
+        # get dtype and shape for checking data type (below) and also check for region
+        # reference.  Call made here to ensure check for region reference is done
+        # even if is custom attribute. 
+        dtype, shape = self.file.get_dtype_and_shape(nv, self.full_path, aid)
         if aid not in ats:
             # setting custom attribute
             self.attributes[aid] = {'qty': 'custom'}
@@ -4450,7 +4774,7 @@ class Node(object):
                 error_exit()
             # check data type
             ddt = ats[aid]['ddt']
-            dtype, shape = self.file.get_dtype_and_shape(nv)
+            # dtype, shape = self.file.get_dtype_and_shape(nv, self.full_path, aid)
             if not valid_dtype(ddt, dtype):
                 msg = ("'%s': expecting type '%s' assigned to attribute [%s], but value being stored"
                     " is type '%s'") % (self.full_path, ddt['orig'], aid, dtype)
@@ -4481,11 +4805,11 @@ class Node(object):
         # before merging get decoded data type
         self.get_attributes_ddt()
         # now merge, doing type checking
-        for aid in self.attrs:         
+        for aid in sorted(list(self.attrs)):  #py3, add sorted to make deterministic         
             nv = self.attrs[aid]
             self.update_attribute_value(aid, nv)
-            
-         
+
+
     def set_attr_values(self):
         """ set attribute values of hdf5 node.  Values to set are stored in
         self.attributes, either in the values key (for values specified in
@@ -4496,7 +4820,7 @@ class Node(object):
             # don't set attributes in hdf5 file if reading
             return
         ats = self.attributes  # convenient short name
-        for aid in ats:
+        for aid in sorted(list(ats)):  #py3, sort so order is always consistent
             value = ats[aid]['nv'] if 'nv' in ats[aid] else (
                 ats[aid]['value'] if 'value' in ats[aid] else None)
             if value is None:
@@ -4514,33 +4838,66 @@ class Node(object):
             #- self.file.h5commands.append("set attribute(%s:%s)-%s" % (self.full_path,
             #-     aid, value))
                 
-    def set_attr(self, aid, value, custom=False):
+    def set_attr(self, aid, value, custom=False, shape=None):
         """ This is one of the functions for the API.
         Set attribute with key aid to value 'value'.  If custom True
         could inhibit warning messages if setting custom attribute.
-        Right now no warning is generated anyway. """
+        Right now no warning is generated anyway.
+        shape - specifies shapes of 1-d attrs values passed in
+            from matlab.  This only used for matlab bridge.
+        """
+        # make sure not trying to set an attribute on a link.  Links cannot have attributes
+        if self.link_info:
+            link_target = self.make_link_target_name()
+            node_type = self.sdef['type']  # group or dataset
+            msg = ("%s attempt to set attribute (%s) on link.  Link target = "
+                "'%s' (%s).  Links cannot have attributes.") % (self.full_path,
+                aid, link_target, node_type)
+            self.file.error.append(msg)
+            return
+        # print("called set_attr, aid=%s, value=%s type=%s, typecode=%s" % (aid, value, type(value), value.typecode))
+        if isinstance(value, (array.array, tuple)):
+            value = self.file.deflatten(value, shape)
+#         if attrs_shape:
+#             # convert attribute values passed in by matlab from 1-d to original shape
+#             # put aid in value in list for passing to deflatten_attrs
+#             print ("calling deflatten_attrs")
+#             atrs1d = [aid, value]
+#             self.file.deflatten_attrs(atrs1d, attrs_shape)
+#             value = atrs1d[1]
+        # print ("calling self.update_attribute_value")
         self.update_attribute_value(aid, value)
 #         if aid not in self.attributes and not custom:
 #             # print "** Warning: non-declaired attribute %s['%s'] set to:\n'%s'" % (
 #             #    self.name, aid, value)
-        if (isinstance(value, (str, unicode))):
-            # convert string value to numpy string, so string in hdf5 file will be fixed length
-            # see: http://docs.h5py.org/en/latest/strings.html
-            value = np.string_(value)
+#         if (isinstance(value, (str, unicode))):
+#             # convert string value to numpy string, so string in hdf5 file will be fixed length
+#             # see: http://docs.h5py.org/en/latest/strings.html
+#             # test not converting to np.string_, see what is stored.
+#             pass
+#             # value = np.string_(value)
         self.file.set_attribute(self.full_path, aid, value)
         # save value for validation
         self.h5attrs[aid] = value
-        
+ 
     def remember_custom_attribute(self, node_path, aid, value):
         """ save custom attribute for later reporting """
-        msg = "'%s' [%s]:'%s'" % (node_path, aid, value)
+        (value_sum, vs_msg, vs_msg_type) = vs.make_value_summary(value, self.file.file_pointer)
+        msg = "'%s' [%s]:'%s'" % (node_path, aid, value_sum)
         self.file.custom_attributes.append(msg)
+        if vs_msg:
+            assert vs_msg_type in ('warning', 'error')
+            msg = "%s - %s - %s" % (node_path, aid, vs_msg)
+            if vs_msg_type == 'warning':
+                self.file.warning.append(msg)
+            else:
+                self.file.error.append(msg)
             
        
     def check_attributes_for_autogen(self):
         """ Check attributes for any "autogen" specifications.  If any are found
         save them for later processing."""
-        for aid in self.attributes:
+        for aid in sorted(list(self.attributes)):  # py3, add sorted list to make deterministic
             dict = self.attributes[aid]
             find_links.check_for_autogen(dict, aid, self.full_path, self.sdef['type'], self.file)
             
@@ -4628,12 +4985,28 @@ class Node(object):
         if isinstance(val, str) and val.startswith('value_info: type="'):
             # value not available.  This called when reading a file and value in file not loaded
             return None
-        val_str = str(val)
-        if len(val_str) > 40:
-            val_str = val_str[0:40]+"..."
-        return val_str
+        # return vs.make_value_summary(val, self.file.file_pointer)
+        (value_sum, vs_msg, vs_msg_type) = vs.make_value_summary(val, self.file.file_pointer)
+        if vs_msg:
+            assert vs_msg_type in ('warning', 'error')
+            msg = "%s - %s" % (self.full_path, vs_msg)
+            if vs_msg_type == 'warning':
+                self.file.warning.append(msg)
+            else:
+                self.file.error.append(msg)
+        return value_sum
+#         if isinstance(val, bytes):
+#             try:
+#                 val_str = val.decode('utf-8')
+#             except UnicodeDecodeError as e:
+#                 val_str = '** Binary value, length=%i **' % len(val)
+#         else:
+#             val_str = str(val)
+#         len_val = len(val_str)
+#         if len(val_str) > 40:
+#             val_str = val_str[0:40]+"..."
+#         return val_str
 
-  
              
 class Dataset(Node):
     def __init__(self, file, sdef, name, path, attrs, parent, value, dtype, compress, link_info=None):
@@ -4665,7 +5038,7 @@ class Dataset(Node):
         if self.link_info:
             # this dataset set to link to another.  Already done in Node.  Nothing to do here
             return
-#         if self.full_path == "/session_start_time":
+#         if self.full_path == "/processing/extracellular_units/UnitTimes/unit_01/unit_description": 
 #             import pdb; pdb.set_trace()
         # print "Creating Dataset, sdef="
         # pp.pprint(sdef)
@@ -4694,23 +5067,31 @@ class Dataset(Node):
         self.merge_attrs()
         if self.link_info:
             # this dataset set to link to another.  Already done in Node.  Nothing to do here
+            # this will never be executed (because of earlier if self.link_info).  Leave in
+            # for now to document changes.
             pass
         else:
-#             if self.full_path == "/processing/ROIs/DfOverF/fov_16002/roi_names":
+#             if self.full_path == "/general/related_publications":
 #                 import pdb; pdb.set_trace()
             # creating new dataset (normally done)
             if (not dtype and self.dsinfo['ddt'] and self.dsinfo['ddt']['type'] == 'binary'
-                and isinstance(value, (str, unicode))):
+                and isinstance(value, (str, unicode, bytes))):
                 # set dtype to binary to flag, save string value using h5py np.void(),
                 # as described at: http://docs.h5py.org/en/latest/strings.html
                 dtype = 'binary'
-            elif (isinstance(value, (str, unicode))):
+            elif (isinstance(value, (str, unicode, bytes))):  # py3 added bytes
                 # convert string value to numpy string, so string in hdf5 file will be fixed length
                 # see: http://docs.h5py.org/en/latest/strings.html
                 # before converting encode using utf-8 to prevent 
                 # UnicodeEncodeError: 'ascii' codec can't encode characters 
                 # value = np.string_(value.encode('utf-8'))
-                value = np.string_(value)
+                try:
+                    value = np.string_(value)
+                except UnicodeEncodeError as e:
+                    # Assume error is due to not being able to convert unicode to ascii, e.g.:
+                    # 'ascii' codec can't encode character '\xe1' in position 151: ordinal not in range(128)
+                    # leave as unicode, should store in hdf5 file as variable length utf-8
+                    pass
             elif (isinstance(value, (np.ndarray)) and str(value.shape) == "(1,)"
                     and str(value.dtype) == 'object'):
                 # this added because sometimes strings are np.ndarray, (example,
@@ -4816,7 +5197,9 @@ class Dataset(Node):
             dtype = ddt['type'] + str(default_size)
             return dtype
         if ddt['type'] == 'float':
-            dtype = "f" + str(default_size / 8)
+            num_bytes, remainder_bits = divmod(default_size, 8)
+            assert remainder_bits == 0, "Default size for float must be multiple of 8: %s" % default_size
+            dtype = "f%s" % num_bytes
             return dtype
         if ddt['type'] == 'text':
             # this should never be called because strings converted to np.string_ without
@@ -4896,14 +5279,14 @@ class Dataset(Node):
         dsinfo['atags'] = {}
         df = self.sdef['df']
         # save all referenced atags
-        for tag in atags:
-            # don't save descriptions or semantic_type by default
-            # SKIP atags.  No longer used.  (Hence if False below).
-            if False and tag in df and tag not in ('description', 'semantic_type'):
-                dsinfo['atags'][atags[tag]['atname']] = {
-                    'data_type': atags[tag]['data_type'],
-                    'description': atags[tag]['description'],
-                    'value': df[tag],}      
+#         for tag in atags:
+#             # don't save descriptions or semantic_type by default
+#             # SKIP atags.  No longer used.  (Hence if False below).
+#             if False and tag in df and tag not in ('description', 'semantic_type'):
+#                 dsinfo['atags'][atags[tag]['atname']] = {
+#                     'data_type': atags[tag]['data_type'],
+#                     'description': atags[tag]['description'],
+#                     'value': df[tag],}      
         if self.link_info:
             # setting this dataset to another dataset by a link
             # get previously saved info about dataset linking to
@@ -4919,7 +5302,7 @@ class Dataset(Node):
             else:
                 raise SystemError("** Error: invalid key in link_info %s" % self.link_info)
         else:
-            dsinfo['dtype'], dsinfo['shape'] = self.file.get_dtype_and_shape(val)
+            dsinfo['dtype'], dsinfo['shape'] = self.file.get_dtype_and_shape(val, self.full_path, None)
         if 'dimensions' in df:
             dimo = self.find_matching_dimension(df['dimensions'], dsinfo['shape'], dsinfo['dtype'], val)
             if dimo:
@@ -5027,7 +5410,8 @@ def valid_dtype(ddt, found):
         return True
     if found == 'binary':
         dtype = 'binary'
-    elif found in ('str', 'unicode', 'text') or re.match( r'^\|S\d+$', found) or 'byte' in found:
+    elif (found in ('str', 'unicode', 'text') or re.match( r'^\|S\d+$', found)
+        or 'byte' in found or re.match(r'^<U\d+$', found)):
         # print "found dtype '%s', interpreting as string" % dtype
         dtype = 'text'
 #         # if expected type if binary, pretend found type is binary.  Otherwise text
@@ -5074,9 +5458,165 @@ def error_exit(msg = None):
     print("Stack trace follows")
     print("-------------------")
     traceback.print_stack()
+    # import pdb; pdb.set_trace()
     sys.exit(1)
 
-  
+
+#********* start python 3 support functions
+# def make_str(val):
+#     return find_links.make_str(val)
+# 
+# def make_str3(val):
+#     return find_links.make_str3(val)
+
+# print nested dictionary with keys ordered alphabetically
+# this written because pprint pformat gives different output for Python2 and Python3
+def ppdict(hash):
+    if isinstance(hash, dict):
+        parts = []
+        for key in sorted(list(hash)):
+            value = ppdict(hash[key])
+            parts.append('"%s":%s' % (key, value))
+        return "{" + ", ".join(parts) + "}"
+    elif isinstance(hash, (str, unicode)):
+        return '"%s"' % hash
+    else:
+        return hash
+
+# py3, convert bytes to strings, including if in a list or tuple
+# def make_str(val):
+#     if version_info[0] > 2:
+#         base_val = get_base_val(val)
+#         if isinstance(base_val,  bytes):
+#             val = make_str2(val)
+#     return val
+# 
+# get a scalar value, either from scalar or from list or tuple
+# def get_base_val(val):
+#     if isinstance(val, (list, tuple, np.ndarray)) and len(val) > 0:
+#         return get_base_val(val[0])
+#     else:
+#         return val
+# 
+# 
+# # py3: convert bytes to str (unicode) if Python 3   
+# def make_str3(val):
+#     if isinstance(val, bytes) and version_info[0] > 2:
+#         return val.decode('utf-8')
+#     else:
+#         return val
+
+# recursive convert everything from bytes to str (unicode) for Python 3
+# convert numpy ndarray to list if has str as base_val even if python 2
+# this done so output from python2 and python3 will be identical because
+# str(numpy.ndarray) does not have commas in the generated string,
+# while str(list) does
+# def make_str2(val):
+#     if isinstance(val, (list, tuple, np.ndarray)) and len(val) > 0:
+#         return [make_str2(v) for v in val]
+#     elif isinstance(val, bytes):
+#         return val.decode('utf-8')
+#     else:
+#         return val
+
+# py3: form type of value, convert to "text" if class str or type str
+# this done so validate output in Python2 and Python3 will match
+def stype(val):
+    str_type = str(type(val))
+    if str_type in ("<class 'str'>", "<type 'unicode'>"):
+        str_type =  "<type 'str'>"
+    else:
+        str_type = str_type.replace('class', 'type')  # convert any class to 'type'
+    return str_type
+    
+# def stype2(str_type):
+#     import pdb; pdb.set_trace()
+#     if str_type in ("<class 'str'>", "<type 'unicode'>"):
+#         str_type =  "<type 'str'>"
+#     else:
+#         str_type = str_type.replace('class', 'type')  # convert any class to 'type'
+#     return str_type
+
+
+def is_str_type(val):
+    """ Return True if val is a string type """
+    return isinstance(val, (bytes, unicode, np.string_, np.bytes_, np.unicode))
+
+def is_arr_type(val):
+    """ Return True if val is some type of array. """
+    return isinstance(val, (list, tuple, np.ndarray))
+    
+def str2h5(val):
+    """ If val is a string type or array of string types, convert to a type
+    that is optimized for storing in hdf5."""
+    if is_str_type(val):
+        # val is a string type, convert to np.string_
+        try:
+            val = np.string_(val)
+        except UnicodeEncodeError as e:
+            # val is unicode and can't encode using ascii, leave as unicode
+            pass
+    elif is_arr_type(val):
+        val = arr_str2h5(val)
+    return val
+
+def arr_str2h5(val):
+    """ Val is some type of array.  If is array of strings, convert to type that
+    will use fixed length storage (in hdf5) unless dtype is specified to variable
+    length storage, or contains unicode (which always uses variable length storage
+    with h5py."""
+    base_val = vs.base_val(val)
+    if is_str_type(base_val):
+        var_len_dt = h5py.special_dtype(vlen=unicode)
+        if isinstance(val, np.ndarray) and val.dtype == var_len_dt:
+            # user explicitly specifies variable length strings.  Do nothing.
+            pass
+        else:
+            # convert to type for fixed length strings
+            (num_el, max_length, total_length) = get_str_arr_info(val)
+            dtype = "S%s" % max_length
+            try:
+                val = np.array(val, dtype=dtype)
+#                 val = np.array(val)
+            except UnicodeEncodeError as e:
+                # val is unicode and can't encode using ascii, specify var len unicode
+                val = np.array(val, dtype=var_len_dt)
+    return val
+#         # pointer_size = 16  # number bytes required to store pointer to strings in hdf5, found by examining files
+#         pointer_size = 8  # smaller size used for debugging
+#         space_var = num_el * pointer_size + total_length
+#         space_fixed = num_el * max_length
+#         if space_fixed < space_var: # or version_info[0] > 2:
+#         # if True:  # just use fixed size for all now.  Variable sizes does not seem to save space
+#             # format for fixed size strings in hdf5
+#             # python 3 does not work with variable length str attributes
+#             dtype = "S%s" % max_length
+#             val = np.array(val, dtype=dtype)
+#         else:
+#             # format for variable size string in hdf5
+#             dt = h5py.special_dtype(vlen=bytes)
+#             # dt = h5py.special_dtype(vlen=unicode)
+#             val = np.array(val, dtype=dt)
+#     return val
+
+def get_str_arr_info(val):
+    """ Find type of string in array val, and also the min and max length.  Return
+    None if val does not contain strings."""
+    fval = np.array(val).flatten()
+    num_el = len(fval)
+    max_length = 0
+    total_length = 0
+    for sval in fval:
+        len_sval = len(sval)
+        if len_sval > max_length:
+            max_length = len_sval
+        total_length += len_sval
+    return (num_el, max_length, total_length)
+
+
+#********* end py3 support functions
+
+
 class Group(Node):
     """ hdf5 group object """
     def __init__(self, file, sdef, name, path, attrs, parent, link_info=None):
@@ -5115,15 +5655,15 @@ class Group(Node):
         self.check_mstats_for_autogen()
         # self.add_parent_attributes()
         self.merge_attrs()
-        if self.link_info:
-            # this group is linking to another.  Already done in Node class.  Nothing to do here
-            pass
-        else:
+#         if self.link_info:
+#             # this group is linking to another.  Already done in Node class.  Nothing to do here
+#             pass
+#         else:
 #             self.h5node = self.h5parent.create_group(self.name)
             #- self.file.file_pointer.create_group(self.full_path)
             #- self.file.h5commands.append("create_group(%s)" % self.full_path)
-            if self.full_path != "/":  # root group already exists.  Cannot create it.
-                self.file.create_group(self.full_path)
+        if self.full_path != "/":  # root group already exists.  Cannot create it.
+            self.file.create_group(self.full_path)
         # add attribute values to node
         self.set_attr_values()
 
@@ -5134,7 +5674,7 @@ class Group(Node):
         automatically (using autogen) when the file is closed if they have not been 
         created already.  To find the datasets in this group that have autogen, the 
         "mstats" (member stats" dictionary is searched. """
-        for id in self.mstats:
+        for id in sorted(list(self.mstats)):  # py3, add sorted list to make deterministic
             minfo = self.mstats[id]
             if 'autogen' in minfo['df'] or (
                 # check for "_properties": {"create": True}  -- this replaces "autogen": {"type": "create"}
@@ -5210,17 +5750,64 @@ class Group(Node):
                 # of it in function get_member_stats.  (If the path was longer than necessary
                 # get_member_stats might create an empty definition, rather than using the
                 # real one).
-                min_path_length = None
-                for i in range(len(mid_info)):
-                    (i_ns, i_id, i_qty) = mid_info[i]
-                    i_path_length = len(i_id)
-                    if min_path_length is None or i_path_length < min_path_length:
-                        min_path_length = i_path_length
-                        wanted_index = i
+                wanted_index = self.select_implicit_include(mid_info)
+#                 min_path_length = None
+#                 for i in range(len(mid_info)):
+#                     (i_ns, i_id, i_qty) = mid_info[i]
+#                     i_path_length = len(i_id)
+#                     if min_path_length is None or i_path_length < min_path_length:
+#                         min_path_length = i_path_length
+#                         wanted_index = i
             else:
                 wanted_index = 0
             ns, id, qty = mid_info[wanted_index]
             self.file.save_include(self.includes, mid, id, ns, qty, source, self.sdef['id'])
+    
+    def select_implicit_include(self, mid_info):
+        """Select include with shortest path, or if there are more than one with
+        the same length as the shortest, select the one from the default_ns (if present)
+        and if not, select the first one, in sorted order.  This function is called
+        to find implicit include with shortest path to be sure to get the definition
+        of it in function get_member_stats.  (If the path was longer than necessary
+        get_member_stats might create an empty definition, rather than using the real one).
+        Also, if there are more than one with the same length as the shortest, then the
+        default_ns version should be used if present because that will not cause a
+        non-default name space to be possibly included as the 'extension_node_identifier',
+        e.g. 'schema_id').  If the default_ns is not present, picking the first one (sorted)
+        will guarantee that the 'extension_node_identifier' attribute will always be the same.
+        Otherwise it could change depending on the order of the name spaces in the "mid_info"
+        list.  Input "mid_info" is a list of tuples, each containing, (ns, id, qty)."""
+        assert len(mid_info) > 1
+        min_path_length = None
+        for i in range(len(mid_info)):
+            (i_ns, i_id, i_qty) = mid_info[i]
+            i_path_length = len(i_id)
+            if min_path_length is None or i_path_length < min_path_length:
+                min_path_length = i_path_length
+                shortest = [i]
+            elif min_path_length == i_path_length:
+                # found more than one with length of shortest path
+                shortest.append(i)
+        if len(shortest) == 1:
+            # only one found that has the length of the shortest, return that
+            wanted_index = shortest[0]
+        else:
+            # more than one have length matching shortest path
+            # see if default_ns is included
+            for i in range(len(shortest)):
+                if self.file.default_ns == mid_info[shortest[i]][0]:
+                    # found default_ns, use it
+                    wanted_index = shortest[i]
+                    return wanted_index
+            # did not find default ns in list.  Use entry with first ns (sorted)
+            first_ns = None
+            for i in range(len(shortest)):
+                ns = mid_info[shortest[i]][0]
+                if first_ns is None or ns < first_ns:
+                    first_ns = ns
+                    wanted_index = shortest[i]
+        return wanted_index
+               
     
     def get_path_part(self, prefix, full_path):
         """ Get part of path after prefix.  prefix must end with slash.
@@ -5304,7 +5891,7 @@ class Group(Node):
         # string used in specification language to indicate subclass_merge
         msc = "merge+"
         df = self.expanded_def
-        for key in df.keys():
+        for key in list(df):  #py3, was: df.keys(): 
             if key.endswith('/') and isinstance(df[key], dict) and msc in df[key]:
                 assert len(df[key][msc]) == 1, ("%s: must be only one element in list when"
                     " using \"%s\": %s") % (self.full_path, msc, df[key][msc])
@@ -5630,8 +6217,10 @@ class Group(Node):
         return grp
         
     def get_node(self, path, abort=True):
-        """ returns node inside current group.  If node not present, return None,
-        (if abort == False), otherwise return True """
+        """ Returns node specified by path.  If path is relative, e.g. does
+        not start with '/') Node specified is inside the current group.  If path is absolute,
+        e.d. starts with '/') Npde specified can be anywhere in the file.  If node is not
+        present, return None (if abort == False), otherwise return True """
         if path.startswith('/'):
             return self.file.get_node(path, abort)
         else:
@@ -5721,4 +6310,4 @@ class Group(Node):
         sdef, name, path = self.file.get_custom_node_info(qid, gslash, name, path, parent)
         link_info = self.file.extract_link_info(value, None, Dataset)
         ds = Dataset(self.file, sdef, name, path, attrs, parent, value, dtype, compress, link_info)
-        return ds    
+        return ds

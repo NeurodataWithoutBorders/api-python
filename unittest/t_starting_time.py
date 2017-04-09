@@ -43,12 +43,12 @@ def create_startingtime_series(fname, name, target):
     #
     
     stime = f.make_group("<TimeSeries>", name, path=target)
-    stime.set_dataset("data", [0, 1, 2, 3], attrs={"unit": "n/a",
-        "conversion":1, "resolution": 1})
+    stime.set_dataset("data", [0.0, 1.0, 2.0, 3.0], attrs={"unit": "n/a",
+        "conversion":1.0, "resolution": 1.0})
     stime.set_dataset("num_samples", 4)
     
     # stime.set_time_by_rate(0.125, 2)
-    stime.set_dataset("starting_time", 0.125, attrs={ "rate":2, "unit":"Seconds"})
+    stime.set_dataset("starting_time", 0.125, attrs={ "rate":2.0, "unit":"Seconds"})
 #     stime.finalize()
 #     neurodata.close()
     f.close()

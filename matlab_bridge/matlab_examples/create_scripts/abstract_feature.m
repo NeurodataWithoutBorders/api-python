@@ -76,7 +76,9 @@ abs.set_attr('source', 'Simulated data. Normally this would be the device presen
 
 % create some pretend data
 % data = np.arange(4000).reshape(1000, 4)
-data = reshape(0:3999, [1000, 4]);
+% makes: [[0 1 2 3] [4 5 6 7] [8 9 10 11] ... ]
+% data = reshape(0:3999, [1000, 4]); - incorrect, makes [[0 1000 2000 3000],
+data = reshape(0:3999, [4, 1000])';  % this version matches Python
 
 % add data to the time series. for now, ignore the last 3 parameters
 % t = np.arange(1000) * 0.001

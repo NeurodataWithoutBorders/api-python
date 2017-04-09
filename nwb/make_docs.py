@@ -2,8 +2,8 @@
 
 import sys
 # h5gate validate script
-import h5gate as g
-import doc_tools as dt
+from . import h5gate as g
+from . import doc_tools as dt
 
 # print "sys.argv=%s" % sys.argv
 

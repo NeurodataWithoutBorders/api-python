@@ -60,10 +60,10 @@ function create_softlink_source(fname, name, target)
     % source = neurodata.create_timeseries('TimeSeries', name, target)
     source = f.make_group('<TimeSeries>', name, 'path', target);
     % source.set_data([234], unit='parsec', conversion=1, resolution=1e-3)
-    source.set_dataset('data', {234}, 'attrs', {'unit', 'parsec', ... 
-        'conversion', 1, 'resolution', 1e-3});
+    source.set_dataset('data', {234.0}, 'attrs', {'unit', 'parsec', ... 
+        'conversion', 1.0, 'resolution', 1e-3});
     % source.set_time([123])
-    source.set_dataset('timestamps', {123});
+    source.set_dataset('timestamps', {123.0});
     % source.finalize()
     % neurodata.close()
     f.close()

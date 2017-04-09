@@ -24,7 +24,7 @@ def display_versions():
         print( "%s - %s" % (key, os.environ[key]))
     print ("** Versions:")
     print ("Python: %s" % sys.version)
-    print ("Python executable: %s", sys.executable)
+    print ("Python executable: %s" % sys.executable)
     try:
         import h5py
     except:

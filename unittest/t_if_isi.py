@@ -4,6 +4,7 @@ import test_utils as ut
 
 from nwb import nwb_file
 from nwb import nwb_utils as utils
+import numpy as np
 
 # TESTS storage of retonotopic imaging data
 
@@ -92,9 +93,10 @@ def test_isi_iface():
 def create_isi_iface(fname, name):
     settings = {}
     settings["file_name"] = fname
+    settings["start_time"] = "2008-09-15T15:53:00-08:00"
     settings["identifier"] = utils.create_identifier("reference image test")
     settings["mode"] = "w"
-    settings["description"] = "reference image test"
+    settings["description"] = "isi reference image test"
     settings["verbosity"] = "none"
     f = nwb_file.open(**settings)
     
@@ -110,32 +112,34 @@ def create_isi_iface(fname, name):
 #     module.finalize()
     
     module = f.make_group("<Module>", name)
+    # following used to force int32 size for dimension attribute
+    d23 = np.array([2,3], dtype='int32')
     iface = module.make_group("ImagingRetinotopy")
     # iface.add_axis_1_phase_map([[1.0, 1.1, 1.2],[2.0,2.1,2.2]], "altitude", .1, .1)
     iface.set_dataset("axis_1_phase_map", [[1.0, 1.1, 1.2],[2.0,2.1,2.2]], attrs={
-        "dimension": [2,3], "field_of_view": [0.1, 0.1], "unit":"degrees"})
+        "dimension": d23, "field_of_view": [0.1, 0.1], "unit":"degrees"})
 
     # iface.add_axis_2_phase_map([[3.0, 3.1, 3.2],[4.0,4.1,4.2]], "azimuth", .1, .1, unit="degrees")
     iface.set_dataset("axis_2_phase_map", [[3.0, 3.1, 3.2],[4.0,4.1,4.2]], attrs={
-        "dimension": [2,3], "field_of_view": [0.1, 0.1], "unit":"degrees"})
+        "dimension": d23, "field_of_view": [0.1, 0.1], "unit":"degrees"})
 
     iface.set_dataset("axis_descriptions", ["altitude", "azimuth"])
     
     # iface.add_axis_1_power_map([[0.1, 0.2, 0.3],[0.4, 0.5, 0.6]], .1, .1)
     iface.set_dataset("axis_1_power_map", [[0.1, 0.2, 0.3],[0.4, 0.5, 0.6]], attrs={
-        "dimension": [2,3], "field_of_view": [0.1, 0.1]})
+        "dimension": d23, "field_of_view": [0.1, 0.1]})
         
     # iface.add_sign_map([[-.1, .2, -.3],[.4,-.5,.6]])
     iface.set_dataset("sign_map", [[-.1, .2, -.3],[.4,-.5,.6]], attrs={
-        "dimension": [2,3]})
+        "dimension": d23})
         
     # iface.add_vasculature_image([[1,0,129],[2,144,0]], height=.22, width=.35)
     iface.set_dataset("vasculature_image", [[1,0,129],[2,144,0]], attrs={
-        "field_of_view":[0.22, 0.35], "bits_per_pixel":8, "dimension":[2,3], "format": "raw"})
+        "field_of_view":[0.22, 0.35], "bits_per_pixel":8, "dimension":d23, "format": "raw"})
         
     # iface.add_focal_depth_image([[1,0,129],[2,144,0]], bpp=8)
     iface.set_dataset("focal_depth_image", [[1,0,129],[2,144,0]], attrs={
-        "bits_per_pixel":8, "dimension":[2,3], "format": "raw"})
+        "bits_per_pixel":8, "dimension":d23, "format": "raw"})
         
     # iface.finalize()
     # module.finalize()

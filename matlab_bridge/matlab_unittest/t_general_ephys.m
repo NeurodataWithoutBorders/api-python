@@ -77,7 +77,8 @@ function create_general_extra(fname)
 %     neurodata.set_metadata(EXTRA_CUSTOM('EXTRA_CUSTOM'), 'EXTRA_CUSTOM')
 
     g = f.make_group('extracellular_ephys');
-    g.set_dataset('electrode_map', nwb_utils.h5reshape([1,1,1; 1,2,3]));
+    % g.set_dataset('electrode_map', nwb_utils.h5reshape([1,1,1; 1,2,3]));
+    g.set_dataset('electrode_map', [1,1,1; 1,2,3]);
     g.set_dataset('electrode_group', {'p1', 'p2'});
     g.set_dataset('impedance', [1.0e6, 2.0e6]);
     g.set_dataset('filtering', 'EXTRA_FILTERING');

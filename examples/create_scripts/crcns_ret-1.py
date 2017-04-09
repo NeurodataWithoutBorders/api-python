@@ -16,13 +16,13 @@ from nwb import nwb_utils as ut
 
 
 # directory for input data
-SOURCE_DATA_DIR = "../source_data/crcns_ret-1/"
+SOURCE_DATA_DIR = "../source_data_2/crcns_ret-1/"
 path = SOURCE_DATA_DIR + "Data/"
 
 if not os.path.exists(path):
-    print "Source files for script '%s' not present." % os.path.basename(__file__)
-    print "Download and put them in the 'examples/source_data' directory as instructed"
-    print "in file examples/0_README.txt"
+    print ("Source files for script '%s' not present." % os.path.basename(__file__))
+    print ("Download and put them in the 'examples/source_data' directory as instructed")
+    print ("in file examples/0_README.txt")
     sys.exit(1) 
 
 
@@ -30,8 +30,8 @@ file_list = glob.glob(path + "*.mat")
 #file_list = [path+"20080516_R2.mat"]
 
 if not file_list:
-    print "*** Error:"
-    print "No files found at '%s'.  Cannot run script %s." % (path, os.path.basename(__file__))
+    print ("*** Error:")
+    print ("No files found at '%s'.  Cannot run script %s." % (path, os.path.basename(__file__)))
     sys.exit(1)
 
 # directory for created NWB files.  Must have a trailing slash.
@@ -49,12 +49,12 @@ def find_exp_time(fname, data_info):
     try:
         d = data_info["date"][0]
     except IndexError:
-        print "Warning: Unable to read recording date from " + fname
+        print ("Warning: Unable to read recording date from " + fname)
         return ""
     try:
         rst = data_info["RecStartTime"][0]
     except IndexError:
-        print "Warning: Unable to read recording start time from " + fname
+        print ("Warning: Unable to read recording start time from " + fname)
         return ""
     time = d + str(rst[3]) + str(rst[4]) + str(rst[5])
     dt=datetime.datetime.strptime((time), "%Y%m%d%H%M%S")
@@ -64,12 +64,12 @@ def find_stim_times(fname, data_info):
     try:
         d = data_info["date"][0]
     except IndexError:
-        print "Error: Unable to read recording date from " + fname
+        print ("Error: Unable to read recording date from " + fname)
         assert False
     try:
         rst = data_info['RecStartTime']
     except IndexError:
-        print "Error: Unable to read recording start time from " + fname
+        print ("Error: Unable to read recording start time from " + fname)
         assert False
     dt = []
     for i in range(len(rst)):
@@ -77,27 +77,27 @@ def find_stim_times(fname, data_info):
         dt.append(datetime.datetime.strptime((time), "%Y%m%d%H%M%S"))
     for i in range(1,len(rst)):
         dt[i] = (dt[i] - dt[0]).total_seconds()
-    dt[0] = 0
+    dt[0] = 0.0
     return dt
 
 def create_stim_ident(x, y, dx, dy):
     return "%dx%d_%dx%d" % (x, y, dx, dy)
 
 def create_stimulus_file(fname, seed, x, y, dx, dy):
-    print "Creating stimulus file " + fname
+    print ("Creating stimulus file " + fname)
     ident = create_stim_ident(x, y, dx, dy)
     n_pixels = stim_pixel_cnt[ident]
     data = np.zeros(n_pixels)
     with open(SOURCE_DATA_DIR + "ran1.bin", 'rb') as f:
-        for i in range(n_pixels/8):
+        for i in range(int(n_pixels/8)):  #py3, added int
             byte = f.read(1)
             for j in reversed(range(8)):
                 data[i*8+j] = 255*(ord(byte) >> j & 1)
             # for j in range(8):
             #     data[i*8+j] = 255 * ((ord(byte) >> (7-j)) & 1)
-    nx = x/dx
-    ny = y/dy
-    n_frames = n_pixels / (nx * ny)
+    nx = int(x/dx)  # py3, added int
+    ny = int(y/dy)  # py3, added int
+    n_frames = int(n_pixels / (nx * ny))  # py3, added int
     # reshape stimulus
     datar = np.reshape(data, (n_frames, ny, nx))
     h5 = h5py.File(fname, 'w')
@@ -132,7 +132,7 @@ electrode_group = []
 for i in range(len(electrode_map)):
     electrode_group.append("61-channel probe")
 
-print "Getting stimulus frame requirements"
+print ("Getting stimulus frame requirements")
 stim_pixel_cnt = {}
 for i in range(len(file_list)):
     fname = file_list[i][len(path):]
@@ -165,7 +165,7 @@ for i in range(len(file_list)):
 
 for i in range(len(file_list)):
     fname = file_list[i][len(path):]
-    print "Processing " + fname
+    print ("Processing " + fname)
     mfile = sio.loadmat(file_list[i], struct_as_record=True)
     # prepare matlab data
     data_info = mfile['datainfo'][0,0]
@@ -177,7 +177,7 @@ for i in range(len(file_list)):
     vargs["description"] ="Optical stimulation and extracellular recording of retina"
     vargs["file_name"] = OUTPUT_DIR + fname[:-4]+".nwb"    
     bfile = nwb_file.open(**vargs)
-    print "Creating " + vargs["file_name"]
+    print ("Creating " + vargs["file_name"])
     # get stimulus offset times
     stim_offset = find_stim_times(fname, data_info)
     stim_end = []
@@ -215,7 +215,7 @@ for i in range(len(file_list)):
         img.set_dataset("data", link_str) # special string, causes creation of external link
         img.set_dataset("bits_per_pixel", 8)
         img.set_dataset("format", "raw")
-        img.set_dataset("dimension", [x/dx, y/dy])
+        img.set_dataset("dimension", [int(x/dx), int(y/dy)])  # py3, force to be int
         img.set_attr("description", "type = " + str(type_s) + "; seed = " + str(seed))
         img.set_attr("comments", "Based on ran1.bin. Pixel values are 255 for light, 0 for dark")
         # create epoch
@@ -276,6 +276,6 @@ for i in range(len(file_list)):
     g.set_dataset('description',"Approximation of electrode array used in experiment based on Mester, et. al., 1994 (DEMO DATA)")
     g.set_dataset('location',"Retina flatmount recording")
     g.set_dataset('device', "----")
-    print "\tdone"
+    print ("\tdone")
     bfile.close()
 

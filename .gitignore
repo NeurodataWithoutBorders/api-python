@@ -1,8 +1,15 @@
 # Optional source data downloaded separately
 /examples/source_data/crcns_*
+/examples/source_data_2/
 
 # Generated output from tests
-/examples/text_output_files/create/*txt
+examples/text_output_files/create/*txt
+examples/text_output_files/validate/*txt
+matlab_bridge/matlab_examples/text_output_files/
+matlab_bridge/matlab_examples/created_nwb_files/
+test_all/curr/
+test_all/orig/
+test_all/orig_bk*/
 
 # Created nwb files
 *.nwb

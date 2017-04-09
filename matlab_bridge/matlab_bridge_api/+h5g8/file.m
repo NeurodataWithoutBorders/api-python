@@ -192,7 +192,7 @@ classdef file < handle
                 val1d = value;
                 return
             end
-            shape = size(value);
+            shape = int32(size(value));
             empty_array = length(shape) == 2 && length(value) == 0;
             if empty_array
                val1d = {};
@@ -210,9 +210,12 @@ classdef file < handle
                 shape = sprintf('%i,', length(value));
             else
                 % is multidimensional, convert to 1-d and save shape
-                shape = int32(shape);
+                valt = nwb_utils.h5reshape(value); % make transponse
+%                 nel = numel(value);
+%                 val1d = reshape(value, [1, nel]);
                 nel = numel(value);
-                val1d = reshape(value, [1, nel]);
+                % val1d = reshape(value, [1, nel]);
+                val1d = reshape(valt, [1, nel]);
                 % fprintf('after flatten, values are:')
                 % val1d(1:15)
             end
