@@ -1,0 +1,1006 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>2. h5gate format specification language &#8212; NWB API-Python 0.8.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.8.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="1. Python (and Matlab) API for Neurodata Without Borders (NWB) format" href="api_usage.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="h5gate-format-specification-language">
+<span id="id1"></span><h1>2. h5gate format specification language<a class="headerlink" href="#h5gate-format-specification-language" title="Permalink to this headline">¶</a></h1>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Revision:</th><td class="field-body">0.9.1</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Date:</th><td class="field-body">May 1, 2017 <a class="footnote-reference" href="#id3" id="id2">[1]</a></td>
+</tr>
+</tbody>
+</table>
+<div class="section" id="introduction">
+<h2>2.1. Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h2>
+<p>This API for the NWB format is built using a domain-independent
+specification language which allows specifying formats for data
+stored in HDF5.  The system provides the following features:</p>
+<ul class="simple">
+<li>A single, human-readable file is used to specify a &#8220;core&#8221; format.
+(For the NWB format, this file is <code class="docutils literal"><span class="pre">nwb_core.py</span></code>).</li>
+<li>The core format can be extended to incorporate new use cases by
+creating &#8220;extensions&#8221; to the core format.</li>
+<li>Both the core format and extensions are written in the same
+specification language (described in this document).</li>
+<li>Write APIs are provided for both Python and Matlab.  The write APIs
+are independent of the format and do not change when extensions
+are used.  This allows extensions to be shared without the API
+software needing to be modified to use different extensions.</li>
+<li>Files in the fomat can be validated to ensure that they are
+consistent with the core format and any used extensions.</li>
+<li>Documentation for the core format and extensions can be
+generated from the specification files (and from data files
+created using the API because these include the specifications files).</li>
+<li>Specification files (both for the core format and extensions)
+can be validated using JSON Schema (<a class="reference external" href="http://json-schema.org">http://json-schema.org</a>).</li>
+</ul>
+<p>The main program that implements these features is called &#8220;h5gate.&#8221;
+The &#8220;h5&#8221; refers to HDF5 (but other backends may be possible).
+The &#8220;gate&#8221; refers to the concept of controlling access, like a gate
+in a fence, because the write APIs control the addition of data into
+files to conform to that indicated by the format specification.
+The specification language and h5gate were designed for the NWB
+format, but may also be useful for other formats.  The operation of
+the specification language is shown in <a class="reference internal" href="#figspec"><span class="std std-numref">Fig. 2.1.1</span></a>.</p>
+<table class="docutils footnote" frame="void" id="id3" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id2">[1]</a></td><td>The reversion number is for this document and is independent of
+the version number for the NWB format. The date is the last
+modification date of this document.</td></tr>
+</tbody>
+</table>
+<div class="figure" id="id18">
+<span id="figspec"></span><a class="reference internal image-reference" href="_images/spec_uses.jpg"><img alt="How the specification language is used." src="_images/spec_uses.jpg" style="width: 293.0px; height: 185.5px;" /></a>
+<p class="caption"><span class="caption-number">Fig. 2.1.1 </span><span class="caption-text">How the specification language is used.</span></p>
+<div class="legend">
+The specification language is used to define the core format (based on
+the initial use case requirements) and also to define extensions
+to the format.  The software system (which includes a write API for
+both Python and Matlab, a documentation generator and a validator)
+is independent of any particular format or extensions and thus does
+not need to change for different formats or extensions.</div>
+</div>
+</div>
+<div class="section" id="high-level-organization">
+<h2>2.2. High-level organization<a class="headerlink" href="#high-level-organization" title="Permalink to this headline">¶</a></h2>
+<p>The specification language is written using a Python dictionary in a
+JSON-like syntax, which can easily be converted to JSON. A Python dictionary
+is used rather than pure JSON because Python allows inserting comments
+and also provides more readable ways to include long strings.</p>
+<div class="section" id="schema-id-or-namespace">
+<span id="id4"></span><h3>2.2.1. Schema-Id (or namespace)<a class="headerlink" href="#schema-id-or-namespace" title="Permalink to this headline">¶</a></h3>
+<p>The top-level of a format specification has the following form:</p>
+<div class="highlight-default"><div class="highlight"><pre><span class="p">{</span><span class="s2">&quot;fs&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="s2">&quot;ns1&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">specification</span> <span class="k">for</span> <span class="n">schema</span> <span class="s1">&#39;ns1&#39;</span><span class="o">&gt;</span><span class="p">,</span>
+    <span class="s2">&quot;ns2&quot;</span><span class="p">:</span> <span class="o">*</span>\<span class="o">&lt;</span><span class="n">specification</span> <span class="k">for</span> <span class="n">schema</span> <span class="s1">&#39;ns2&#39;</span><span class="o">&gt;</span><span class="p">,</span>
+    <span class="s2">&quot;ns3&quot;</span><span class="p">:</span> <span class="o">*</span>\<span class="o">&lt;</span><span class="n">specification</span> <span class="k">for</span> <span class="n">schema</span> <span class="s1">&#39;ns3&#39;</span><span class="o">&gt;</span><span class="p">,</span>  <span class="o">...</span> <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The top level identifier must be “fs”. (This stands for “format
+specification”). The value of “fs” is a dictionary with each
+key the “schema-Id” (or “namespace”) of a format specification that is
+associated with that schema-Id.  The schema-Ids can be any
+valid Python string (they are <em>not</em> restricted to start
+with ‘ns’). One of the schemas-Ids is designated as the “default”
+and it is associated with the core format.  Other schema-Ids are
+associated with extensions to the core format.  Information
+indicating where to obtain the specifications (usually names
+of files containing the specifications) and the default schema-Id
+are passed into the API software when it is initialized.</p>
+</div>
+<div class="section" id="top-level-components">
+<span id="id5"></span><h3>2.2.2. Top level components<a class="headerlink" href="#top-level-components" title="Permalink to this headline">¶</a></h3>
+<p>The specification associated with each schema-Id is a Python dictionary
+with three keys: info, schema, and doc. e.g.:</p>
+<div class="highlight-default"><div class="highlight"><pre><span class="p">{</span>
+    <span class="s2">&quot;info&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">info</span> <span class="n">specification</span><span class="o">&gt;</span><span class="p">,</span>
+    <span class="s2">&quot;schema&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">schema</span> <span class="n">specification</span><span class="o">&gt;</span><span class="p">,</span>
+    <span class="s2">&quot;doc&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">auxiliary</span> <span class="n">documentation</span><span class="o">&gt;</span><span class="p">,</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>“info” and “schema” are required. “doc” is optional. <code class="docutils literal"><span class="pre">&lt;info</span>
+<span class="pre">specification&gt;</span></code> has the following form:</p>
+<div class="highlight-default"><div class="highlight"><pre><span class="p">{</span>
+    <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;Name of specification&gt;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;version number&gt;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;date&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;date last modified or released&gt;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;author&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;author name&gt;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;contact&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;author email or other contact info&gt;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;description of the specification&gt;&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal"><span class="pre">&lt;schema</span> <span class="pre">specification&gt;</span></code> section defines the groups, datasets and
+relationship that make up the format. This is the main part of the
+format specification. It is described in the following sections.</p>
+<p>The <code class="docutils literal"><span class="pre">&lt;auxiliary</span> <span class="pre">documentation&gt;</span></code> section is for text that is added to
+documentation that is generated from the format
+specification, using the <code class="docutils literal"><span class="pre">make_docs.py</span></code> tool. This is not described
+further in this document, but the structure and operation can be deduced
+by examining this part of the NWB format specification in file
+<code class="docutils literal"><span class="pre">nwb_core.py</span></code> and the generated documentation for the NWB format.</p>
+<p>The top level components are <a class="reference internal" href="#top-level-components"><span class="std std-numref">2.2.2 Top level components</span></a> (see above).
+They are also at <a class="reference internal" href="#top-level-components"><span class="std std-numref">2.2.2 Top level components</span></a> (<a class="reference internal" href="#id5">Top level components</a>)
+(also see above).</p>
+<p>But these work: <a class="reference internal" href="#id5">Top level components</a> (see above).
+They are also at <a class="reference internal" href="#top-level-components">top_level_components</a> (also see above).</p>
+</div>
+<div class="section" id="schema-specification">
+<span id="id6"></span><h3>2.2.3. Schema specification<a class="headerlink" href="#schema-specification" title="Permalink to this headline">¶</a></h3>
+<p>The <code class="docutils literal"><span class="pre">&lt;schema</span> <span class="pre">specification&gt;</span></code> consist of a Python dictionary where each key
+has the following form:</p>
+<div class="highlight-default"><div class="highlight"><pre><span class="p">[</span><span class="o">&lt;</span><span class="n">absolute_path</span><span class="o">&gt;</span><span class="p">]</span> <span class="o">&lt;</span><span class="n">identifier</span><span class="o">&gt;</span> <span class="p">[</span><span class="o">&lt;</span><span class="n">group</span><span class="o">-</span><span class="n">flag</span><span class="o">&gt;</span><span class="p">]</span> <span class="p">[</span><span class="o">&lt;</span><span class="n">quantity</span><span class="o">-</span><span class="n">flag</span><span class="o">&gt;</span><span class="p">]</span>
+</pre></div>
+</div>
+<p><code class="docutils literal"><span class="pre">&lt;absolute_path&gt;</span></code> is optional. If present, it starts with a slash (&#8220;/&#8221;),
+and specifies the absolute location within an HDF5 file of the group or
+dataset. For the root group, the absolute path is empty and the
+identifier is “/”.</p>
+<p><code class="docutils literal"><span class="pre">&lt;identifier&gt;</span></code> is required. Identifiers that start with “&lt;“ and end
+with “&gt;” have a &#8220;variable&#8221; name, that is, the name is specified
+through an API call when creating the group or dataset. If the identifier
+does not start and end with angle brackets, then the name is fixed and is
+the same as the identifier.</p>
+<p><code class="docutils literal"><span class="pre">&lt;group-flag&gt;</span></code> is optional.  If present, it is a &#8220;/&#8221; to indicate that the
+identifier is associated with a group.  If absent, the identifier is associated
+with a dataset.</p>
+<p><code class="docutils literal"><span class="pre">&lt;quantity_flag&gt;</span></code> is optional. It is used to indicate if the HDF5 dataset
+or group associated with the identifier is required, optional, recommended or
+if there are multiple instances required.  (The term &#8220;quantity&#8221; was chosen
+for this because some of the characters used for the <code class="docutils literal"><span class="pre">&lt;quantity_flag&gt;</span></code> have
+the same meaning as characters used to specifies quantities in regular
+expressions).  If present, the <code class="docutils literal"><span class="pre">&lt;quantity_flag&gt;</span></code> is a single character,
+one of: “?”, “!”, “^”, “+” or “*”.  These mean:</p>
+<div class="highlight-default"><div class="highlight"><pre>!   - Required (this is the default)
+?   - Optional
+^   - Recommended
++   - One or more instances of variable-named identifier required
+*   - Zero or more instances of variable-named identifier allowed
+</pre></div>
+</div>
+<p>Some example schema specification keys and their meaning are given below:</p>
+<p>Unspecified location (no leading slash):</p>
+<div class="highlight-default"><div class="highlight"><pre>foo     - dataset, name is “foo”
+foo/    - group, name is “foo”
+&lt;foo&gt;   - dataset, variable name
+&lt;foo&gt;/  - group, variable name
+</pre></div>
+</div>
+<p>Specified location (has leading slash). Meaning same as above, but
+location specified:</p>
+<div class="highlight-default"><div class="highlight"><pre>/some/path/foo    – dataset, name is “foo”, located at /some/path/
+/some/path/foo/   – group, name is “foo”, located at /some/path/
+/some/path/&lt;foo&gt;  – dataset, variable name, located at /some/path
+/some/path/&lt;foo&gt;/ – group, variable name, located at /some/path
+</pre></div>
+</div>
+<p>With quantity specified:</p>
+<div class="highlight-default"><div class="highlight"><pre>foo?    – dataset, name is “foo”. Is optional
+foo/^   – group, name is “foo”. Is recommended
+&lt;foo&gt;*  – dataset, variable name, zero or more allowed
+&lt;foo&gt;+  – group, variable name, at least one required
+</pre></div>
+</div>
+<p>When an absolute path is specified (or if the identifier is for the root
+group) the identifier is “anchored” to the specified location. If there
+is no absolute path, then the group or dataset associated with the
+identifier can be incorporated into other groups using the “include” or
+“merge” directives that are described below.</p>
+</div>
+<div class="section" id="extensions">
+<span id="id7"></span><h3>2.2.4. Extensions<a class="headerlink" href="#extensions" title="Permalink to this headline">¶</a></h3>
+<p>As mentioned, extensions to the core format are specified using
+schema-Ids that are different from the schema-id used for the core
+format. The way that extensions are implemented is very simple: The
+schema specified in extensions are simply “merged” into the schema
+specified in the core format based on having the same absolute path (if
+given) and the same identifier. For example, if the core format schema
+includes key “&lt;foo&gt;/” (specifying a group with a variable name
+“foo”) and an extension also includes a key “&lt;foo&gt;/”, the value
+associated with both of these (which must be a dictionary) are combined
+to form the combined specification of the core format and the extension.
+While it’s possible to define multiple extensions in the same file (as
+illustrated in Section <a class="reference internal" href="#schema-id-or-namespace"><span class="std std-numref">2.2.1 Schema-Id (or namespace)</span></a>) normally,
+the specification associated with each schema-Id will be in a separate
+file as illustrated below:</p>
+<p>File containing specification for core format:</p>
+<div class="highlight-default"><div class="highlight"><pre><span class="p">{</span><span class="s2">&quot;fs&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="s2">&quot;core&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">specification</span> <span class="k">for</span> <span class="n">core</span> <span class="nb">format</span><span class="o">&gt;</span>
+ <span class="p">}}</span>
+</pre></div>
+</div>
+<p>File containing specification for extension ex1:</p>
+<div class="highlight-default"><div class="highlight"><pre><span class="p">{</span><span class="s2">&quot;fs&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="s2">&quot;ex1&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">specification</span> <span class="k">for</span> <span class="n">extension</span> <span class="n">ex1</span><span class="o">&gt;</span>
+<span class="p">}}</span>
+</pre></div>
+</div>
+<p>File containing specification for extension ex2:</p>
+<div class="highlight-default"><div class="highlight"><pre><span class="p">{</span><span class="s2">&quot;fs&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="s2">&quot;ex2&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">specification</span> <span class="k">for</span> <span class="n">extension</span> <span class="n">ex2</span><span class="o">&gt;</span>
+<span class="p">}}</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="specification-of-groups">
+<h2>2.3. Specification of groups<a class="headerlink" href="#specification-of-groups" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="overall-form">
+<h3>2.3.1. Overall form<a class="headerlink" href="#overall-form" title="Permalink to this headline">¶</a></h3>
+<p>The specification of a group (i.e. value of a schema specification
+identifier that is followed by a slash) is a Python dictionary with the
+following form:</p>
+<div class="highlight-default"><div class="highlight"><pre><span class="p">{</span>
+    <span class="s2">&quot;description&quot;</span><span class="p">:</span>  <span class="s2">&quot;&lt;description of group&gt;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;_description&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;description in case there is a dataset named &#39;description&#39;&gt;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;_required&quot;</span><span class="p">:</span>    <span class="o">&lt;</span><span class="n">required</span> <span class="n">specification</span><span class="o">&gt;</span><span class="p">,</span>
+    <span class="s2">&quot;_exclude_in&quot;</span><span class="p">:</span>  <span class="o">&lt;</span><span class="n">exclude_in</span> <span class="n">specification</span><span class="o">&gt;</span><span class="p">,</span>
+    <span class="s2">&quot;_properties&quot;</span><span class="p">:</span>  <span class="o">&lt;</span><span class="n">properties</span> <span class="n">specification</span><span class="o">&gt;</span><span class="s2">&quot;,</span>
+    <span class="s2">&quot;attributes&quot;</span><span class="p">:</span>   <span class="o">&lt;</span><span class="n">attributes</span> <span class="n">specification</span><span class="o">&gt;</span><span class="p">,</span>
+    <span class="s2">&quot;merge&quot;</span><span class="p">:</span>        <span class="o">&lt;</span><span class="nb">list</span> <span class="n">of</span> <span class="n">groups</span> <span class="n">to</span> <span class="n">merge</span><span class="o">&gt;</span><span class="p">,</span>
+    <span class="s2">&quot;merge+&quot;</span><span class="p">:</span>       <span class="o">&lt;</span><span class="nb">list</span> <span class="n">of</span> <span class="n">group</span> <span class="p">(</span><span class="n">base</span> <span class="n">class</span><span class="p">)</span> <span class="n">to</span> <span class="n">merge</span><span class="o">&gt;</span><span class="p">,</span>
+    <span class="s2">&quot;include&quot;</span><span class="p">:</span>      <span class="o">&lt;</span><span class="n">dictionary</span> <span class="n">of</span> <span class="n">structures</span> <span class="n">to</span> <span class="n">include</span><span class="o">&gt;</span><span class="p">,</span>
+    <span class="s2">&quot;link&quot;</span><span class="p">:</span>         <span class="o">&lt;</span><span class="n">link</span> <span class="n">specification</span><span class="o">&gt;</span><span class="p">,</span>
+    <span class="s2">&quot;dataset_id[&lt;qty-flag&gt;]&quot;</span><span class="p">:</span> <span class="p">{</span> <span class="o">&lt;</span><span class="n">dataset</span> <span class="n">specification</span><span class="o">&gt;</span> <span class="p">},</span>
+    <span class="s2">&quot;group_id/[&lt;qty-flag&gt;]&quot;</span><span class="p">:</span>  <span class="p">{</span> <span class="o">&lt;</span><span class="n">group</span> <span class="n">specification</span><span class="o">&gt;</span> <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>None of the key-value pairs are required. All but the last two are
+described in the Section <a class="reference internal" href="#group-specification-keys"><span class="std std-numref">2.3.2 Group specification keys</span></a> below. The last two
+(&#8220;dataset_id&#8221;, and &#8220;group_id/&#8221;) are used to specify a group or dataset
+inside the group. The specification for these is the same as the
+specification for top-level groups (described in this section) and for
+top-level datasets (describe in :numref&#8221;:<cite>specification_of_datasets</cite>).
+There can be any number of groups or datasets specified inside a group.
+The optional <code class="docutils literal"><span class="pre">&lt;qty-flag&gt;</span></code> after &#8220;dataset_id&#8221; and &#8220;group_id/&#8221; is the same
+as the <code class="docutils literal"><span class="pre">&lt;quantity-flag&gt;</span></code> described in Section <a class="reference internal" href="#schema-specification"><span class="std std-numref">2.2.3 Schema specification</span></a>.</p>
+</div>
+<div class="section" id="group-specification-keys">
+<span id="id8"></span><h3>2.3.2. Group specification keys<a class="headerlink" href="#group-specification-keys" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="description">
+<h4>2.3.2.1. &#8220;description&#8221;<a class="headerlink" href="#description" title="Permalink to this headline">¶</a></h4>
+<p>The value of the group specification “description” key is a string
+describing the group.</p>
+</div>
+<div class="section" id="id9">
+<h4>2.3.2.2. &#8220;_description&#8221;<a class="headerlink" href="#id9" title="Permalink to this headline">¶</a></h4>
+<p>The key “_description” (has an underscore in front) is used in place of
+“description” in case the key “description” is used to specify a dataset
+in the group named “description”.  (In this case the value of the
+&#8220;description&#8221; key would be a JSON Object (Python dictionary) instead of
+a string.)</p>
+</div>
+<div class="section" id="required">
+<h4>2.3.2.3. &#8220;_required&#8221;<a class="headerlink" href="#required" title="Permalink to this headline">¶</a></h4>
+<p>The <code class="docutils literal"><span class="pre">&lt;required</span> <span class="pre">specification&gt;</span></code> is a dictionary with each key an
+identifier associated with some condition, and each value a list of
+tuples. First element of each tuple is a string (called the “condition
+string”) that contains a logical expression that has variables matching
+members of the group. The condition string specifies which combinations
+of group members are required. The second element of each tuple is an
+error message that is displayed if the requirements of the condition
+string are not met. An example required specification is shown below:</p>
+<div class="highlight-default"><div class="highlight"><pre><span class="p">{</span> <span class="s2">&quot;start_time&quot;</span> <span class="p">:</span>
+    <span class="p">[</span><span class="s2">&quot;starting_time XOR timestamps&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;starting_time or timestamps must be present, but not both.&quot;</span><span class="p">],</span>
+  <span class="s2">&quot;control&quot;</span><span class="p">:</span>
+    <span class="p">[</span><span class="s2">&quot;(control AND control_description) OR (NOT control AND NOT control_description)&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;If control or control_description are present, then both must be present.&quot;</span><span class="p">)]}</span>
+</pre></div>
+</div>
+<p>The logical expression can contain the following logical operators:</p>
+<div class="highlight-default"><div class="highlight"><pre><span class="p">{</span><span class="s2">&quot;AND&quot;</span><span class="p">:</span> <span class="s1">&#39;and&#39;</span><span class="p">,</span> <span class="s1">&#39;XOR&#39;</span><span class="p">:</span> <span class="s1">&#39;^&#39;</span><span class="p">,</span> <span class="s1">&#39;OR&#39;</span><span class="p">:</span> <span class="s1">&#39;or&#39;</span><span class="p">,</span> <span class="s1">&#39;NOT&#39;</span><span class="p">:</span> <span class="s1">&#39;not&#39;</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>either the upper-case strings (keys in the above JSON object) or the corresponding
+Python operator (values associated with the above keys) can be used.</p>
+</div>
+<div class="section" id="exclude-in">
+<h4>2.3.2.4. &#8220;exclude_in&#8221;<a class="headerlink" href="#exclude-in" title="Permalink to this headline">¶</a></h4>
+<p>The exclude_in specification is used to specify locations in the HDF5
+file under which particular members of this group should not be present
+(or be optional). It has the form:</p>
+<div class="highlight-default"><div class="highlight"><pre><span class="p">{</span> <span class="s2">&quot;/path1&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;id1&quot;</span><span class="p">,</span> <span class="s2">&quot;id2&quot;</span><span class="p">,</span> <span class="s2">&quot;id3&quot;</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
+  <span class="s2">&quot;/path2&quot;</span><span class="p">:</span> <span class="p">[</span><span class="o">&lt;</span><span class="n">ids</span> <span class="k">for</span> <span class="n">path2</span><span class="o">&gt;</span><span class="p">],</span> <span class="o">...</span> <span class="p">}</span>
+</pre></div>
+</div>
+<p>Each id is the identifier of a member group or dataset.  The id in the list can
+be followed by characters &#8221;!”, &#8220;^”, &#8221;?” to respectively indicate that the id
+must not be present, should not be present or is optional under the specified path.
+If the last character is not “!”, “^” or “?” then “!” is assumed. An example is:</p>
+<div class="highlight-default"><div class="highlight"><pre><span class="s2">&quot;_exclude\_in&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="s2">&quot;/stimulus/templates&quot;</span><span class="p">:</span>
+        <span class="p">[</span> <span class="s2">&quot;starting_time!&quot;</span><span class="p">,</span> <span class="s2">&quot;timestamps!&quot;</span><span class="p">,</span> <span class="s2">&quot;num_samples?&quot;</span><span class="p">]</span> <span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="properties">
+<h4>2.3.2.5. &#8220;_properties&#8221;<a class="headerlink" href="#properties" title="Permalink to this headline">¶</a></h4>
+<p>The &#8220;_properties&#8221; specification is optional. If present, the value must
+be a dictionary containing any combination of the keys: “abstract”,
+“closed” and “create”. The value of included key(s) must be type boolean
+(True or False). Key “abstract” has value True to indicate that this group is
+“abstract” (cannot be created directly, but instead must be subclassed
+via the “merge” directive). Key &#8220;closed&#8221; is True to indicate that additional
+members (groups and datasets beyond what are defined in the specification)
+are not allowed in this group.  Key &#8220;create&#8221; is True to indicate that a
+write API should automatically create this group if the group is specified
+as being required and it is not created.</p>
+</div>
+<div class="section" id="group-attributes">
+<span id="id10"></span><h4>2.3.2.6. Group &#8220;attributes&#8221;<a class="headerlink" href="#group-attributes" title="Permalink to this headline">¶</a></h4>
+<p>The value of the group specification &#8220;attributes&#8221; key is a Python
+dictionary of the following form:</p>
+<div class="highlight-default"><div class="highlight"><pre><span class="p">{</span>
+    <span class="s2">&quot;attr_name_1[&lt;qty_flag&gt;]&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">specification</span> <span class="k">for</span> <span class="n">attr_name_1</span><span class="o">&gt;</span><span class="p">,</span>
+    <span class="s2">&quot;attr_name_2[&lt;qty-flag&gt;]&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">specification</span> <span class="k">for</span> <span class="n">attr_name_2</span><span class="o">&gt;</span><span class="p">,</span>
+ <span class="o">...</span> <span class="p">}</span>
+</pre></div>
+</div>
+<p>The keys are the attribute names, optionally followed by a <code class="docutils literal"><span class="pre">&lt;qty_flag&gt;</span></code>.”
+The <code class="docutils literal"><span class="pre">&lt;qty_flag&gt;</span></code> (stands for ‘quantity flag’ is similar to that for
+groups and data sets. It specifies if the attribute is required (“!”)–
+the default, optional (“?”) or recommended (“^”). The value of each key
+is the specification for that attribute. Each attribute specification
+has the following form:</p>
+<div class="highlight-default"><div class="highlight"><pre><span class="p">{</span>
+    <span class="s2">&quot;data_type&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">data_type</span><span class="o">&gt;</span><span class="p">,</span>
+    <span class="s2">&quot;dimensions&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">dimensions</span> <span class="nb">list</span><span class="o">&gt;</span><span class="p">,</span>
+    <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;description of attribute&gt;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">value</span> <span class="n">to</span> <span class="n">store</span><span class="o">&gt;</span><span class="p">,</span>
+    <span class="s2">&quot;const&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="kc">True</span> <span class="ow">or</span> <span class="kc">False</span><span class="o">&gt;</span><span class="p">,</span>
+    <span class="s2">&quot;autogen&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">autogen</span> <span class="n">specification</span><span class="o">&gt;</span><span class="p">,</span>
+    <span class="s2">&quot;references&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">reference</span> <span class="n">specification</span><span class="o">&gt;</span><span class="p">,</span>
+    <span class="s2">&quot;dim1&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">dimension</span> <span class="n">specification</span><span class="o">&gt;</span><span class="p">,</span>
+    <span class="s2">&quot;dim2&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">dimension</span> <span class="n">specification</span><span class="o">&gt;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Only &#8220;data_type&#8221; is required. The value (<code class="docutils literal"><span class="pre">&lt;data_type&gt;</span></code>) is a string
+specifying the data_type of the attribute. Allowable values include:</p>
+<div class="highlight-default"><div class="highlight"><pre>&quot;float&quot;  – indicates a floating point number
+&quot;int&quot;    – indicates an integer
+&quot;uint&quot;   – unsigned integer
+&quot;number&quot; – indicates either a floating point or an integer
+&quot;text&quot;   – a text string
+</pre></div>
+</div>
+<p>For &#8220;float&#8221;, &#8220;int&#8221; and &#8220;uint&#8221;, a default size (in bits) can
+be specified by appending the size to the type, e.g., &#8220;int32&#8221;. If “!” is
+appended to the default size, e.g. “float64!”, then the default size is
+also the required minimum size.</p>
+<p>If the attribute stores an array, the <code class="docutils literal"><span class="pre">&lt;dimensions</span> <span class="pre">list&gt;</span></code> specifies
+the list of dimensions. The format for this is the same as the
+<code class="docutils literal"><span class="pre">&lt;dimensions</span> <span class="pre">list&gt;</span></code> for datasets which is described in Section
+<a class="reference internal" href="#dataset-dimensions"><span class="std std-numref">2.4.1.3 Dataset dimensions</span></a>.  If no <code class="docutils literal"><span class="pre">&lt;dimension</span> <span class="pre">list&gt;</span></code> is given, the
+attribute stores a scalar value.</p>
+<p>The description is a text string describing the attribute.</p>
+<p>The &#8220;value&#8221; key denotes the value to store in the attribute. If a value
+is specified and “const”:True is specified, then the value is treated
+as a constant and cannot be changed by the API.</p>
+<p>The autogen specification is described in Section <a class="reference internal" href="#autogen"><span class="std std-numref">2.5 Autogen</span></a>.</p>
+<p>The references specification and the <code class="docutils literal"><span class="pre">&lt;dimension</span> <span class="pre">specification&gt;</span></code>
+are the same as that used for datasets. They are respectively described
+in Sections <a class="reference internal" href="#references"><span class="std std-numref">2.4.1.5 &#8220;references&#8221;</span></a> and <a class="reference internal" href="#dimension-specification"><span class="std std-numref">2.4.2 dimension specification</span></a>.</p>
+</div>
+<div class="section" id="merge">
+<h4>2.3.2.7. &#8220;merge&#8221;<a class="headerlink" href="#merge" title="Permalink to this headline">¶</a></h4>
+<p>The merge specification is used to merge the specification of other
+groups into the current group. It consists of a Python list of the
+groups (identifiers described in Section <a class="reference internal" href="#schema-specification"><span class="std std-numref">2.2.3 Schema specification</span></a>)
+to merge. (Each element of the list must have a trailing slash since
+they all must be groups).</p>
+</div>
+<div class="section" id="id11">
+<h4>2.3.2.8. &#8220;merge+&#8221;<a class="headerlink" href="#id11" title="Permalink to this headline">¶</a></h4>
+<p>The merge+ specification (“+” character after the word “merge”) is used
+to merge the specification of a single group (or subclass of it) into
+the current group. The group merged is either the group given in the
+list, or a subclass of that group (where subclasses are defined as a
+group that merges the specified group). In the API call to make the group,
+a subclass is specified by appending a dash then the subclass name after
+the identifier used to make the group. For example, in the NWB format,
+if the group name is “corrected” and the base class (in the “merge+”
+specification) is &#8220;&lt;image-series&gt;&#8221;, then the call to create a
+subclass (such as &#8220;&lt;TwoPhotonSeries&gt;&#8221;) would be:</p>
+<div class="highlight-default"><div class="highlight"><pre><span class="n">make_group</span><span class="p">(</span><span class="s2">&quot;corrected-&lt;TwoPhotonSeries&gt;&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="include">
+<h4>2.3.2.9. &#8220;include&#8221;<a class="headerlink" href="#include" title="Permalink to this headline">¶</a></h4>
+<p>The include specification is used to include the specification of a
+group or dataset inside the current group. The format is a Python
+dictionary (also JSON object), in which each key is the key associated
+with a group or dataset to include and the values are a dictionary used
+to specify properties and values that are merged into the included structure
+and also options for the include. The key that designate the group or
+dataset to include may have a final character that specifies a quantity
+(same as described in Section <a class="reference internal" href="#schema-specification"><span class="std std-numref">2.2.3 Schema specification</span></a>). Options for
+the include are specified by key <code class="docutils literal"><span class="pre">\_options</span></code>. Currently, there is only
+one option: “subclasses” which has value True to indicate that “subclasses”
+of the included group should also be included. Subclasses of a group are
+groups that inherit from a base group using the “merge” directive
+(described in the next section). Some examples of the include directive
+are shown below:</p>
+<div class="highlight-default"><div class="highlight"><pre><span class="c1"># include with subclasses</span>
+<span class="s2">&quot;include&quot;</span><span class="p">:</span> <span class="p">{</span> <span class="s2">&quot;&lt;TimeSeries&gt;/*&quot;</span><span class="p">:{</span><span class="s2">&quot;\_options&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;subclasses&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">}}}</span>
+<span class="c1"># include without subclasses</span>
+<span class="s2">&quot;include&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;&lt;TimeSeries&gt;/*&quot;</span><span class="p">:</span> <span class="p">{}}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="merge-vs-include">
+<h4>2.3.2.10. &#8220;merge&#8221; vs. &#8220;include&#8221;<a class="headerlink" href="#merge-vs-include" title="Permalink to this headline">¶</a></h4>
+<p>The merge operation implements a type of subclassing because properties
+of the merged in groups (the superclasses) are included, but overridden
+by properties in the group specifying the merge if there are conflicts.
+The include specification implements a type of reuse. The merge and
+include operations are illustrated by the following diagram:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="49%" />
+<col width="51%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">merge – (for subclassing)</th>
+<th class="head">include – for reuse</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><div class="first line-block">
+<div class="line">&#8220;A/&#8221;: {</div>
+<div class="line-block">
+<div class="line">&#8220;x&#8221;: ...,</div>
+<div class="line">&#8220;y&#8221;: ...</div>
+</div>
+<div class="line">}</div>
+</div>
+<div class="last line-block">
+<div class="line">&#8220;B/&#8221;: {</div>
+<div class="line-block">
+<div class="line">&#8220;merge&#8221;: [&#8220;A/&#8221;,],</div>
+<div class="line-block">
+<div class="line">&#8220;m&#8221;: ...,</div>
+<div class="line">&#8220;n&#8221;: ...,</div>
+</div>
+</div>
+<div class="line">}</div>
+<div class="line"><br /></div>
+<div class="line"><strong>Result:</strong></div>
+<div class="line">&#8220;B/&#8221;: {</div>
+<div class="line-block">
+<div class="line-block">
+<div class="line">&#8220;x&#8221;: ...,</div>
+<div class="line">&#8220;y&#8221;: ...,</div>
+<div class="line">&#8220;m&#8221;: ...,</div>
+<div class="line">&#8220;n&#8221;: ...,</div>
+</div>
+<div class="line">}</div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+</div>
+</div>
+</td>
+<td><div class="first line-block">
+<div class="line">&#8220;A/&#8221;: {</div>
+<div class="line-block">
+<div class="line">&#8220;x&#8221;: ...,</div>
+<div class="line">&#8220;y&#8221;: ...</div>
+</div>
+<div class="line">}</div>
+</div>
+<div class="last line-block">
+<div class="line">&#8220;B/&#8221;: {</div>
+<div class="line-block">
+<div class="line">&#8220;include&#8221;: {&#8220;A/&#8221;: {}},</div>
+<div class="line-block">
+<div class="line">&#8220;m&#8221;: ...,</div>
+<div class="line">&#8220;n&#8221;: ...,</div>
+</div>
+</div>
+<div class="line">}</div>
+<div class="line"><br /></div>
+<div class="line"><strong>Result:</strong></div>
+<div class="line">&#8220;B/&#8221;: {</div>
+<div class="line-block">
+<div class="line">&#8220;m&#8221;: ...,</div>
+<div class="line">&#8220;n&#8221;: ...,</div>
+<div class="line">&#8220;A/&#8221;: {</div>
+<div class="line-block">
+<div class="line-block">
+<div class="line">&#8220;x&#8221;: ...,</div>
+<div class="line">&#8220;y&#8221;: ...</div>
+</div>
+<div class="line">}</div>
+</div>
+</div>
+<div class="line">}</div>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="link">
+<h4>2.3.2.11. &#8220;link&#8221;<a class="headerlink" href="#link" title="Permalink to this headline">¶</a></h4>
+<p>The link specification is used to indicate that the group must be HDF5
+link to another group. (Hard or soft links can be used, but soft links
+are recommended). The link specification is a Python dictionary. It has
+the following form:</p>
+<div class="highlight-default"><div class="highlight"><pre><span class="p">{</span>
+    <span class="s2">&quot;target_type&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;target_type&gt;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;allow_subclasses&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="kc">True</span> <span class="ow">or</span> <span class="kc">False</span><span class="o">&gt;</span><span class="p">,</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><code class="docutils literal"><span class="pre">&lt;target_type&gt;</span></code> specifies the key for a group in the top level structure
+of a namespace. It is used to indicate that the link must be to an
+instance of that structure. “allow_subclasses” is set to True to
+indicate the link can be to subclasses of the target structure.
+Subclasses are structures that include the target using a “merge”
+specification. Neither of the keys are required. The default value for
+“allow_subclasses” is False. If <code class="docutils literal"><span class="pre">&lt;target_type&gt;</span></code> is not specified, then
+the link can be to any group.</p>
+</div>
+</div>
+</div>
+<div class="section" id="specification-of-datasets">
+<span id="id12"></span><h2>2.4. Specification of datasets<a class="headerlink" href="#specification-of-datasets" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="id13">
+<h3>2.4.1. Overall form<a class="headerlink" href="#id13" title="Permalink to this headline">¶</a></h3>
+<p>The specification of a dataset (i.e. value associated with a schema
+specification key described in Section <a class="reference internal" href="#schema-specification"><span class="std std-numref">2.2.3 Schema specification</span></a>
+that does not have a trailing slash) is a Python dictionary with the
+following form:</p>
+<div class="highlight-default"><div class="highlight"><pre><span class="p">{</span>
+    <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;description&gt;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;data_type&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">data_type</span><span class="o">&gt;</span><span class="p">,</span>
+    <span class="s2">&quot;dimensions&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">dimensions</span> <span class="nb">list</span><span class="o">&gt;</span><span class="p">,</span> <span class="c1"># required if dataset is not scalar</span>
+    <span class="s2">&quot;attributes&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">attributes</span> <span class="n">specification</span><span class="o">&gt;</span><span class="p">,</span>
+    <span class="s2">&quot;references&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;reference target specification&gt;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;link&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">link</span> <span class="n">specification</span><span class="o">&gt;</span><span class="p">,</span>
+    <span class="s2">&quot;autogen&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">autogen</span> <span class="n">specification</span><span class="o">&gt;</span><span class="p">,</span>
+    <span class="s2">&quot;dim1&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">dimension</span> <span class="n">specification</span><span class="o">&gt;</span><span class="p">,</span>
+    <span class="s2">&quot;dim2&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">dimension</span> <span class="n">specification</span><span class="o">&gt;</span><span class="p">,</span>
+    <span class="o">...</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Either the &#8220;data_type&#8221; or &#8220;link&#8221; property must be present.  All others are
+optional. If the dataset is specified and is an array (not scalar) than
+the dimensions property is required. The autogen specification is
+described in Section <a class="reference internal" href="#autogen"><span class="std std-numref">2.5 Autogen</span></a>. Others are described below.</p>
+<div class="section" id="dataset-description">
+<h4>2.4.1.1. 4.2.1 dataset &#8220;description&#8221;<a class="headerlink" href="#dataset-description" title="Permalink to this headline">¶</a></h4>
+<p>A string describing the dataset.</p>
+</div>
+<div class="section" id="data-type">
+<h4>2.4.1.2. &#8220;data_type&#8221;<a class="headerlink" href="#data-type" title="Permalink to this headline">¶</a></h4>
+<p>A string indicating the type of data stored. This is the same as the
+<code class="docutils literal"><span class="pre">&lt;data_type</span></code> for group attributes, described in Section <a class="reference internal" href="#group-attributes"><span class="std std-numref">2.3.2.6 Group &#8220;attributes&#8221;</span></a>.</p>
+</div>
+<div class="section" id="dataset-dimensions">
+<span id="id14"></span><h4>2.4.1.3. Dataset dimensions<a class="headerlink" href="#dataset-dimensions" title="Permalink to this headline">¶</a></h4>
+<p>If present, <code class="docutils literal"><span class="pre">&lt;dimension_list&gt;</span></code> is either a list of named
+dimensions, e.g.: [“dim1”, “dim2”, ...], or a list of lists of named
+dimensions, e.g.: [[“dim1”], [“dim1”, “dim2”]]. The first form is
+used if there is only one possibility for the number of dimensions. The
+second form is used if there are multiple possible number of dimensions.
+Each dimension name is a string (providing a dimension name). Dimensions
+names are used both for specifying properties of dimensions (as described
+in Section <a class="reference internal" href="#dimension-specification"><span class="std std-numref">2.4.2 dimension specification</span></a>) and for specifying relationships
+between datasets.</p>
+<p>The special dimension name <code class="docutils literal"><span class="pre">&quot;*unlimited*&quot;</span></code> is used to indicate that the
+number of elements stored in this dimension can increase (by appending to
+the dataset) after the dataset is created.  Other dimensions are fixed in
+size once the dataset is created.</p>
+</div>
+<div class="section" id="dataset-attributes">
+<h4>2.4.1.4. Dataset &#8220;attributes&#8221;<a class="headerlink" href="#dataset-attributes" title="Permalink to this headline">¶</a></h4>
+<p>Dataset attributes are specified in the same was as group attributes,
+described in Section <a class="reference internal" href="#group-attributes"><span class="std std-numref">2.3.2.6 Group &#8220;attributes&#8221;</span></a>.</p>
+</div>
+<div class="section" id="references">
+<span id="id15"></span><h4>2.4.1.5. &#8220;references&#8221;<a class="headerlink" href="#references" title="Permalink to this headline">¶</a></h4>
+<p>The references property is used to indicate that the values stored in
+the dataset are referencing groups, datasets or parts of other datasets
+in the file. The value of the references property is a reference target
+specification. This has one of the following four forms:</p>
+<ol class="loweralpha simple">
+<li>&lt;path_to_dataset&gt;.dimension</li>
+<li>&lt;path_to_dataset&gt;.dimension.component</li>
+<li>&lt;path_to_group&gt;/&lt;variable_node_id&gt;</li>
+<li>/</li>
+</ol>
+<p><code class="docutils literal"><span class="pre">&lt;path_to_dataset&gt;</span></code> and <code class="docutils literal"><span class="pre">&lt;path_to_group&gt;</span></code> are
+respectively a path to a group or dataset in the file. The path can be
+absolute (starting with “/”) or a relative (not starting with “/”). A
+relative path references a node that is a child of the group containing
+the references specification.</p>
+<p>The first form (a) specifies a reference to a particular dimension of a
+dataset. In this case all values in the referencing dataset should be
+integers that are equal to one of the indices in the referenced dataset
+dimension.  Zero-based indexing in used.</p>
+<p>The second form (b) specifies a reference to a particular component of a
+structured dimension. Structured dimensions are described in the Section
+<a class="reference internal" href="#dimension-specification"><span class="std std-numref">2.4.2 dimension specification</span></a>. In this case each value in the
+referencing dataset should be equal to a value in the referenced
+component of the referenced dataset and the values of the component in
+the referenced dataset should all be unique. This case corresponds to
+foreign key references in relational databases with the referenced
+component being a column in the referenced table satisfying a uniqueness
+constraint.</p>
+<p>The third form (c) allows referencing variable-named groups or datasets.
+In this case all values of the referencing dataset should be names of
+groups or datasets that are created with the name specified in the call
+to the API. The value of the reference target specification should
+contain the name of the group or dataset in angle brackets (since the
+name is variable) and have a trailing slash if it is a group (since
+groups are designated by a slash after the name).</p>
+<p>The forth form (d) is a single slash. This form is to indicate that the
+values in the referencing dataset must link to a group or dataset
+somewhere in the file, but there are no other constraints.</p>
+</div>
+<div class="section" id="dataset-link">
+<h4>2.4.1.6. Dataset &#8220;link&#8221;<a class="headerlink" href="#dataset-link" title="Permalink to this headline">¶</a></h4>
+<p>The link specification is used to indicate that the dataset must be
+implemented using a HDF5 link. Either hard or soft links can be used,
+but soft links are recommended because they indicate the source and
+target of the link). The link specification is a Python dictionary. It
+has the following form:</p>
+<div class="highlight-default"><div class="highlight"><pre><span class="p">{</span>
+    <span class="s2">&quot;target_type&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;target_type&gt;&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><code class="docutils literal"><span class="pre">&lt;target_type&gt;</span></code> specifies the identifier for a dataset in the top level
+structure of a namespace. It is used to indicate that the link must be
+to an instance of that structure. If &#8220;target_type&#8221; is not specified, then
+the link can be to any dataset id.</p>
+</div>
+</div>
+<div class="section" id="dimension-specification">
+<span id="id16"></span><h3>2.4.2. dimension specification<a class="headerlink" href="#dimension-specification" title="Permalink to this headline">¶</a></h3>
+<p>Within a dataset specification, there are two types of dimension
+specifications. The first, described in Section <a class="reference internal" href="#dataset-dimensions"><span class="std std-numref">2.4.1.3 Dataset dimensions</span></a>,
+provides a list of the names of all dimensions in the dataset. The
+second (described in this section) provides a way to describe the
+properties of each dimension. It is not necessary to include the
+specification for all dimensions. Only those dimensions that have
+structured components (which are described here) need to be specified.
+These dimension specifications have a key equal to the name of the
+dimension, and the value is the specification of the properties of
+the dimension. The following format is used:</p>
+<div class="highlight-default"><div class="highlight"><pre><span class="p">{</span>
+    <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;structure&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;components&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="p">{</span>   <span class="s2">&quot;alias&quot;</span><span class="p">:</span> <span class="s2">&quot;var1&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;unit&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;unit&gt;&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;references&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;reference target specification&gt;&quot;</span><span class="p">},</span>
+        <span class="p">{</span> <span class="s2">&quot;alias&quot;</span><span class="p">:</span> <span class="s2">&quot;var2&quot;</span><span class="p">,</span> <span class="o">...</span> <span class="p">},</span> <span class="o">...</span> <span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The &#8220;type&#8221; specifies the type of dimension. Currently there is only one
+type implemented, named “structure”. Type &#8220;structure&#8221; allows
+storing different types of data into a single array similar
+to columns in a spreadsheet or fields in a relational data base table.</p>
+<p>The different components are specified using a list of dictionaries, (or
+a list of lists of dictionaries if there are more than one possible
+structure; see below) with each dictionary specifying the properties
+of the corresponding component. The “alias” specifies the component name that
+can be referenced in a <code class="docutils literal"><span class="pre">&lt;reference</span> <span class="pre">target</span> <span class="pre">specification&gt;</span></code>
+(reference type “b” in Section <a class="reference internal" href="#references"><span class="std std-numref">2.4.1.5 &#8220;references&#8221;</span></a>).</p>
+<p>“unit” allows specifying the unit of measure for numeric values.
+“references” allows specifying that the values in the component reference
+another part of the file using any of the methods described in Section
+<a class="reference internal" href="#references"><span class="std std-numref">2.4.1.5 &#8220;references&#8221;</span></a>.</p>
+<p>The list of components can be a list of lists, which allows specifying more
+than one possible structure for the dimension.  An example in which this is
+useful is for representing a field of view, which could be 2-D (with components
+&#8220;width&#8221; and &#8220;height&#8221;) or 3-D (with components: &#8220;width&#8221;, &#8220;height&#8221; and &#8220;depth&#8221;).
+The same functionality might be achieved by defining two structured
+(&#8220;fov2d&#8221;, &#8220;fov3d&#8221;) and including both in the list of dimensions.  In either
+case, determining which dimension (or list of dimension components) matches
+the dataset stored in a file requires matches the number of components in the
+structured dimension specification to the number of components in the data.</p>
+</div>
+</div>
+<div class="section" id="autogen">
+<span id="id17"></span><h2>2.5. Autogen<a class="headerlink" href="#autogen" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="purpose-and-overall-form">
+<h3>2.5.1. Purpose and overall form<a class="headerlink" href="#purpose-and-overall-form" title="Permalink to this headline">¶</a></h3>
+<p>The autogen specification is used to specify that the
+attribute or dataset contents (values) can be derived from the contents of the
+HDF55 file and automatically filled in by the API.  An API may use the autogen
+specification to automatically generate the values when creating a file, and
+to ensure that correct values are stored when validating a file.  (In this
+section, the values specified by the autogen will be denoted
+by the phrase &#8220;value of the autogen&#8221; or &#8220;autogen contents.&#8221;) The autogen
+specification has the following form:</p>
+<div class="highlight-default"><div class="highlight"><pre>{
+    &quot;type&quot;: &lt;type of autogen&gt;
+    &quot;target&quot;: &lt;path_to_target&gt;,
+    &quot;trim&quot;: &lt;True or False; default False&gt;
+    &quot;allow_others&quot;: &lt;True or False; default False&gt;
+    &quot;qty&quot;: &lt;Either ‘!’ – exactly one, or “*” – zero or more; default “*”&gt;
+    &quot;tsig&quot;: &lt;target_signature&gt;
+    &quot;include_empty&quot;: &lt;True or False; default False&gt;,
+    &quot;sort&quot;: &lt;True or False; default True&gt;,
+    &quot;format’: &lt;link_path_format&gt;
+}
+</pre></div>
+</div>
+<p><code class="docutils literal"><span class="pre">&lt;Type</span> <span class="pre">of</span> <span class="pre">autogen&gt;</span></code> is one of:</p>
+<div class="highlight-default"><div class="highlight"><pre><span class="s2">&quot;links&quot;</span><span class="p">,</span> <span class="s2">&quot;link_path&quot;</span><span class="p">,</span> <span class="s2">&quot;names&quot;</span><span class="p">,</span> <span class="s2">&quot;values&quot;</span><span class="p">,</span> <span class="s2">&quot;length&quot;</span><span class="p">,</span> <span class="s2">&quot;missing&quot;</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal"><span class="pre">&lt;Type</span> <span class="pre">of</span> <span class="pre">autogen&gt;</span></code> is the type of autogen. They are described in the
+sections below. For all types, except &#8220;missing&#8221; key “target” is required.
+All other keys are optional.</p>
+<p><code class="docutils literal"><span class="pre">&lt;path_to_target&gt;</span></code> is a path of identifiers that specifies
+one or more groups or datasets that are descendant of the group that most
+directly contains the autogen specification. To specify multiple
+members the target path would have one or more variable-named id’s
+(enclosed in &lt;&gt;). In addition, the target &#8220;&lt;*&gt;” indicates
+any group or dataset.</p>
+<p>If &#8220;include_empty&#8221; is True, then if no values are found that would be used
+to fill the autogen, the value is set to an empty list. Otherwise, the
+container for the autogen values (attribute or dataset) is not created.</p>
+<p>The “tsig” value (<code class="docutils literal"><span class="pre">&lt;target_signature&gt;</span></code>) is used to specify properties that
+must be satisfied for matching target(s). It is used to filter the nodes (groups
+or datasets) found at the target path to only those for which the autogen
+should apply. <code class="docutils literal"><span class="pre">&lt;target_signature&gt;</span></code> has the following form:</p>
+<div class="highlight-default"><div class="highlight"><pre><span class="p">{</span> <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="s2">&quot;group&quot;</span> <span class="ow">or</span> <span class="s2">&quot;dataset&quot;</span><span class="o">&gt;</span><span class="p">,</span>
+    <span class="s2">&quot;attrs&quot;</span><span class="p">:</span> <span class="p">{</span> <span class="s2">&quot;key1&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">value1</span><span class="o">&gt;</span><span class="p">,</span> <span class="s2">&quot;key2&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">value2</span><span class="o">&gt;</span><span class="p">,</span> <span class="o">...</span> <span class="p">},</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>At least one of the keys (“type” or “attrs”) is required and both may be present.
+The value for “type” specifies the type of the target node (either &#8220;group&#8221; or &#8220;dataset&#8221;).
+If not included, both groups and datasets match. “attrs” specifies the attribute keys
+and values that are compared to those in the target to detect a match.</p>
+</div>
+<div class="section" id="autogen-type-links">
+<h3>2.5.2. autogen type &#8220;links&#8221;<a class="headerlink" href="#autogen-type-links" title="Permalink to this headline">¶</a></h3>
+<p><code class="docutils literal"><span class="pre">&lt;type</span> <span class="pre">of</span> <span class="pre">autogen&gt;</span></code> value &#8220;links&#8221; indicates that the value of the autogen
+is a list of paths that link to the group or dataset specified by the <code class="docutils literal"><span class="pre">&lt;target_signature&gt;</span></code>.
+If “trim” is True then when the paths are stored, if they all share the same trailing
+component (e.g. <code class="docutils literal"><span class="pre">/foo/bar/baz</span></code>, and <code class="docutils literal"><span class="pre">/x/y/baz</span></code>; both share final component “baz”),
+then the common final component is trimmed from the paths before using them
+to fill in the data. If “sort” is true, values must be sorted.</p>
+</div>
+<div class="section" id="autogen-type-link-path">
+<h3>2.5.3. autogen type &#8220;link_path&#8221;<a class="headerlink" href="#autogen-type-link-path" title="Permalink to this headline">¶</a></h3>
+<p><code class="docutils literal"><span class="pre">&lt;type</span> <span class="pre">of</span> <span class="pre">autogen&gt;</span></code> value “link_path” indicates that the value of the autogen is the
+path of a link made from the referenced group or dataset. For example, if there is
+a group “foo” which is links to group “bar”, and a dataset named “baz” at the same
+level, defined by:</p>
+<div class="highlight-default"><div class="highlight"><pre><span class="s2">&quot;baz&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;autogen&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;link_path&quot;</span><span class="p">,</span> <span class="s2">&quot;target&quot;</span><span class="p">:</span> <span class="s2">&quot;foo&quot;</span><span class="p">}}</span>
+</pre></div>
+</div>
+<p>Then the value of &#8220;baz&#8221; should be the path to &#8220;bar&#8221;.</p>
+<p>The “format” option allows specifying a formatting string used for
+“link_path”. It can include strings: “$s” to indicate the source of a
+link and “$t” to indicate the target. If present, the format is used to
+create the “link_path” entries. Default format is: “$t” (include just
+the target path). Another common format is <code class="docutils literal"><span class="pre">&quot;'$s'</span> <span class="pre">is</span> <span class="pre">'$t'&quot;</span></code> which will
+generate strings like: <code class="docutils literal"><span class="pre">'&lt;source&gt;'</span> <span class="pre">is</span> <span class="pre">'&lt;target&gt;'</span></code> The ‘qty’ for
+“link_path” is currently not used.  If &#8220;trim&#8221; is True both the &#8220;prefix&#8221;
+and &#8220;suffix&#8221; of any matching paths are trimmed.  The &#8220;prefix&#8221; is defined
+as the path to the group that most directly contains the autogen
+specification.  The &#8220;suffix&#8221; is defined as any components of the matching path
+which are to the right of the rightmost component associated with a
+&#8220;variable named&#8221; node (that is, identifier enclosed in &#8220;&lt;&gt;&#8221;).  If there
+is no path component associated with a variable named node, the suffix
+is not trimmed.</p>
+</div>
+<div class="section" id="autogen-type-names">
+<h3>2.5.4. autogen type &#8220;names&#8221;<a class="headerlink" href="#autogen-type-names" title="Permalink to this headline">¶</a></h3>
+<p><code class="docutils literal"><span class="pre">&lt;type</span> <span class="pre">of</span> <span class="pre">autogen&gt;</span></code> value “names” specifies that the value of the autogen
+is an array contining the names of groups and/or datasets referenced by
+the <code class="docutils literal"><span class="pre">&lt;target_signature&gt;</span></code>. If “sort” is True, the values must be sorted.</p>
+</div>
+<div class="section" id="autogen-type-values">
+<h3>2.5.5. autogen type &#8220;values&#8221;<a class="headerlink" href="#autogen-type-values" title="Permalink to this headline">¶</a></h3>
+<p><code class="docutils literal"><span class="pre">&lt;type</span> <span class="pre">of</span> <span class="pre">autogen&gt;</span></code> set to “values” specifies that the the autogen contents
+is an array listing all values stored in the target data set(s) as a set (no
+duplicates).  If &#8220;sort&#8221; is True, the array is sorted.  The values in each target
+data set must be an array of strings.</p>
+</div>
+<div class="section" id="autogen-type-length">
+<h3>2.5.6. autogen type &#8220;length&#8221;<a class="headerlink" href="#autogen-type-length" title="Permalink to this headline">¶</a></h3>
+<p><code class="docutils literal"><span class="pre">&lt;type</span> <span class="pre">of</span> <span class="pre">autogen&gt;</span></code> value “length” specifies that the value of the autogen is the
+length of the target which must be a dataset storing a 1-D array.</p>
+</div>
+<div class="section" id="autogen-type-missing">
+<h3>2.5.7. autogen type &#8220;missing&#8221;<a class="headerlink" href="#autogen-type-missing" title="Permalink to this headline">¶</a></h3>
+<p><code class="docutils literal"><span class="pre">&lt;type</span> <span class="pre">of</span> <span class="pre">autogen&gt;</span></code> value “missing” specifies that autogen contents
+is a sorted list of all members within the group which are specified as
+being required or recommended, but are missing. There is no target
+specified. If “allow_others” is True, then the list can also include
+additional identifiers, as long as they are not present in the group,
+whether or not they are defined in the specification as being required
+or recommended. If present, such additional identifiers should be indicated
+with a warning during validation.</p>
+</div>
+</div>
+<div class="section" id="relationships">
+<h2>2.6. Relationships<a class="headerlink" href="#relationships" title="Permalink to this headline">¶</a></h2>
+<p>Relationships are specified in one of two ways:</p>
+<ol class="arabic simple">
+<li>By sharing a common dimension identifier. Two arrays that are in the
+same group and which have a common dimension identifier are related to
+each other through the common dimension.  Specifically, for a given
+index value &#8220;i&#8221; into the common dimension, the value in the two arrays
+at that index are related.  For example, if arrays &#8220;data&#8221; and &#8220;timestamps&#8221;
+have a common dimension named &#8220;num_times&#8221;, then the values in these
+arrays that share the same index for &#8220;num_times&#8221; will be related.</li>
+<li>Through references specifications in dataset specifications that are
+described in Section <a class="reference internal" href="#references"><span class="std std-numref">2.4.1.5 &#8220;references&#8221;</span></a>.</li>
+</ol>
+</div>
+<div class="section" id="default-custom-location">
+<h2>2.7. Default custom location<a class="headerlink" href="#default-custom-location" title="Permalink to this headline">¶</a></h2>
+<p>An optional dataset named &#8220;__custom&#8221; (two leading underscores) is used
+as a flag in the format specification to indicate the location within
+which custom groups and custom datasets are created by default (that if,
+if the path is not specified in the API call).</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">2. h5gate format specification language</a><ul>
+<li><a class="reference internal" href="#introduction">2.1. Introduction</a></li>
+<li><a class="reference internal" href="#high-level-organization">2.2. High-level organization</a><ul>
+<li><a class="reference internal" href="#schema-id-or-namespace">2.2.1. Schema-Id (or namespace)</a></li>
+<li><a class="reference internal" href="#top-level-components">2.2.2. Top level components</a></li>
+<li><a class="reference internal" href="#schema-specification">2.2.3. Schema specification</a></li>
+<li><a class="reference internal" href="#extensions">2.2.4. Extensions</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#specification-of-groups">2.3. Specification of groups</a><ul>
+<li><a class="reference internal" href="#overall-form">2.3.1. Overall form</a></li>
+<li><a class="reference internal" href="#group-specification-keys">2.3.2. Group specification keys</a><ul>
+<li><a class="reference internal" href="#description">2.3.2.1. &#8220;description&#8221;</a></li>
+<li><a class="reference internal" href="#id9">2.3.2.2. &#8220;_description&#8221;</a></li>
+<li><a class="reference internal" href="#required">2.3.2.3. &#8220;_required&#8221;</a></li>
+<li><a class="reference internal" href="#exclude-in">2.3.2.4. &#8220;exclude_in&#8221;</a></li>
+<li><a class="reference internal" href="#properties">2.3.2.5. &#8220;_properties&#8221;</a></li>
+<li><a class="reference internal" href="#group-attributes">2.3.2.6. Group &#8220;attributes&#8221;</a></li>
+<li><a class="reference internal" href="#merge">2.3.2.7. &#8220;merge&#8221;</a></li>
+<li><a class="reference internal" href="#id11">2.3.2.8. &#8220;merge+&#8221;</a></li>
+<li><a class="reference internal" href="#include">2.3.2.9. &#8220;include&#8221;</a></li>
+<li><a class="reference internal" href="#merge-vs-include">2.3.2.10. &#8220;merge&#8221; vs. &#8220;include&#8221;</a></li>
+<li><a class="reference internal" href="#link">2.3.2.11. &#8220;link&#8221;</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#specification-of-datasets">2.4. Specification of datasets</a><ul>
+<li><a class="reference internal" href="#id13">2.4.1. Overall form</a><ul>
+<li><a class="reference internal" href="#dataset-description">2.4.1.1. 4.2.1 dataset &#8220;description&#8221;</a></li>
+<li><a class="reference internal" href="#data-type">2.4.1.2. &#8220;data_type&#8221;</a></li>
+<li><a class="reference internal" href="#dataset-dimensions">2.4.1.3. Dataset dimensions</a></li>
+<li><a class="reference internal" href="#dataset-attributes">2.4.1.4. Dataset &#8220;attributes&#8221;</a></li>
+<li><a class="reference internal" href="#references">2.4.1.5. &#8220;references&#8221;</a></li>
+<li><a class="reference internal" href="#dataset-link">2.4.1.6. Dataset &#8220;link&#8221;</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#dimension-specification">2.4.2. dimension specification</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#autogen">2.5. Autogen</a><ul>
+<li><a class="reference internal" href="#purpose-and-overall-form">2.5.1. Purpose and overall form</a></li>
+<li><a class="reference internal" href="#autogen-type-links">2.5.2. autogen type &#8220;links&#8221;</a></li>
+<li><a class="reference internal" href="#autogen-type-link-path">2.5.3. autogen type &#8220;link_path&#8221;</a></li>
+<li><a class="reference internal" href="#autogen-type-names">2.5.4. autogen type &#8220;names&#8221;</a></li>
+<li><a class="reference internal" href="#autogen-type-values">2.5.5. autogen type &#8220;values&#8221;</a></li>
+<li><a class="reference internal" href="#autogen-type-length">2.5.6. autogen type &#8220;length&#8221;</a></li>
+<li><a class="reference internal" href="#autogen-type-missing">2.5.7. autogen type &#8220;missing&#8221;</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#relationships">2.6. Relationships</a></li>
+<li><a class="reference internal" href="#default-custom-location">2.7. Default custom location</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="api_usage.html" title="previous chapter">1. Python (and Matlab) API for Neurodata Without Borders (NWB) format</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/specification_language.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Jeff Teeters.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.4</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.6</a>
+      
+      |
+      <a href="_sources/specification_language.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
