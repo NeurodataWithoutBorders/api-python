@@ -9,7 +9,12 @@ Overview
 --------
 
 The Python API for the NWB format is a write API that can be used to
-create NWB files (it does not provide functionality for reading).
+create NWB files (and add data to previously created NWB files). (It
+does not provide functionality for reading).
+The NWB format and API are described in the paper:
+*Neurodata Without Borders: Creating a Common Data Format for Neurophysiology.*
+http://dx.doi.org/10.1016/j.neuron.2015.10.025
+
 The API provides a small set of generic functions for storing data in the file
 (that is, creating HDF5 groups and datasets).    It is
 implemented using a software that is domain-independent.

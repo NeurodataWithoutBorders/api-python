@@ -1,6 +1,6 @@
+
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
@@ -28,11 +28,14 @@
     <link rel="search" title="Search" href="search.html" />
     <link rel="prev" title="1. Python (and Matlab) API for Neurodata Without Borders (NWB) format" href="api_usage.html" />
    
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
   </head>
-  <body role="document">  
+  <body>
+  
 
     <div class="document">
       <div class="documentwrapper">
@@ -112,7 +115,7 @@ and also provides more readable ways to include long strings.</p>
 <div class="section" id="schema-id-or-namespace">
 <span id="id4"></span><h3>2.2.1. Schema-Id (or namespace)<a class="headerlink" href="#schema-id-or-namespace" title="Permalink to this headline">¶</a></h3>
 <p>The top-level of a format specification has the following form:</p>
-<div class="highlight-default"><div class="highlight"><pre><span class="p">{</span><span class="s2">&quot;fs&quot;</span><span class="p">:</span> <span class="p">{</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">{</span><span class="s2">&quot;fs&quot;</span><span class="p">:</span> <span class="p">{</span>
     <span class="s2">&quot;ns1&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">specification</span> <span class="k">for</span> <span class="n">schema</span> <span class="s1">&#39;ns1&#39;</span><span class="o">&gt;</span><span class="p">,</span>
     <span class="s2">&quot;ns2&quot;</span><span class="p">:</span> <span class="o">*</span>\<span class="o">&lt;</span><span class="n">specification</span> <span class="k">for</span> <span class="n">schema</span> <span class="s1">&#39;ns2&#39;</span><span class="o">&gt;</span><span class="p">,</span>
     <span class="s2">&quot;ns3&quot;</span><span class="p">:</span> <span class="o">*</span>\<span class="o">&lt;</span><span class="n">specification</span> <span class="k">for</span> <span class="n">schema</span> <span class="s1">&#39;ns3&#39;</span><span class="o">&gt;</span><span class="p">,</span>  <span class="o">...</span> <span class="p">}</span>
@@ -135,7 +138,7 @@ are passed into the API software when it is initialized.</p>
 <span id="id5"></span><h3>2.2.2. Top level components<a class="headerlink" href="#top-level-components" title="Permalink to this headline">¶</a></h3>
 <p>The specification associated with each schema-Id is a Python dictionary
 with three keys: info, schema, and doc. e.g.:</p>
-<div class="highlight-default"><div class="highlight"><pre><span class="p">{</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">{</span>
     <span class="s2">&quot;info&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">info</span> <span class="n">specification</span><span class="o">&gt;</span><span class="p">,</span>
     <span class="s2">&quot;schema&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">schema</span> <span class="n">specification</span><span class="o">&gt;</span><span class="p">,</span>
     <span class="s2">&quot;doc&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">auxiliary</span> <span class="n">documentation</span><span class="o">&gt;</span><span class="p">,</span>
@@ -144,7 +147,7 @@ with three keys: info, schema, and doc. e.g.:</p>
 </div>
 <p>“info” and “schema” are required. “doc” is optional. <code class="docutils literal"><span class="pre">&lt;info</span>
 <span class="pre">specification&gt;</span></code> has the following form:</p>
-<div class="highlight-default"><div class="highlight"><pre><span class="p">{</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">{</span>
     <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;Name of specification&gt;&quot;</span><span class="p">,</span>
     <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;version number&gt;&quot;</span><span class="p">,</span>
     <span class="s2">&quot;date&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;date last modified or released&gt;&quot;</span><span class="p">,</span>
@@ -173,7 +176,7 @@ They are also at <a class="reference internal" href="#top-level-components">top_
 <span id="id6"></span><h3>2.2.3. Schema specification<a class="headerlink" href="#schema-specification" title="Permalink to this headline">¶</a></h3>
 <p>The <code class="docutils literal"><span class="pre">&lt;schema</span> <span class="pre">specification&gt;</span></code> consist of a Python dictionary where each key
 has the following form:</p>
-<div class="highlight-default"><div class="highlight"><pre><span class="p">[</span><span class="o">&lt;</span><span class="n">absolute_path</span><span class="o">&gt;</span><span class="p">]</span> <span class="o">&lt;</span><span class="n">identifier</span><span class="o">&gt;</span> <span class="p">[</span><span class="o">&lt;</span><span class="n">group</span><span class="o">-</span><span class="n">flag</span><span class="o">&gt;</span><span class="p">]</span> <span class="p">[</span><span class="o">&lt;</span><span class="n">quantity</span><span class="o">-</span><span class="n">flag</span><span class="o">&gt;</span><span class="p">]</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">[</span><span class="o">&lt;</span><span class="n">absolute_path</span><span class="o">&gt;</span><span class="p">]</span> <span class="o">&lt;</span><span class="n">identifier</span><span class="o">&gt;</span> <span class="p">[</span><span class="o">&lt;</span><span class="n">group</span><span class="o">-</span><span class="n">flag</span><span class="o">&gt;</span><span class="p">]</span> <span class="p">[</span><span class="o">&lt;</span><span class="n">quantity</span><span class="o">-</span><span class="n">flag</span><span class="o">&gt;</span><span class="p">]</span>
 </pre></div>
 </div>
 <p><code class="docutils literal"><span class="pre">&lt;absolute_path&gt;</span></code> is optional. If present, it starts with a slash (&#8220;/&#8221;),
@@ -195,7 +198,7 @@ for this because some of the characters used for the <code class="docutils liter
 the same meaning as characters used to specifies quantities in regular
 expressions).  If present, the <code class="docutils literal"><span class="pre">&lt;quantity_flag&gt;</span></code> is a single character,
 one of: “?”, “!”, “^”, “+” or “*”.  These mean:</p>
-<div class="highlight-default"><div class="highlight"><pre>!   - Required (this is the default)
+<div class="highlight-default"><div class="highlight"><pre><span></span>!   - Required (this is the default)
 ?   - Optional
 ^   - Recommended
 +   - One or more instances of variable-named identifier required
@@ -204,7 +207,7 @@ one of: “?”, “!”, “^”, “+” or “*”.  These mean:</p>
 </div>
 <p>Some example schema specification keys and their meaning are given below:</p>
 <p>Unspecified location (no leading slash):</p>
-<div class="highlight-default"><div class="highlight"><pre>foo     - dataset, name is “foo”
+<div class="highlight-default"><div class="highlight"><pre><span></span>foo     - dataset, name is “foo”
 foo/    - group, name is “foo”
 &lt;foo&gt;   - dataset, variable name
 &lt;foo&gt;/  - group, variable name
@@ -212,14 +215,14 @@ foo/    - group, name is “foo”
 </div>
 <p>Specified location (has leading slash). Meaning same as above, but
 location specified:</p>
-<div class="highlight-default"><div class="highlight"><pre>/some/path/foo    – dataset, name is “foo”, located at /some/path/
+<div class="highlight-default"><div class="highlight"><pre><span></span>/some/path/foo    – dataset, name is “foo”, located at /some/path/
 /some/path/foo/   – group, name is “foo”, located at /some/path/
 /some/path/&lt;foo&gt;  – dataset, variable name, located at /some/path
 /some/path/&lt;foo&gt;/ – group, variable name, located at /some/path
 </pre></div>
 </div>
 <p>With quantity specified:</p>
-<div class="highlight-default"><div class="highlight"><pre>foo?    – dataset, name is “foo”. Is optional
+<div class="highlight-default"><div class="highlight"><pre><span></span>foo?    – dataset, name is “foo”. Is optional
 foo/^   – group, name is “foo”. Is recommended
 &lt;foo&gt;*  – dataset, variable name, zero or more allowed
 &lt;foo&gt;+  – group, variable name, at least one required
@@ -248,19 +251,19 @@ illustrated in Section <a class="reference internal" href="#schema-id-or-namespa
 the specification associated with each schema-Id will be in a separate
 file as illustrated below:</p>
 <p>File containing specification for core format:</p>
-<div class="highlight-default"><div class="highlight"><pre><span class="p">{</span><span class="s2">&quot;fs&quot;</span><span class="p">:</span> <span class="p">{</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">{</span><span class="s2">&quot;fs&quot;</span><span class="p">:</span> <span class="p">{</span>
     <span class="s2">&quot;core&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">specification</span> <span class="k">for</span> <span class="n">core</span> <span class="nb">format</span><span class="o">&gt;</span>
  <span class="p">}}</span>
 </pre></div>
 </div>
 <p>File containing specification for extension ex1:</p>
-<div class="highlight-default"><div class="highlight"><pre><span class="p">{</span><span class="s2">&quot;fs&quot;</span><span class="p">:</span> <span class="p">{</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">{</span><span class="s2">&quot;fs&quot;</span><span class="p">:</span> <span class="p">{</span>
     <span class="s2">&quot;ex1&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">specification</span> <span class="k">for</span> <span class="n">extension</span> <span class="n">ex1</span><span class="o">&gt;</span>
 <span class="p">}}</span>
 </pre></div>
 </div>
 <p>File containing specification for extension ex2:</p>
-<div class="highlight-default"><div class="highlight"><pre><span class="p">{</span><span class="s2">&quot;fs&quot;</span><span class="p">:</span> <span class="p">{</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">{</span><span class="s2">&quot;fs&quot;</span><span class="p">:</span> <span class="p">{</span>
     <span class="s2">&quot;ex2&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">specification</span> <span class="k">for</span> <span class="n">extension</span> <span class="n">ex2</span><span class="o">&gt;</span>
 <span class="p">}}</span>
 </pre></div>
@@ -274,7 +277,7 @@ file as illustrated below:</p>
 <p>The specification of a group (i.e. value of a schema specification
 identifier that is followed by a slash) is a Python dictionary with the
 following form:</p>
-<div class="highlight-default"><div class="highlight"><pre><span class="p">{</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">{</span>
     <span class="s2">&quot;description&quot;</span><span class="p">:</span>  <span class="s2">&quot;&lt;description of group&gt;&quot;</span><span class="p">,</span>
     <span class="s2">&quot;_description&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;description in case there is a dataset named &#39;description&#39;&gt;&quot;</span><span class="p">,</span>
     <span class="s2">&quot;_required&quot;</span><span class="p">:</span>    <span class="o">&lt;</span><span class="n">required</span> <span class="n">specification</span><span class="o">&gt;</span><span class="p">,</span>
@@ -325,7 +328,7 @@ members of the group. The condition string specifies which combinations
 of group members are required. The second element of each tuple is an
 error message that is displayed if the requirements of the condition
 string are not met. An example required specification is shown below:</p>
-<div class="highlight-default"><div class="highlight"><pre><span class="p">{</span> <span class="s2">&quot;start_time&quot;</span> <span class="p">:</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">{</span> <span class="s2">&quot;start_time&quot;</span> <span class="p">:</span>
     <span class="p">[</span><span class="s2">&quot;starting_time XOR timestamps&quot;</span><span class="p">,</span>
       <span class="s2">&quot;starting_time or timestamps must be present, but not both.&quot;</span><span class="p">],</span>
   <span class="s2">&quot;control&quot;</span><span class="p">:</span>
@@ -334,7 +337,7 @@ string are not met. An example required specification is shown below:</p>
 </pre></div>
 </div>
 <p>The logical expression can contain the following logical operators:</p>
-<div class="highlight-default"><div class="highlight"><pre><span class="p">{</span><span class="s2">&quot;AND&quot;</span><span class="p">:</span> <span class="s1">&#39;and&#39;</span><span class="p">,</span> <span class="s1">&#39;XOR&#39;</span><span class="p">:</span> <span class="s1">&#39;^&#39;</span><span class="p">,</span> <span class="s1">&#39;OR&#39;</span><span class="p">:</span> <span class="s1">&#39;or&#39;</span><span class="p">,</span> <span class="s1">&#39;NOT&#39;</span><span class="p">:</span> <span class="s1">&#39;not&#39;</span><span class="p">}</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">{</span><span class="s2">&quot;AND&quot;</span><span class="p">:</span> <span class="s1">&#39;and&#39;</span><span class="p">,</span> <span class="s1">&#39;XOR&#39;</span><span class="p">:</span> <span class="s1">&#39;^&#39;</span><span class="p">,</span> <span class="s1">&#39;OR&#39;</span><span class="p">:</span> <span class="s1">&#39;or&#39;</span><span class="p">,</span> <span class="s1">&#39;NOT&#39;</span><span class="p">:</span> <span class="s1">&#39;not&#39;</span><span class="p">}</span>
 </pre></div>
 </div>
 <p>either the upper-case strings (keys in the above JSON object) or the corresponding
@@ -345,7 +348,7 @@ Python operator (values associated with the above keys) can be used.</p>
 <p>The exclude_in specification is used to specify locations in the HDF5
 file under which particular members of this group should not be present
 (or be optional). It has the form:</p>
-<div class="highlight-default"><div class="highlight"><pre><span class="p">{</span> <span class="s2">&quot;/path1&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;id1&quot;</span><span class="p">,</span> <span class="s2">&quot;id2&quot;</span><span class="p">,</span> <span class="s2">&quot;id3&quot;</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">{</span> <span class="s2">&quot;/path1&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;id1&quot;</span><span class="p">,</span> <span class="s2">&quot;id2&quot;</span><span class="p">,</span> <span class="s2">&quot;id3&quot;</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
   <span class="s2">&quot;/path2&quot;</span><span class="p">:</span> <span class="p">[</span><span class="o">&lt;</span><span class="n">ids</span> <span class="k">for</span> <span class="n">path2</span><span class="o">&gt;</span><span class="p">],</span> <span class="o">...</span> <span class="p">}</span>
 </pre></div>
 </div>
@@ -353,7 +356,7 @@ file under which particular members of this group should not be present
 be followed by characters &#8221;!”, &#8220;^”, &#8221;?” to respectively indicate that the id
 must not be present, should not be present or is optional under the specified path.
 If the last character is not “!”, “^” or “?” then “!” is assumed. An example is:</p>
-<div class="highlight-default"><div class="highlight"><pre><span class="s2">&quot;_exclude\_in&quot;</span><span class="p">:</span> <span class="p">{</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="s2">&quot;_exclude\_in&quot;</span><span class="p">:</span> <span class="p">{</span>
     <span class="s2">&quot;/stimulus/templates&quot;</span><span class="p">:</span>
         <span class="p">[</span> <span class="s2">&quot;starting_time!&quot;</span><span class="p">,</span> <span class="s2">&quot;timestamps!&quot;</span><span class="p">,</span> <span class="s2">&quot;num_samples?&quot;</span><span class="p">]</span> <span class="p">}</span>
 </pre></div>
@@ -376,7 +379,7 @@ as being required and it is not created.</p>
 <span id="id10"></span><h4>2.3.2.6. Group &#8220;attributes&#8221;<a class="headerlink" href="#group-attributes" title="Permalink to this headline">¶</a></h4>
 <p>The value of the group specification &#8220;attributes&#8221; key is a Python
 dictionary of the following form:</p>
-<div class="highlight-default"><div class="highlight"><pre><span class="p">{</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">{</span>
     <span class="s2">&quot;attr_name_1[&lt;qty_flag&gt;]&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">specification</span> <span class="k">for</span> <span class="n">attr_name_1</span><span class="o">&gt;</span><span class="p">,</span>
     <span class="s2">&quot;attr_name_2[&lt;qty-flag&gt;]&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">specification</span> <span class="k">for</span> <span class="n">attr_name_2</span><span class="o">&gt;</span><span class="p">,</span>
  <span class="o">...</span> <span class="p">}</span>
@@ -388,7 +391,7 @@ groups and data sets. It specifies if the attribute is required (“!”)–
 the default, optional (“?”) or recommended (“^”). The value of each key
 is the specification for that attribute. Each attribute specification
 has the following form:</p>
-<div class="highlight-default"><div class="highlight"><pre><span class="p">{</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">{</span>
     <span class="s2">&quot;data_type&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">data_type</span><span class="o">&gt;</span><span class="p">,</span>
     <span class="s2">&quot;dimensions&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">dimensions</span> <span class="nb">list</span><span class="o">&gt;</span><span class="p">,</span>
     <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;description of attribute&gt;&quot;</span><span class="p">,</span>
@@ -403,7 +406,7 @@ has the following form:</p>
 </div>
 <p>Only &#8220;data_type&#8221; is required. The value (<code class="docutils literal"><span class="pre">&lt;data_type&gt;</span></code>) is a string
 specifying the data_type of the attribute. Allowable values include:</p>
-<div class="highlight-default"><div class="highlight"><pre>&quot;float&quot;  – indicates a floating point number
+<div class="highlight-default"><div class="highlight"><pre><span></span>&quot;float&quot;  – indicates a floating point number
 &quot;int&quot;    – indicates an integer
 &quot;uint&quot;   – unsigned integer
 &quot;number&quot; – indicates either a floating point or an integer
@@ -448,7 +451,7 @@ the identifier used to make the group. For example, in the NWB format,
 if the group name is “corrected” and the base class (in the “merge+”
 specification) is &#8220;&lt;image-series&gt;&#8221;, then the call to create a
 subclass (such as &#8220;&lt;TwoPhotonSeries&gt;&#8221;) would be:</p>
-<div class="highlight-default"><div class="highlight"><pre><span class="n">make_group</span><span class="p">(</span><span class="s2">&quot;corrected-&lt;TwoPhotonSeries&gt;&quot;</span><span class="p">)</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">make_group</span><span class="p">(</span><span class="s2">&quot;corrected-&lt;TwoPhotonSeries&gt;&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -468,7 +471,7 @@ of the included group should also be included. Subclasses of a group are
 groups that inherit from a base group using the “merge” directive
 (described in the next section). Some examples of the include directive
 are shown below:</p>
-<div class="highlight-default"><div class="highlight"><pre><span class="c1"># include with subclasses</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="c1"># include with subclasses</span>
 <span class="s2">&quot;include&quot;</span><span class="p">:</span> <span class="p">{</span> <span class="s2">&quot;&lt;TimeSeries&gt;/*&quot;</span><span class="p">:{</span><span class="s2">&quot;\_options&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;subclasses&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">}}}</span>
 <span class="c1"># include without subclasses</span>
 <span class="s2">&quot;include&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;&lt;TimeSeries&gt;/*&quot;</span><span class="p">:</span> <span class="p">{}}</span>
@@ -573,7 +576,7 @@ include operations are illustrated by the following diagram:</p>
 link to another group. (Hard or soft links can be used, but soft links
 are recommended). The link specification is a Python dictionary. It has
 the following form:</p>
-<div class="highlight-default"><div class="highlight"><pre><span class="p">{</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">{</span>
     <span class="s2">&quot;target_type&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;target_type&gt;&quot;</span><span class="p">,</span>
     <span class="s2">&quot;allow_subclasses&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="kc">True</span> <span class="ow">or</span> <span class="kc">False</span><span class="o">&gt;</span><span class="p">,</span>
 <span class="p">}</span>
@@ -598,7 +601,7 @@ the link can be to any group.</p>
 specification key described in Section <a class="reference internal" href="#schema-specification"><span class="std std-numref">2.2.3 Schema specification</span></a>
 that does not have a trailing slash) is a Python dictionary with the
 following form:</p>
-<div class="highlight-default"><div class="highlight"><pre><span class="p">{</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">{</span>
     <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;description&gt;&quot;</span><span class="p">,</span>
     <span class="s2">&quot;data_type&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">data_type</span><span class="o">&gt;</span><span class="p">,</span>
     <span class="s2">&quot;dimensions&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">dimensions</span> <span class="nb">list</span><span class="o">&gt;</span><span class="p">,</span> <span class="c1"># required if dataset is not scalar</span>
@@ -694,7 +697,7 @@ implemented using a HDF5 link. Either hard or soft links can be used,
 but soft links are recommended because they indicate the source and
 target of the link). The link specification is a Python dictionary. It
 has the following form:</p>
-<div class="highlight-default"><div class="highlight"><pre><span class="p">{</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">{</span>
     <span class="s2">&quot;target_type&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;target_type&gt;&quot;</span>
 <span class="p">}</span>
 </pre></div>
@@ -717,7 +720,7 @@ structured components (which are described here) need to be specified.
 These dimension specifications have a key equal to the name of the
 dimension, and the value is the specification of the properties of
 the dimension. The following format is used:</p>
-<div class="highlight-default"><div class="highlight"><pre><span class="p">{</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">{</span>
     <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;structure&quot;</span><span class="p">,</span>
     <span class="s2">&quot;components&quot;</span><span class="p">:</span> <span class="p">[</span>
         <span class="p">{</span>   <span class="s2">&quot;alias&quot;</span><span class="p">:</span> <span class="s2">&quot;var1&quot;</span><span class="p">,</span>
@@ -764,7 +767,7 @@ to ensure that correct values are stored when validating a file.  (In this
 section, the values specified by the autogen will be denoted
 by the phrase &#8220;value of the autogen&#8221; or &#8220;autogen contents.&#8221;) The autogen
 specification has the following form:</p>
-<div class="highlight-default"><div class="highlight"><pre>{
+<div class="highlight-default"><div class="highlight"><pre><span></span>{
     &quot;type&quot;: &lt;type of autogen&gt;
     &quot;target&quot;: &lt;path_to_target&gt;,
     &quot;trim&quot;: &lt;True or False; default False&gt;
@@ -778,7 +781,7 @@ specification has the following form:</p>
 </pre></div>
 </div>
 <p><code class="docutils literal"><span class="pre">&lt;Type</span> <span class="pre">of</span> <span class="pre">autogen&gt;</span></code> is one of:</p>
-<div class="highlight-default"><div class="highlight"><pre><span class="s2">&quot;links&quot;</span><span class="p">,</span> <span class="s2">&quot;link_path&quot;</span><span class="p">,</span> <span class="s2">&quot;names&quot;</span><span class="p">,</span> <span class="s2">&quot;values&quot;</span><span class="p">,</span> <span class="s2">&quot;length&quot;</span><span class="p">,</span> <span class="s2">&quot;missing&quot;</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="s2">&quot;links&quot;</span><span class="p">,</span> <span class="s2">&quot;link_path&quot;</span><span class="p">,</span> <span class="s2">&quot;names&quot;</span><span class="p">,</span> <span class="s2">&quot;values&quot;</span><span class="p">,</span> <span class="s2">&quot;length&quot;</span><span class="p">,</span> <span class="s2">&quot;missing&quot;</span>
 </pre></div>
 </div>
 <p>The <code class="docutils literal"><span class="pre">&lt;Type</span> <span class="pre">of</span> <span class="pre">autogen&gt;</span></code> is the type of autogen. They are described in the
@@ -797,7 +800,7 @@ container for the autogen values (attribute or dataset) is not created.</p>
 must be satisfied for matching target(s). It is used to filter the nodes (groups
 or datasets) found at the target path to only those for which the autogen
 should apply. <code class="docutils literal"><span class="pre">&lt;target_signature&gt;</span></code> has the following form:</p>
-<div class="highlight-default"><div class="highlight"><pre><span class="p">{</span> <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="s2">&quot;group&quot;</span> <span class="ow">or</span> <span class="s2">&quot;dataset&quot;</span><span class="o">&gt;</span><span class="p">,</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">{</span> <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="s2">&quot;group&quot;</span> <span class="ow">or</span> <span class="s2">&quot;dataset&quot;</span><span class="o">&gt;</span><span class="p">,</span>
     <span class="s2">&quot;attrs&quot;</span><span class="p">:</span> <span class="p">{</span> <span class="s2">&quot;key1&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">value1</span><span class="o">&gt;</span><span class="p">,</span> <span class="s2">&quot;key2&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">value2</span><span class="o">&gt;</span><span class="p">,</span> <span class="o">...</span> <span class="p">},</span>
 <span class="p">}</span>
 </pre></div>
@@ -822,7 +825,7 @@ to fill in the data. If “sort” is true, values must be sorted.</p>
 path of a link made from the referenced group or dataset. For example, if there is
 a group “foo” which is links to group “bar”, and a dataset named “baz” at the same
 level, defined by:</p>
-<div class="highlight-default"><div class="highlight"><pre><span class="s2">&quot;baz&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;autogen&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;link_path&quot;</span><span class="p">,</span> <span class="s2">&quot;target&quot;</span><span class="p">:</span> <span class="s2">&quot;foo&quot;</span><span class="p">}}</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="s2">&quot;baz&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;autogen&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;link_path&quot;</span><span class="p">,</span> <span class="s2">&quot;target&quot;</span><span class="p">:</span> <span class="s2">&quot;foo&quot;</span><span class="p">}}</span>
 </pre></div>
 </div>
 <p>Then the value of &#8220;baz&#8221; should be the path to &#8220;bar&#8221;.</p>
@@ -991,8 +994,8 @@ if the path is not specified in the API call).</p>
       &copy;2017, Jeff Teeters.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.4</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.6</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
       |
       <a href="_sources/specification_language.rst.txt"

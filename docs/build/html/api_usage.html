@@ -1,6 +1,6 @@
+
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
@@ -29,11 +29,14 @@
     <link rel="next" title="2. h5gate format specification language" href="specification_language.html" />
     <link rel="prev" title="Welcome to NWB API-Python’s documentation!" href="index.html" />
    
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
   </head>
-  <body role="document">  
+  <body>
+  
 
     <div class="document">
       <div class="documentwrapper">
@@ -55,8 +58,12 @@
 <div class="section" id="overview">
 <h2>1.1. Overview<a class="headerlink" href="#overview" title="Permalink to this headline">¶</a></h2>
 <p>The Python API for the NWB format is a write API that can be used to
-create NWB files (it does not provide functionality for reading).
-The API provides a small set of generic functions for storing data in the file
+create NWB files (and add data to previously created NWB files). (It
+does not provide functionality for reading).
+The NWB format and API are described in the paper:
+<em>Neurodata Without Borders: Creating a Common Data Format for Neurophysiology.</em>
+<a class="reference external" href="http://dx.doi.org/10.1016/j.neuron.2015.10.025">http://dx.doi.org/10.1016/j.neuron.2015.10.025</a></p>
+<p>The API provides a small set of generic functions for storing data in the file
 (that is, creating HDF5 groups and datasets).    It is
 implemented using a software that is domain-independent.
 The specialization of the API to
@@ -86,17 +93,17 @@ modification date of this document.</td></tr>
 <h3>1.2.1. Installing using system Python<a class="headerlink" href="#installing-using-system-python" title="Permalink to this headline">¶</a></h3>
 <p>The API works with both Python 2 and Python 3.</p>
 <p>To get the source code for installation, do:</p>
-<div class="highlight-default"><div class="highlight"><pre><span class="n">git</span> <span class="n">clone</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">NeurodataWithoutBorders</span><span class="o">/</span><span class="n">api</span><span class="o">-</span><span class="n">python</span> <span class="n">nwb_api</span><span class="o">-</span><span class="n">python</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">clone</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">NeurodataWithoutBorders</span><span class="o">/</span><span class="n">api</span><span class="o">-</span><span class="n">python</span> <span class="n">nwb_api</span><span class="o">-</span><span class="n">python</span>
 </pre></div>
 </div>
 <p>The last parameter is optional.  Providing it, will cause the software to be stored in a
 directory named &#8220;nwb_api-python&#8221; rather than &#8216;api-python&#8217;.</p>
 <p>After you get the latest software, install it using:</p>
-<div class="highlight-default"><div class="highlight"><pre><span class="n">python</span> <span class="n">setup</span><span class="o">.</span><span class="n">py</span> <span class="n">install</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">setup</span><span class="o">.</span><span class="n">py</span> <span class="n">install</span>
 </pre></div>
 </div>
 <p>Then, in the future, (to incorporate any further updates), issue the command:</p>
-<div class="highlight-default"><div class="highlight"><pre><span class="n">git</span> <span class="n">pull</span> <span class="n">origin</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">pull</span> <span class="n">origin</span>
 </pre></div>
 </div>
 <p>then re-run <code class="docutils literal"><span class="pre">python</span> <span class="pre">setup.py</span> <span class="pre">install</span></code> to install the updates.</p>
@@ -106,7 +113,7 @@ version was installed in, then removing it.  The location the previous version w
 installed in can be found by printing nwb.__path__ from inside a python shell that is
 started in a directory other than that containing the NWB API source code.  The commands
 look like the following:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">nwb</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">nwb</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="k">print</span><span class="p">(</span><span class="n">nwb</span><span class="o">.</span><span class="n">__path__</span><span class="p">)</span>
 <span class="go">[&#39;/Path/to/site-packages/nwb&#39;]</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">quit</span><span class="p">()</span>
@@ -125,7 +132,7 @@ other software, for instance if you wish to use a different version of HDF5,
 or not have h5py installed globally.</p>
 <p>Once you have [installed conda], you can use the following commands to set
 up an environment for NWB:</p>
-<div class="highlight-default"><div class="highlight"><pre><span class="n">conda</span> <span class="n">create</span> <span class="o">-</span><span class="n">n</span> <span class="n">nwb</span> <span class="n">python</span><span class="o">=</span><span class="mf">3.6</span> <span class="n">h5py</span>  <span class="c1"># or python=2.7</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">conda</span> <span class="n">create</span> <span class="o">-</span><span class="n">n</span> <span class="n">nwb</span> <span class="n">python</span><span class="o">=</span><span class="mf">3.6</span> <span class="n">h5py</span>  <span class="c1"># or python=2.7</span>
 <span class="c1"># Activate the conda environment with one of the following two lines</span>
 <span class="n">source</span> <span class="n">activate</span> <span class="n">nwb</span> <span class="c1"># Linux, Mac OS</span>
 <span class="n">activate</span> <span class="n">nwb</span>        <span class="c1"># Windows</span>
@@ -171,7 +178,7 @@ part of the API are described after the &#8220;Examples and utilities&#8221; sec
 <h2>1.4. Examples and utilities<a class="headerlink" href="#examples-and-utilities" title="Permalink to this headline">¶</a></h2>
 <p>Example scripts for creating NWB files and running utilities are in the
 following directories:</p>
-<div class="highlight-default"><div class="highlight"><pre><span class="n">examples</span><span class="o">/</span><span class="n">create_scripts</span>       <span class="c1"># Python example create scripts in Python</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">examples</span><span class="o">/</span><span class="n">create_scripts</span>       <span class="c1"># Python example create scripts in Python</span>
 <span class="n">unittest</span>                      <span class="c1"># Python unittests</span>
 <span class="n">matlab_bridge</span><span class="o">/</span><span class="n">matlab_examples</span> <span class="c1"># Matlab example create scripts</span>
 <span class="n">matlab_bridge</span><span class="o">/</span><span class="n">matlab_unittest</span> <span class="c1"># Matlab unittests</span>
@@ -181,14 +188,14 @@ following directories:</p>
 <p>The utilities included with the software (and usage) are shown below.</p>
 <div class="section" id="validate-an-nwb-file">
 <h3>1.4.1. Validate an NWB file<a class="headerlink" href="#validate-an-nwb-file" title="Permalink to this headline">¶</a></h3>
-<div class="highlight-python"><div class="highlight"><pre><span class="n">python</span> <span class="o">-</span><span class="n">m</span> <span class="n">nwb</span><span class="o">.</span><span class="n">validate</span> <span class="n">filename</span><span class="o">.</span><span class="n">nwb</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="o">-</span><span class="n">m</span> <span class="n">nwb</span><span class="o">.</span><span class="n">validate</span> <span class="n">filename</span><span class="o">.</span><span class="n">nwb</span>
 </pre></div>
 </div>
 <p>See the <code class="docutils literal"><span class="pre">validate_all.sh</span></code> script in <code class="docutils literal"><span class="pre">examples/utility_scripts</span></code> for specific examples.</p>
 </div>
 <div class="section" id="generate-documentation-for-the-nwb-format">
 <h3>1.4.2. Generate documentation for the NWB format<a class="headerlink" href="#generate-documentation-for-the-nwb-format" title="Permalink to this headline">¶</a></h3>
-<div class="highlight-python"><div class="highlight"><pre><span class="c1"># for the core NWB format</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="c1"># for the core NWB format</span>
 <span class="n">python</span> <span class="o">-</span><span class="n">m</span> <span class="n">nwb</span><span class="o">.</span><span class="n">make_doc</span> <span class="o">&gt;</span> <span class="n">doc</span><span class="o">.</span><span class="n">html</span>
 
 <span class="c1"># for the core NWB format and an extension</span>
@@ -202,7 +209,7 @@ following directories:</p>
 </div>
 <div class="section" id="compare-two-hdf5-files-displaying-differences-in-detail">
 <h3>1.4.3. Compare two HDF5 files displaying differences in detail<a class="headerlink" href="#compare-two-hdf5-files-displaying-differences-in-detail" title="Permalink to this headline">¶</a></h3>
-<div class="highlight-python"><div class="highlight"><pre><span class="c1"># find all differences</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="c1"># find all differences</span>
 <span class="n">python</span> <span class="o">-</span><span class="n">m</span> <span class="n">nwb</span><span class="o">.</span><span class="n">h5diffsig</span> <span class="n">file1</span><span class="o">.</span><span class="n">nwb</span> <span class="n">file2</span><span class="o">.</span><span class="n">nwb</span> <span class="o">&gt;</span> <span class="n">diff</span><span class="o">.</span><span class="n">txt</span>
 
 <span class="c1"># find all differences except those that normally change between NWB files</span>
@@ -217,7 +224,7 @@ options are displayed by running the script with no parameters.</p>
 </div>
 <div class="section" id="generate-a-signature-file-for-a-hdf5-file">
 <h3>1.4.4. Generate a &#8216;signature file&#8217; for a HDF5 file<a class="headerlink" href="#generate-a-signature-file-for-a-hdf5-file" title="Permalink to this headline">¶</a></h3>
-<div class="highlight-python"><div class="highlight"><pre><span class="c1"># generate full signature</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="c1"># generate full signature</span>
 <span class="n">python</span> <span class="o">-</span><span class="n">m</span> <span class="n">nwb</span><span class="o">.</span><span class="n">h5diffsig</span> <span class="n">filename</span><span class="o">.</span><span class="n">nwb</span> <span class="o">&gt;</span> <span class="n">filename_sig</span><span class="o">.</span><span class="n">txt</span>
 
 <span class="c1"># generate signature, filtering out parts that normally change</span>
@@ -233,13 +240,13 @@ previously.</p>
 <div class="section" id="initializing-the-api">
 <span id="id3"></span><h2>1.5. Initializing the API<a class="headerlink" href="#initializing-the-api" title="Permalink to this headline">¶</a></h2>
 <p>To create an NWB file using the API, the following imports are required:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">nwb</span> <span class="kn">import</span> <span class="n">nwb_file</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">nwb</span> <span class="kn">import</span> <span class="n">nwb_file</span>
 <span class="kn">from</span> <span class="nn">nwb</span> <span class="kn">import</span> <span class="n">nwb_utils</span> <span class="k">as</span> <span class="n">utils</span>
 </pre></div>
 </div>
 <p>Function <code class="docutils literal"><span class="pre">nwb_file.open</span></code> is used to create or open an NWB file.  It has the
 following signature:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="k">def</span> <span class="nf">open</span><span class="p">(</span><span class="n">file_name</span><span class="p">,</span> <span class="n">start_time</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;w-&quot;</span><span class="p">,</span> <span class="n">identifier</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">open</span><span class="p">(</span><span class="n">file_name</span><span class="p">,</span> <span class="n">start_time</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;w-&quot;</span><span class="p">,</span> <span class="n">identifier</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
     <span class="n">description</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">core_spec</span><span class="o">=</span><span class="s2">&quot;nwb_core.py&quot;</span><span class="p">,</span> <span class="n">extensions</span><span class="o">=</span><span class="p">[],</span>
     <span class="n">default_ns</span><span class="o">=</span><span class="s2">&quot;core&quot;</span><span class="p">,</span> <span class="n">keep_original</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">auto_compress</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
 </pre></div>
@@ -290,7 +297,7 @@ and exiting file), a backup copy of any original file will be saved with the nam
 Otherwise, the data is not automatically compressed.</p>
 </div></blockquote>
 <p>An example of calling nwb_file.open is given below:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">nwb</span> <span class="kn">import</span> <span class="n">nwb_file</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">nwb</span> <span class="kn">import</span> <span class="n">nwb_file</span>
 <span class="kn">from</span> <span class="nn">nwb</span> <span class="kn">import</span> <span class="n">nwb_utils</span> <span class="k">as</span> <span class="n">utils</span>
 
 <span class="n">settings</span> <span class="o">=</span> <span class="p">{}</span>
@@ -355,7 +362,7 @@ in the following sections.</p>
 <h3>1.8.1. h5gate File make_group<a class="headerlink" href="#h5gate-file-make-group" title="Permalink to this headline">¶</a></h3>
 <p>Method <code class="docutils literal"><span class="pre">make_group</span></code> of object h5gate File creates a group in the hdf5 file.  It has the
 following signature:</p>
-<div class="highlight-default"><div class="highlight"><pre><span class="n">g</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">make_group</span><span class="p">(</span><span class="n">qid</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">attrs</span><span class="p">,</span> <span class="n">link</span><span class="p">,</span> <span class="n">abort</span><span class="p">)</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">g</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">make_group</span><span class="p">(</span><span class="n">qid</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">attrs</span><span class="p">,</span> <span class="n">link</span><span class="p">,</span> <span class="n">abort</span><span class="p">)</span>
 </pre></div>
 </div>
 <p><code class="docutils literal"><span class="pre">f</span></code> signifies an h5gate File object.  The returned object, stored in variable ‘g’ in
@@ -392,7 +399,7 @@ If False, the function will return the previously existing group (h5gate Group o
 method is provided because method “make_group” can only be used to create groups that are
 specified in the file format or an extension.  The function signature for
 <code class="docutils literal"><span class="pre">make_custom_group</span></code> is:</p>
-<div class="highlight-default"><div class="highlight"><pre><span class="n">g</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">make_custom_group</span><span class="p">(</span><span class="n">qid</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">g</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">make_custom_group</span><span class="p">(</span><span class="n">qid</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>Return type and parameters are the same as for h5gate File method <code class="docutils literal"><span class="pre">make_group</span></code>.  If
@@ -403,7 +410,7 @@ created in the default custom location, which is inside group <code class="docut
 <h3>1.8.3. h5gate File set_dataset<a class="headerlink" href="#h5gate-file-set-dataset" title="Permalink to this headline">¶</a></h3>
 <p>Method “set_dataset” of object h5gate File is used to create and store data in an HDF5
 dataset.  It has the following signature:</p>
-<div class="highlight-default"><div class="highlight"><pre><span class="n">d</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">set_dataset</span><span class="p">(</span><span class="n">qid</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">attrs</span><span class="p">,</span> <span class="n">dtype</span><span class="p">,</span> <span class="n">compress</span><span class="p">)</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">d</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">set_dataset</span><span class="p">(</span><span class="n">qid</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">attrs</span><span class="p">,</span> <span class="n">dtype</span><span class="p">,</span> <span class="n">compress</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>The return value is an object of type h5gate Dataset.  The arguments are described below:</p>
@@ -434,7 +441,7 @@ generated file.</p>
 <p>Method “set_custom_dataset” of object h5gate File creates a custom dataset in the hdf5 file
 (that is, a dataset that is not part of the format specification).  The function signature
 is:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="n">d</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">set_custom_dataset</span><span class="p">(</span><span class="n">qid</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">attrs</span><span class="p">,</span> <span class="n">dtype</span><span class="p">,</span> <span class="n">compress</span><span class="p">)</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">d</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">set_custom_dataset</span><span class="p">(</span><span class="n">qid</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">attrs</span><span class="p">,</span> <span class="n">dtype</span><span class="p">,</span> <span class="n">compress</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>Return type and parameters are the same as for method <code class="docutils literal"><span class="pre">set_dataset</span></code>.</p>
@@ -443,7 +450,7 @@ is:</p>
 <h3>1.8.5. h5gate File get_node<a class="headerlink" href="#h5gate-file-get-node" title="Permalink to this headline">¶</a></h3>
 <p>Method <code class="docutils literal"><span class="pre">get_node</span></code> returns the h5gate Group or Dataset object located at the specified
 location (full path in the hdf5 file).  It has the following signature:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="n">n</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">get_node</span><span class="p">(</span><span class="n">full_path</span><span class="p">,</span> <span class="n">abort</span><span class="p">)</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">n</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">get_node</span><span class="p">(</span><span class="n">full_path</span><span class="p">,</span> <span class="n">abort</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>Arguments are:</p>
@@ -456,7 +463,7 @@ A value of False, causes the function to return None.</p>
 <h3>1.8.6. h5gate File close<a class="headerlink" href="#h5gate-file-close" title="Permalink to this headline">¶</a></h3>
 <p>Method <code class="docutils literal"><span class="pre">close</span></code> of object h5gate File is used to close the created file.  It must be
 called to complete the creation of the file.  Function signature is:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 </pre></div>
 </div>
 <p>There are no arguments.</p>
@@ -487,7 +494,7 @@ used to call the methods.  The h5gate Group methods are described below:</p>
 <h3>1.9.1. h5gate Group make_group<a class="headerlink" href="#h5gate-group-make-group" title="Permalink to this headline">¶</a></h3>
 <p>Method <code class="docutils literal"><span class="pre">make_group</span></code> of object h5gate Group creates a group inside the current group.
 It has the following signature:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="n">g</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">make_group</span><span class="p">(</span><span class="n">qid</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">attrs</span><span class="p">,</span> <span class="n">link</span><span class="p">,</span> <span class="n">abort</span><span class="p">)</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">g</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">make_group</span><span class="p">(</span><span class="n">qid</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">attrs</span><span class="p">,</span> <span class="n">link</span><span class="p">,</span> <span class="n">abort</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>In the above line, <code class="docutils literal"><span class="pre">pg</span></code> signifies a parent group, (object of type h5gate Group).
@@ -501,7 +508,7 @@ located inside the parent group used to invoke the method).</p>
 <h3>1.9.2. h5gate Group make_custom_group<a class="headerlink" href="#h5gate-group-make-custom-group" title="Permalink to this headline">¶</a></h3>
 <p>Method <code class="docutils literal"><span class="pre">make_custom_group</span></code> of object h5gate Group creates a custom group, usually within
 the parent group.  The function signature for <code class="docutils literal"><span class="pre">make_custom_group</span></code> is:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="n">g</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">make_custom_group</span><span class="p">(</span><span class="n">qid</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">g</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">make_custom_group</span><span class="p">(</span><span class="n">qid</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>Return type and parameters are the same as for h5gate Group method <code class="docutils literal"><span class="pre">make_group</span></code>.  If path
@@ -513,7 +520,7 @@ can be anywhere in the hdf5 file.</p>
 <h3>1.9.3. h5gate Group set_dataset<a class="headerlink" href="#h5gate-group-set-dataset" title="Permalink to this headline">¶</a></h3>
 <p>Method <code class="docutils literal"><span class="pre">set_dataset</span></code> of object h5gate Group is used to create a dataset within the parent
 group.  It has the following signature:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="n">d</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">set_dataset</span><span class="p">(</span><span class="n">qid</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">attrs</span><span class="p">,</span> <span class="n">dtype</span><span class="p">,</span> <span class="n">compress</span><span class="p">)</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">d</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">set_dataset</span><span class="p">(</span><span class="n">qid</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">attrs</span><span class="p">,</span> <span class="n">dtype</span><span class="p">,</span> <span class="n">compress</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>The return value is an object of type h5gate Dataset.  The parameters have the same
@@ -524,7 +531,7 @@ the created dataset is always located inside the parent group used to invoke the
 <h3>1.9.4. h5gate Group set_custom_dataset<a class="headerlink" href="#h5gate-group-set-custom-dataset" title="Permalink to this headline">¶</a></h3>
 <p>Method set_custom_dataset of object h5gate Group is used to create a custom dataset,
 usually within the parent group.  It has the following signature:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="n">d</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">set_custom_dataset</span><span class="p">(</span><span class="n">qid</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">attrs</span><span class="p">,</span> <span class="n">dtype</span><span class="p">,</span> <span class="n">compress</span><span class="p">)</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">d</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">set_custom_dataset</span><span class="p">(</span><span class="n">qid</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">attrs</span><span class="p">,</span> <span class="n">dtype</span><span class="p">,</span> <span class="n">compress</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>The return value is an object of type h5gate Dataset.  The parameters have the same
@@ -537,7 +544,7 @@ absolute path, the group will be created at the specified location.</p>
 <p>Both the h5gate Group and h5gate Dataset objects have a method <code class="docutils literal"><span class="pre">set_attr</span></code> which is used
 to set the value of an hdf5 attribute of the group or dataset.  It has the following
 signature:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="n">n</span><span class="o">.</span><span class="n">set_attr</span><span class="p">(</span><span class="n">aid</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">custom</span><span class="p">)</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">n</span><span class="o">.</span><span class="n">set_attr</span><span class="p">(</span><span class="n">aid</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">custom</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>In the above, “n” is an h5gate Node object (which is a h5gate Group or Dataset).</p>
@@ -558,7 +565,7 @@ closing the file.</dd>
 <h3>1.9.6. h5gate Group get_node method<a class="headerlink" href="#h5gate-group-get-node-method" title="Permalink to this headline">¶</a></h3>
 <p>This is a shorthand wrapper for the <code class="docutils literal"><span class="pre">File.get_node</span></code> method for accessing Groups or Datasets
 within the current Group.  It has the following signature:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="n">n</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">get_node</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">abort</span><span class="p">)</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">n</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">get_node</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">abort</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>In the above <code class="docutils literal"><span class="pre">g</span></code> is an h5gate Group object.  Parameters are as for <code class="docutils literal"><span class="pre">File.get_node</span></code> except
@@ -569,7 +576,7 @@ that the <cite>path</cite> may be a relative path, in which case it is resolved 
 <h2>1.10. nwb_utils.py functions<a class="headerlink" href="#nwb-utils-py-functions" title="Permalink to this headline">¶</a></h2>
 <p>File nwb_utils.py provides the following utility functions that are useful when using
 the API.  The function signatures and doc strings are given below.</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="k">def</span> <span class="nf">load_file</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">load_file</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; Load content of a file.  Useful for setting metadata to</span>
 <span class="sd">    content of a text file&quot;&quot;&quot;</span>
 
@@ -648,7 +655,7 @@ below (for the Python API).  For most complete and recent examples, see the scri
 <h3>1.11.1. Setting metadata in the top-level general group<a class="headerlink" href="#setting-metadata-in-the-top-level-general-group" title="Permalink to this headline">¶</a></h3>
 <p>For metadata that is in the top level of group <code class="docutils literal"><span class="pre">/general</span></code>, a call to the h5gate File object
 is used.  Examples are:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="n">f</span><span class="o">.</span><span class="n">set_dataset</span><span class="p">(</span><span class="s2">&quot;lab&quot;</span><span class="p">,</span> <span class="s2">&quot;content to be stored...&quot;</span><span class="p">)</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">f</span><span class="o">.</span><span class="n">set_dataset</span><span class="p">(</span><span class="s2">&quot;lab&quot;</span><span class="p">,</span> <span class="s2">&quot;content to be stored...&quot;</span><span class="p">)</span>
 <span class="n">f</span><span class="o">.</span><span class="n">set_dataset</span><span class="p">(</span><span class="s2">&quot;surgery&quot;</span><span class="p">,</span> <span class="s2">&quot;content to be stored...&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -656,18 +663,18 @@ is used.  Examples are:</p>
 object is used to create the subgroup, then calls are made using the subgroup to create
 and store the data inside it.  Examples are:</p>
 <p><strong>Subject metadata</strong> – (inside group <code class="docutils literal"><span class="pre">/general/subject</span></code>)</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="n">g</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">make_group</span><span class="p">(</span><span class="s2">&quot;subject&quot;</span><span class="p">)</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">g</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">make_group</span><span class="p">(</span><span class="s2">&quot;subject&quot;</span><span class="p">)</span>
 <span class="n">g</span><span class="o">.</span><span class="n">set_dataset</span><span class="p">(</span><span class="s2">&quot;subject_id&quot;</span><span class="p">,</span> <span class="s2">&quot;content to be stored...&quot;</span><span class="p">)</span>
 <span class="n">g</span><span class="o">.</span><span class="n">set_dataset</span><span class="p">(</span><span class="s2">&quot;species&quot;</span><span class="p">,</span> <span class="s2">&quot;content to be stored...&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 <p><strong>Extracellular ephys metadata</strong> – (inside group <code class="docutils literal"><span class="pre">/general/extracellular_ephys</span></code>)</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="n">g</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">make_group</span><span class="p">(</span><span class="s2">&quot;extracellular_ephys&quot;</span><span class="p">)</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">g</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">make_group</span><span class="p">(</span><span class="s2">&quot;extracellular_ephys&quot;</span><span class="p">)</span>
 <span class="n">g</span><span class="o">.</span><span class="n">set_dataset</span><span class="p">(</span><span class="s2">&quot;electrode_group&quot;</span><span class="p">,</span> <span class="s2">&quot;content to be stored...&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 <p><strong>Extracellular ephys electrode group metadata</strong></p>
-<div class="highlight-python"><div class="highlight"><pre><span class="c1"># create subgroup using the group “g” made by the previous call</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="c1"># create subgroup using the group “g” made by the previous call</span>
 <span class="n">g2</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">make_group</span><span class="p">(</span><span class="s2">&quot;&lt;electrode_group_N&gt;&quot;</span><span class="p">,</span> <span class="s2">&quot;name of electrode group...&quot;</span><span class="p">)</span>
 
 <span class="c1"># set dataset inside subgropu</span>
@@ -679,19 +686,19 @@ and store the data inside it.  Examples are:</p>
 <h3>1.11.2. Creating Modules and interfaces<a class="headerlink" href="#creating-modules-and-interfaces" title="Permalink to this headline">¶</a></h3>
 <p>NWB “Modules” (which are stored as hdf5 groups inside the <code class="docutils literal"><span class="pre">/processing</span></code> group) are
 created using the following call:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="n">gm</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">make_group</span><span class="p">(</span><span class="s2">&quot;&lt;module&gt;&quot;</span><span class="p">,</span> <span class="s2">&quot;name of module.&quot;</span><span class="p">)</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">gm</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">make_group</span><span class="p">(</span><span class="s2">&quot;&lt;module&gt;&quot;</span><span class="p">,</span> <span class="s2">&quot;name of module.&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>Once a module is created, NWB interfaces (which are groups inside a module) are created
 by calling “make_group” using the group associated with the module.  Examples:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="n">gi</span> <span class="o">=</span> <span class="n">gm</span><span class="o">.</span><span class="n">make_group</span><span class="p">(</span><span class="s2">&quot;Clustering&quot;</span><span class="p">)</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">gi</span> <span class="o">=</span> <span class="n">gm</span><span class="o">.</span><span class="n">make_group</span><span class="p">(</span><span class="s2">&quot;Clustering&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>In the above call, the <code class="docutils literal"><span class="pre">Clustering</span></code> interface is created inside of the module created in
 the previous call.  Storing data inside the interface is done by calling the methods of
 the group associated with the interface.  For example, the Clustering interface contains
 a dataset named <code class="docutils literal"><span class="pre">times</span></code>.  Data would be saved to it using:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="n">gi</span><span class="o">.</span><span class="n">set_dataset</span><span class="p">(</span><span class="s2">&quot;times&quot;</span><span class="p">,</span> <span class="n">data_to_be_stored</span><span class="p">)</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">gi</span><span class="o">.</span><span class="n">set_dataset</span><span class="p">(</span><span class="s2">&quot;times&quot;</span><span class="p">,</span> <span class="n">data_to_be_stored</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>In the above call, <code class="docutils literal"><span class="pre">data_to_be_stored</span></code> would be a list, tuple, or numpy array
@@ -706,7 +713,7 @@ call).  If the TimeSeries being created is not inside a previously created h5gat
 then the h5gate File object must be used to create the TimeSeries.  Otherwise, the parent
 h5gate Group object is used.  Some examples are below.</p>
 <p><strong>Storing TimeSeries</strong> (in <code class="docutils literal"><span class="pre">/acquisition/timeseries</span></code>)</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="n">ts</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">make_group</span><span class="p">(</span><span class="s2">&quot;&lt;TimeSeries&gt;&quot;</span><span class="p">,</span> <span class="s2">&quot;name of TimeSeries group&quot;</span><span class="p">,</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">ts</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">make_group</span><span class="p">(</span><span class="s2">&quot;&lt;TimeSeries&gt;&quot;</span><span class="p">,</span> <span class="s2">&quot;name of TimeSeries group&quot;</span><span class="p">,</span>
    <span class="n">path</span><span class="o">=</span><span class="s2">&quot;/acquisition/timeseries&quot;</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span> <span class="p">{</span><span class="s2">&quot;source&quot;</span><span class="p">:</span> <span class="s2">&quot;...&quot;</span><span class="p">})</span>
 <span class="n">ts</span><span class="o">.</span><span class="n">set_dataset</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">,</span> <span class="n">data_to_be_stored</span><span class="p">,</span>
    <span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;unit&quot;</span><span class="p">:</span> <span class="s2">&quot;unit used&quot;</span><span class="p">},</span> <span class="n">compress</span><span class="o">=</span><span class="bp">True</span> <span class="p">)</span>
@@ -717,7 +724,7 @@ h5gate Group object is used.  Some examples are below.</p>
 <p>In the above, times is a list, tuple or numpy array having the data to be stored in the
 timestamps array.  Argument <code class="docutils literal"><span class="pre">compress</span></code> is set to true to save space.</p>
 <p><strong>Storing TimeSeries type ImageSeries</strong> (in <code class="docutils literal"><span class="pre">/stimulus/timeseries</span></code>)</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="n">ts</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">make_group</span><span class="p">(</span><span class="s2">&quot;&lt;ImageSeries&gt;&quot;</span><span class="p">,</span> <span class="s2">&quot;name of group&quot;</span><span class="p">,</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">ts</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">make_group</span><span class="p">(</span><span class="s2">&quot;&lt;ImageSeries&gt;&quot;</span><span class="p">,</span> <span class="s2">&quot;name of group&quot;</span><span class="p">,</span>
    <span class="n">path</span><span class="o">=</span><span class="s2">&quot;/stimulus/timeseries&quot;</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span> <span class="p">{</span><span class="s2">&quot;source&quot;</span><span class="p">:</span> <span class="s2">&quot;...&quot;</span><span class="p">})</span>
 <span class="c1"># calls below are the same as in the previous example</span>
 <span class="n">ts</span><span class="o">.</span><span class="n">set_dataset</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">,</span> <span class="n">data_to_be_stored</span><span class="p">,</span>
@@ -729,12 +736,12 @@ timestamps array.  Argument <code class="docutils literal"><span class="pre">com
 <p><strong>Storing a TimeSeries type in an Interface</strong></p>
 <p>Many interfaces include as a member one or more TimeSeries types.  Modules and interfaces
 are stored using the following hierarchical layout:</p>
-<div class="highlight-default"><div class="highlight"><pre><span class="o">/</span><span class="n">processing</span><span class="o">/&lt;</span><span class="n">module</span><span class="o">&gt;/</span><span class="n">interface</span><span class="o">/</span><span class="n">interface</span><span class="o">-</span><span class="n">contents</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="o">/</span><span class="n">processing</span><span class="o">/&lt;</span><span class="n">module</span><span class="o">&gt;/</span><span class="n">interface</span><span class="o">/</span><span class="n">interface</span><span class="o">-</span><span class="n">contents</span>
 </pre></div>
 </div>
 <p>To store a TimeSeries inside an interface,the group associated with the interface is used
 to create the TimeSeries group.  An example:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="c1"># create the module</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="c1"># create the module</span>
 <span class="n">gm</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">make_group</span><span class="p">(</span><span class="s2">&quot;&lt;module&gt;&quot;</span><span class="p">,</span> <span class="s2">&quot;name of module.&quot;</span><span class="p">)</span>
 
 <span class="c1"># create the interface</span>
@@ -754,11 +761,11 @@ to create the TimeSeries group.  An example:</p>
 <div class="section" id="storing-epochs">
 <h3>1.11.4. Storing epochs<a class="headerlink" href="#storing-epochs" title="Permalink to this headline">¶</a></h3>
 <p>To store epochs, first create the top-level epoch group:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="n">fe</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">make_group</span><span class="p">(</span><span class="s2">&quot;epochs&quot;</span><span class="p">)</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">fe</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">make_group</span><span class="p">(</span><span class="s2">&quot;epochs&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>Then create each epoch inside the top-level epoch group:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="n">e</span> <span class="o">=</span> <span class="n">fe</span><span class="o">.</span><span class="n">make_group</span><span class="p">(</span><span class="s2">&quot;&lt;epoch_X&gt;&quot;</span><span class="p">,</span> <span class="n">epoch_name</span><span class="p">)</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">e</span> <span class="o">=</span> <span class="n">fe</span><span class="o">.</span><span class="n">make_group</span><span class="p">(</span><span class="s2">&quot;&lt;epoch_X&gt;&quot;</span><span class="p">,</span> <span class="n">epoch_name</span><span class="p">)</span>
 <span class="n">e</span><span class="o">.</span><span class="n">set_dataset</span><span class="p">(</span><span class="s1">&#39;description&#39;</span><span class="p">,</span> <span class="n">description</span><span class="p">)</span>
 <span class="n">e</span><span class="o">.</span><span class="n">set_dataset</span><span class="p">(</span><span class="s1">&#39;start_time&#39;</span><span class="p">,</span> <span class="n">start_time</span><span class="p">)</span>
 <span class="n">e</span><span class="o">.</span><span class="n">set_dataset</span><span class="p">(</span><span class="s1">&#39;stop_time&#39;</span><span class="p">,</span> <span class="n">stop_time</span><span class="p">)</span>
@@ -766,7 +773,7 @@ to create the TimeSeries group.  An example:</p>
 </pre></div>
 </div>
 <p>To add time (“timeseries_X”) to the epoch, use the nwb_utility routine “add_epoch_ts”:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="n">ut</span><span class="o">.</span><span class="n">add_epoch_ts</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">start_time</span><span class="p">,</span> <span class="n">stop_time</span><span class="p">,</span> <span class="s2">&quot;pole_in&quot;</span><span class="p">,</span> <span class="n">tsg</span><span class="p">)</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">ut</span><span class="o">.</span><span class="n">add_epoch_ts</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">start_time</span><span class="p">,</span> <span class="n">stop_time</span><span class="p">,</span> <span class="s2">&quot;pole_in&quot;</span><span class="p">,</span> <span class="n">tsg</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>In the above “tsg” specifies a previously created time series to add to the epoch.  It can
@@ -813,7 +820,7 @@ directory <code class="docutils literal"><span class="pre">examples/create_scrip
 <p>Extensions are Python files that contain a Python dictionary of a particular form.
 They can created using any text editor.  An example is below (from file
 <code class="docutils literal"><span class="pre">e-analysis.py</span></code> in <code class="docutils literal"><span class="pre">examples/create_scripts\extensions</span></code>):</p>
-<div class="highlight-json"><div class="highlight"><pre><span class="p">{</span><span class="nt">&quot;fs&quot;</span><span class="p">:</span> <span class="p">{</span><span class="nt">&quot;aibs_ct_an&quot;</span><span class="p">:</span> <span class="p">{</span>
+<div class="highlight-json"><div class="highlight"><pre><span></span><span class="p">{</span><span class="nt">&quot;fs&quot;</span><span class="p">:</span> <span class="p">{</span><span class="nt">&quot;aibs_ct_an&quot;</span><span class="p">:</span> <span class="p">{</span>
 
 
 <span class="nt">&quot;info&quot;</span><span class="p">:</span> <span class="p">{</span>
@@ -866,7 +873,7 @@ into the call to <code class="docutils literal"><span class="pre">nwb_file.open<
 Section <a class="reference internal" href="#initializing-the-api"><span class="std std-numref">1.5 Initializing the API</span></a>.  An example call (from file
 <code class="docutils literal"><span class="pre">examples/create_scripts/analysis-e.py</span></code> is given below for the above
 extension, which is in file <code class="docutils literal"><span class="pre">extensions/e-analysis.py</span></code>.</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="c1"># create a new NWB file</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="c1"># create a new NWB file</span>
 <span class="n">settings</span> <span class="o">=</span> <span class="p">{}</span>
 <span class="n">settings</span><span class="p">[</span><span class="s2">&quot;file_name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">OUTPUT_DIR</span> <span class="o">+</span> <span class="n">file_name</span>
 <span class="n">settings</span><span class="p">[</span><span class="s2">&quot;identifier&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ut</span><span class="o">.</span><span class="n">create_identifier</span><span class="p">(</span><span class="s2">&quot;example /analysis group using extension.&quot;</span><span class="p">)</span>
@@ -896,7 +903,7 @@ extension and not the core format.</p>
 <p>Examples of referencing structures defined in an extension is given below (from file
 <code class="docutils literal"><span class="pre">examples/create_scripts/analysis-e.py</span></code>).  It creates creates a group and
 datasets that are defined by the extension given above.</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="c1"># This example, stores spike times for multiple sweeps</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="c1"># This example, stores spike times for multiple sweeps</span>
 <span class="c1"># Create the group for the spike times</span>
 <span class="c1"># The group (&quot;aibs_spike_times&quot;) is defined in the extension</span>
 <span class="c1"># f is the h5gate File object returned by nwb_file.open</span>
@@ -936,7 +943,7 @@ two sections above is below.  Note, the extension files do not change regardless
 of whether the Python or Matlab API is used.  This is because the Python API also
 handles the calls made from Matlab.</p>
 <p>Matlab code (from file <code class="docutils literal"><span class="pre">matlab_bridge/create_scripts/analysis_e.m</span></code>):</p>
-<div class="highlight-matlab"><div class="highlight"><pre><span class="c">% create a new NWB file</span>
+<div class="highlight-matlab"><div class="highlight"><pre><span></span><span class="c">% create a new NWB file</span>
 <span class="n">settings</span> <span class="p">=</span> <span class="p">{</span> <span class="c">...</span>
     <span class="s">&#39;file_name&#39;</span><span class="p">,</span> <span class="n">nwb_file_path</span><span class="p">,</span> <span class="c">...</span>
     <span class="s">&#39;identifier&#39;</span><span class="p">,</span> <span class="c">...</span>
@@ -1067,8 +1074,8 @@ handles the calls made from Matlab.</p>
       &copy;2017, Jeff Teeters.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.4</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.6</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
       |
       <a href="_sources/api_usage.rst.txt"
