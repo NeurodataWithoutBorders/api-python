@@ -52,11 +52,13 @@ def process_files(input_dir_or_file):
         # input_dir_or_file is a directory, processes files within it
         output = []
         output_file_name = "dirsig.txt"
+        ignore_files = [output_file_name, "log.txt"]
         for dirpath, dirnames, filenames in os.walk(input_dir_or_file):
             for filename in filenames:
                 assert dirpath.startswith(input_dir_or_file)
                 path = os.path.join(dirpath, filename)
-                if path == os.path.join(input_dir_or_file, output_file_name):
+                if path in [os.path.join(input_dir_or_file, x) for x in ignore_files]:
+                    # don't include signature for this file
                     continue
                 hash = get_file_hash(path)
                 output_path = path[len(input_dir_or_file):].lstrip("/")

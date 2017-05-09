@@ -1,19 +1,21 @@
 Python (and Matlab) API for Neurodata Without Borders (NWB) format
 ==================================================================
 
-:Revision: 0.8.2
-:Date: May 1, 2017 [1]_
+:Revision: 0.8.3
+:Date: May 9, 2017 [1]_
 
 
 Overview
 --------
 
-The Python API for the NWB format is a write API that can be used to
-create NWB files (and add data to previously created NWB files). (It
-does not provide functionality for reading).
+The Python (and Matlab) API
+(available at https://github.com/NeurodataWithoutBorders/api-python)
+for the NWB format is a write API that can be used to
+create NWB files.  It can also be used to add data to previously created NWB
+files, but it does not provide functionality for reading.
 The NWB format and API are described in the paper:
-*Neurodata Without Borders: Creating a Common Data Format for Neurophysiology.*
-http://dx.doi.org/10.1016/j.neuron.2015.10.025
+*Neurodata Without Borders: Creating a Common Data Format for Neurophysiology*
+(http://dx.doi.org/10.1016/j.neuron.2015.10.025).
 
 The API provides a small set of generic functions for storing data in the file
 (that is, creating HDF5 groups and datasets).    It is
@@ -662,13 +664,14 @@ the API.  The function signatures and doc strings are given below.
                 *nothing*
         """
 
-    def add_reference_image(seg_iface, plane, name, img):
+    def add_reference_image(seg_iface, plane, name, img, source=None):
         """ Add a reference image to the segmentation interface
             Args: 
                 *seg_iface*  Group folder having the segmentation interface
                 *plane* (text) name of imaging plane
                 *name* (text) name of reference image
                 *img* (byte array) raw pixel map of image, 8-bit grayscale
+                *source* (text) description of reference image source
             Returns:
                 *nothing*
         """

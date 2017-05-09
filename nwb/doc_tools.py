@@ -1007,10 +1007,11 @@ def insert_doc_content(dinfo, toc, ids_documented, ns):
     content = add_css(dinfo['content'])
     lid = location['id']
     if lid not in toc:
-        print ("namespace: %s, doc id '%s' location id '%s' not in table of contents" %(
+        msg = ("namespace: %s, doc id '%s' location id '%s' not in table of contents" %(
             ns, doc_id, lid))
-        traceback.print_stack()
-        import pdb; pdb.set_trace()
+        # print (msg)
+        # import pdb; pdb.set_trace()
+        raise ValueError(msg)
     position = location['position']
     if position in ('before', 'after'):
         # doc inserted as new entry in table of contents.  Make new Id_doc object
@@ -1855,9 +1856,9 @@ def make_id_doc(f, id, id_info, ids_documented, sdef=None):
 #                 make_id_doc(f, mid, mid_info, ids_documented, msdef)
             if len(ml) == 1:
                 ml = ml[0]
-            if "core" in ml:
-                print ("found ml: %s" % ml)
-                import pdb; pdb.set_trace()
+#             if "core" in ml:
+#                 print ("found ml: %s" % ml)
+#                 import pdb; pdb.set_trace()
             html.append("<p><i>%s</i> includes all elements of <i>%s</i> with the "
                 "the following additions or <u>changes</u>:</p>" % (cgi.escape(qid), ml))
     tbl = Table(f)

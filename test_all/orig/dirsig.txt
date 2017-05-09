@@ -1,5 +1,4 @@
 jZSWqA check_schemas.txt
-lkLpVy log.txt
 ckBgPE doc/behavior-e.html
 nOEUPO doc/closed_interface-e.html
 ksmjJP doc/core_doc.html
@@ -22,7 +21,7 @@ eioDwc examples/create/closed_interface-e.txt
 jPpUEu examples/create/crcns_alm-1.txt
 eaVLsW examples/create/crcns_hc-3.txt
 eWVqzp examples/create/crcns_ret-1.txt
-iElpxq examples/create/crcns_ssc-1.txt
+fSVleq examples/create/crcns_ssc-1.txt
 jvucXC examples/create/custom_link.txt
 jFuWmY examples/create/extracellular_ephys.txt
 hqOGuv examples/create/extracellular_spikes.txt
@@ -85,7 +84,7 @@ ehIBTg examples/h5sig/crcns_ret-1/stim_library/640x480_2x480_-10000.txt
 fyIbFO examples/h5sig/crcns_ret-1/stim_library/640x480_5x480_-10000.txt
 dyTjoP examples/h5sig/crcns_ret-1/stim_library/640x480_640x1_-10000.txt
 bRbUMy examples/h5sig/crcns_ret-1/stim_library/640x480_640x2_-10000.txt
-ksNQvs examples/h5sig/crcns_ssc-1/an197522_2013_03_10_session.txt
+hVoAFR examples/h5sig/crcns_ssc-1/an197522_2013_03_10_session.txt
 hEyqSO examples/validate/abstract_feature.txt
 dgMhJm examples/validate/analysis_e.txt
 kdwSko examples/validate/annotations.txt
@@ -95,7 +94,7 @@ hQnxIk examples/validate/closed_interface-e.txt
 iBlvPf examples/validate/crcns_alm-1.txt
 cpXoQX examples/validate/crcns_hc-3.txt
 eUNAkM examples/validate/crcns_ret-1.txt
-iFcClr examples/validate/crcns_ssc-1.txt
+eoVOTn examples/validate/crcns_ssc-1.txt
 glqvmy examples/validate/custom_link.txt
 hOWtDJ examples/validate/extracellular_ephys.txt
 eGIMAr examples/validate/extracellular_spikes.txt

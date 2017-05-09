@@ -75,9 +75,14 @@ classdef nwb_utils
                 % no need to convert, is not python type
                 ml_data = py_data;
             else
-                if startsWith(ptype,'py.numpy.float') || ...
-                   startsWith(ptype,'py.numpy.int') || ...
-                   startsWith(ptype,'py.numpy.uint')
+                % replace startsWith, with nwb_utils.hasPrefix for older
+                % versions of Matlab
+%                 if startsWith(ptype,'py.numpy.float') || ...
+%                    startsWith(ptype,'py.numpy.int') || ...
+%                    startsWith(ptype,'py.numpy.uint')
+                if nwb_utils.hasPrefix(ptype,'py.numpy.float') || ...
+                   nwb_utils.hasPrefix(ptype,'py.numpy.int') || ...
+                   nwb_utils.hasPrefix(ptype,'py.numpy.uint')
                    ptype = 'py.numpy.number';  % for switch case below
                 end
                 switch ptype
@@ -92,6 +97,17 @@ classdef nwb_utils
                         py_data
                         error('Unable to convert Python type "%s" to matlab', ptype)
                 end
+            end
+        end
+        function [match] = hasPrefix(str, prefix)
+            % Return true if string str starts with prefix, false otherwise
+            % equivalant to startsWith but for earlier versions of Matlab
+            len_str = length(str);
+            len_prefix = length(prefix);
+            if len_str < len_prefix
+                match = false;
+            else
+                match = strcmp(str(1:len_prefix), prefix);
             end
         end
         function [cellP] = convert_py_list(pylist)

@@ -3,8 +3,14 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to NWB API-Python's documentation!
-==========================================
+NWB API-Python documentation
+============================
+
+|  This documentation describes the NWB Python (and Matlab) API available at:
+|  https://github.com/NeurodataWithoutBorders/api-python
+
+Contents
+--------
 
 .. toctree::
    :maxdepth: 2

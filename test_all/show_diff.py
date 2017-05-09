@@ -368,18 +368,18 @@ def find_diff():
     assert sorted(list(si["curr"]["sigs"])) == sorted(list(si["orig"]["sigs"]))
     for path in sorted(list(si["curr"]["sigs"])):
         hash_curr = si["curr"]["sigs"][path]
-        hash_orig = si["curr"]["sigs"][path]
+        hash_orig = si["orig"]["sigs"][path]
         if hash_curr != hash_orig:
             diff_hashes.append(path)
     if diff_hashes:
-        msg = "%i files in both, but hashes different:\n%s" % (len(diff_hashes),
-            "\n".join(diff_hashes))
+        msg = "Hashes don't match in %i file(s):\n%s" % (len(diff_hashes), "\n".join(diff_hashes))
         diffs.append(msg)
     # check consistency between files in the same top dir, e.g. between
     # matlab and python hdf5 files
     diffs.extend(check_consistency())
     if diffs:
-        print ("Differences found:\n%s" % "\n".join(diffs))
+        print ("%i paired files; following differences found:\n%s" % (len(list(si["curr"]["sigs"])),
+            "\n".join(diffs)))
         return diffs
     else:
         print("All paired files (%i) match." % len(sorted(list(si["curr"]["sigs"]))))

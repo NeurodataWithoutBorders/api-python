@@ -27,7 +27,7 @@
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="2. h5gate format specification language" href="specification_language.html" />
-    <link rel="prev" title="Welcome to NWB API-Python’s documentation!" href="index.html" />
+    <link rel="prev" title="NWB API-Python documentation" href="index.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
@@ -49,20 +49,22 @@
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Revision:</th><td class="field-body">0.8.2</td>
+<tr class="field-odd field"><th class="field-name">Revision:</th><td class="field-body">0.8.3</td>
 </tr>
-<tr class="field-even field"><th class="field-name">Date:</th><td class="field-body">May 1, 2017 <a class="footnote-reference" href="#id2" id="id1">[1]</a></td>
+<tr class="field-even field"><th class="field-name">Date:</th><td class="field-body">May 9, 2017 <a class="footnote-reference" href="#id2" id="id1">[1]</a></td>
 </tr>
 </tbody>
 </table>
 <div class="section" id="overview">
 <h2>1.1. Overview<a class="headerlink" href="#overview" title="Permalink to this headline">¶</a></h2>
-<p>The Python API for the NWB format is a write API that can be used to
-create NWB files (and add data to previously created NWB files). (It
-does not provide functionality for reading).
+<p>The Python (and Matlab) API
+(available at <a class="reference external" href="https://github.com/NeurodataWithoutBorders/api-python">https://github.com/NeurodataWithoutBorders/api-python</a>)
+for the NWB format is a write API that can be used to
+create NWB files.  It can also be used to add data to previously created NWB
+files, but it does not provide functionality for reading.
 The NWB format and API are described in the paper:
-<em>Neurodata Without Borders: Creating a Common Data Format for Neurophysiology.</em>
-<a class="reference external" href="http://dx.doi.org/10.1016/j.neuron.2015.10.025">http://dx.doi.org/10.1016/j.neuron.2015.10.025</a></p>
+<em>Neurodata Without Borders: Creating a Common Data Format for Neurophysiology</em>
+(<a class="reference external" href="http://dx.doi.org/10.1016/j.neuron.2015.10.025">http://dx.doi.org/10.1016/j.neuron.2015.10.025</a>).</p>
 <p>The API provides a small set of generic functions for storing data in the file
 (that is, creating HDF5 groups and datasets).    It is
 implemented using a software that is domain-independent.
@@ -618,13 +620,14 @@ the API.  The function signatures and doc strings are given below.</p>
 <span class="sd">            *nothing*</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-<span class="k">def</span> <span class="nf">add_reference_image</span><span class="p">(</span><span class="n">seg_iface</span><span class="p">,</span> <span class="n">plane</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">img</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">add_reference_image</span><span class="p">(</span><span class="n">seg_iface</span><span class="p">,</span> <span class="n">plane</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">img</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; Add a reference image to the segmentation interface</span>
 <span class="sd">        Args:</span>
 <span class="sd">            *seg_iface*  Group folder having the segmentation interface</span>
 <span class="sd">            *plane* (text) name of imaging plane</span>
 <span class="sd">            *name* (text) name of reference image</span>
 <span class="sd">            *img* (byte array) raw pixel map of image, 8-bit grayscale</span>
+<span class="sd">            *source* (text) description of reference image source</span>
 <span class="sd">        Returns:</span>
 <span class="sd">            *nothing*</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -1044,7 +1047,7 @@ handles the calls made from Matlab.</p>
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="index.html" title="previous chapter">Welcome to NWB API-Python&#8217;s documentation!</a></li>
+      <li>Previous: <a href="index.html" title="previous chapter">NWB API-Python documentation</a></li>
       <li>Next: <a href="specification_language.html" title="next chapter">2. h5gate format specification language</a></li>
   </ul></li>
 </ul>

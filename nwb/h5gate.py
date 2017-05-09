@@ -110,7 +110,7 @@ class File(object):
 
     def get_version(self):
         """Returns version information for this software."""
-        version = "h5gate 0.7; April 8, 2017"
+        version = "h5gate 0.71; May 9, 2017"
         return version
     
     def set_close_callback(self, callback):
@@ -1505,12 +1505,13 @@ class File(object):
             3. By specifying a link pattern explicitly (only for groups, since make_group
                 does not have a "value" option, an extra parameter (link) is made available
                 if needed to specify the link.  (Needed means the name is used to specify
-                the name of the group).
+                the name of the group).  Parameter 'link' can also be used to specify a
+                a node explicitly by having it be of type node_type.
         Function parameters are:
             val - name of group or value of dataset (used for methods 1 & 2)
-            link - explicitly specified link pattern (used for method 3.
+            link - explicitly specified link pattern or node (used for method 3).
             node_type, type of node being linked.  Either Group or Dataset.  (used
-            for method 1).
+            for method 1 and 3 when nodes are specified).
         Return value(link_info) is either:
             None - no link
             { 'node': <node_linking_to> }  - linking to an internal node
@@ -1525,7 +1526,10 @@ class File(object):
             link_info = self.extract_link_str(val)
             if not link_info:
                 # method 3
-                link_info = self.extract_link_str(link)
+                if type(link) is node_type:
+                    link_info = {'node': link}
+                else:
+                    link_info = self.extract_link_str(link)
         return link_info
     
     def extract_link_str(self, link):

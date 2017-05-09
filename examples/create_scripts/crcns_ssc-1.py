@@ -880,10 +880,13 @@ for i in range(len(file_list)):
         plane = plane_map[k]
         img = reference_image_red[plane]
         #- seg_iface.add_reference_image(plane, "%s_0002"%plane, img)
-        ut.add_reference_image(seg_iface, plane, "%s_0002"%plane, img)
+        # make a description of the source
+        source = "%s - red" % k  # k will be like 'area9_plane1'
+        ut.add_reference_image(seg_iface, plane, "%s_0002"%plane, img, source)
         img = reference_image_green[plane]
         #- seg_iface.add_reference_image(plane, "%s_0001"%plane, img)
-        ut.add_reference_image(seg_iface, plane, "%s_0001"%plane, img)
+        source = "%s - green" % k  # k will be like 'area9_plane1'
+        ut.add_reference_image(seg_iface, plane, "%s_0001"%plane, img, source)
 
 
     # generate time series for /acquisition

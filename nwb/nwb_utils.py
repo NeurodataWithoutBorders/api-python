@@ -411,7 +411,7 @@ def add_masks(seg_iface, image_plane, name, desc, pixel_list, weights, img, star
     roi_folder.set_dataset("roi_description", desc)
 
 
-def add_reference_image(seg_iface, plane, name, img):
+def add_reference_image(seg_iface, plane, name, img, source=None):
     """ Add a reference image to the segmentation interface
 
         Args: 
@@ -422,6 +422,8 @@ def add_reference_image(seg_iface, plane, name, img):
             *name* (text) name of reference image
 
             *img* (byte array) raw pixel map of image, 8-bit grayscale
+            
+            *source* (text) description of reference image source
 
         Returns:
             *nothing*
@@ -435,6 +437,8 @@ def add_reference_image(seg_iface, plane, name, img):
     ri = grp.make_group("reference_images", abort=False)
     #- img_ts = ts.ImageSeries(name, self.module.borg, "other", path)
     img_ts = ri.make_group("<image_name>", name)
+    if source:
+       img_ts.set_attr("source", source)
     #- img_ts.set_format("raw")
     img_ts.set_dataset('format', 'raw')
     #- img_ts.set_bits_per_pixel(8)
