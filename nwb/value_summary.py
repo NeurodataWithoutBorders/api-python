@@ -269,14 +269,14 @@ def get_prefix(val, fileObj, num_chars):
             hash = hash_str(val)
             prefix = "<<binary, hash=%s>>" % hash
             return prefix
-    elif isinstance(val, (float, np.float_, np.float32)):
+    elif isinstance(val, (float, np.floating)):
         val = float(val)
         if val.is_integer():
             prefix = str(int(val))
         else:
             prefix = "%-.4g" % val
         return prefix
-    elif isinstance(val, (int, np.int_, np.int8, np.int16, np.int32, np.uint8, np.uint16, np.uint32)):
+    elif isinstance(val, (int, np.integer)):
         return str(val)
     elif isinstance(val, h5py.h5r.RegionReference):
         prefix = summarize_region_reference(val, fileObj)
