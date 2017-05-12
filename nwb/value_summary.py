@@ -253,7 +253,7 @@ def get_prefix(val, fileObj, num_chars):
         if isinstance(val, bytes) and version_info[0] > 2:
             try:
                 prefix = prefix.decode('utf-8')
-            except UnicodeDecodeError as e:
+            except UnicodeDecodeError:
                 # value is a binary string.
                 hash = hashval(val)
                 bmsg = "<<binary, hash=%s>>" % hash
@@ -283,7 +283,7 @@ def get_prefix(val, fileObj, num_chars):
         return prefix
     vs_msg = "Unknown type in value_summary.get_prefix, val=%s, type=%s" % (val, type(val))
     # vs_msg_type = "warning"
-    # import pdb; pdb.set_trace()  
+    # import pdb; pdb.set_trace()
     raise SystemError(vs_msg)
     return str(val)
 
