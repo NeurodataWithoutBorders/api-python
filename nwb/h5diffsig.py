@@ -1307,36 +1307,36 @@ def diff_files(file1, file2):
 # used for profiling
 # import cProfile
 
-    
-if len(sys.argv) not in (2, 3, 4):
-    display_doc()
-    sys.exit(1)
-file1 = sys.argv[1]
-opts = sys.argv[-1].lstrip("-") if sys.argv[-1].startswith('-') and len(sys.argv[-1]) > 2 else None
-if len(sys.argv) == 4 and opts is None:
-    print("Third input parameter should be <opts>, but value found does not start with '-': %s" % sys.argv[3])
-    display_doc()
-    sys.exit(1)
-file2 = sys.argv[2] if (len(sys.argv) == 3 and opts is None) or len(sys.argv) > 3 else None
-if opts is not None:
-    given_opts = set(list(opts))
-    possible_options = set(['N', 'a'])
-    found_options = possible_options.intersection(given_opts)
-    unknown_options = list(given_opts - found_options)
-    if len(unknown_options) > 0:
-        print ("Unknown option(s) specified: %s.  Should include only: %s" % (unknown_options,
-        possible_options))
+if __name__ == '__main__':
+    if len(sys.argv) not in (2, 3, 4):
         display_doc()
         sys.exit(1)
-else:
-    found_options = []
-filter_nwb = ("N" in found_options)
-alpha_sort = ("a" in found_options)
-# set to True if this file is being compared to itself
-single_file = file2 is None
-if single_file: 
-    # compare file to itself to get information about links and sizes
-    diff_files(file1, file1)
-    # cProfile.run('diff_files("%s", "%s")' % (sys.argv[1], sys.argv[1]))
-else:
-    diff_files(file1, file2)
+    file1 = sys.argv[1]
+    opts = sys.argv[-1].lstrip("-") if sys.argv[-1].startswith('-') and len(sys.argv[-1]) > 2 else None
+    if len(sys.argv) == 4 and opts is None:
+        print("Third input parameter should be <opts>, but value found does not start with '-': %s" % sys.argv[3])
+        display_doc()
+        sys.exit(1)
+    file2 = sys.argv[2] if (len(sys.argv) == 3 and opts is None) or len(sys.argv) > 3 else None
+    if opts is not None:
+        given_opts = set(list(opts))
+        possible_options = set(['N', 'a'])
+        found_options = possible_options.intersection(given_opts)
+        unknown_options = list(given_opts - found_options)
+        if len(unknown_options) > 0:
+            print ("Unknown option(s) specified: %s.  Should include only: %s" % (unknown_options,
+            possible_options))
+            display_doc()
+            sys.exit(1)
+    else:
+        found_options = []
+    filter_nwb = ("N" in found_options)
+    alpha_sort = ("a" in found_options)
+    # set to True if this file is being compared to itself
+    single_file = file2 is None
+    if single_file:
+        # compare file to itself to get information about links and sizes
+        diff_files(file1, file1)
+        # cProfile.run('diff_files("%s", "%s")' % (sys.argv[1], sys.argv[1]))
+    else:
+        diff_files(file1, file2)
