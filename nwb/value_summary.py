@@ -253,7 +253,7 @@ def get_prefix(val, fileObj, num_chars):
         if isinstance(val, bytes) and version_info[0] > 2:
             try:
                 prefix = prefix.decode('utf-8')
-            except UnicodeDecodeError as e:
+            except UnicodeDecodeError:
                 # value is a binary string.
                 hash = hashval(val)
                 bmsg = "<<binary, hash=%s>>" % hash
@@ -269,21 +269,21 @@ def get_prefix(val, fileObj, num_chars):
             hash = hash_str(val)
             prefix = "<<binary, hash=%s>>" % hash
             return prefix
-    elif isinstance(val, (float, np.float_, np.float32)):
+    elif isinstance(val, (float, np.floating)):
         val = float(val)
         if val.is_integer():
             prefix = str(int(val))
         else:
             prefix = "%-.4g" % val
         return prefix
-    elif isinstance(val, (int, np.int_, np.int8, np.int16, np.int32, np.uint8, np.uint16, np.uint32)):
+    elif isinstance(val, (int, np.integer)):
         return str(val)
     elif isinstance(val, h5py.h5r.RegionReference):
         prefix = summarize_region_reference(val, fileObj)
         return prefix
     vs_msg = "Unknown type in value_summary.get_prefix, val=%s, type=%s" % (val, type(val))
     # vs_msg_type = "warning"
-    # import pdb; pdb.set_trace()  
+    # import pdb; pdb.set_trace()
     raise SystemError(vs_msg)
     return str(val)
 
