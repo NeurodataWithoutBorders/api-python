@@ -25,7 +25,6 @@ function run_all_tests( verbosity )
     end
     diary(log_file)
     
-
     % find all test
     tests = dir('t_*.m');
     script_name = mfilename();
@@ -35,33 +34,9 @@ function run_all_tests( verbosity )
         [trash, name] = fileparts(test);  % strip off .m extension
         if ~strcmp(name, script_name)
             % file is not this script, run it
-            cmd = [ name, '(''', verbosity, ''')' ];
-            run(cmd)
+            feval(name, verbosity);
         end
     end
-    
     diary off
-    
-    % run each test
-%     t_annotation(verbosity)
-%     t_general_image(verbosity)
-%     t_general_top(verbosity)
-%     t_no_data(verbosity)
-%     t_starting_time(verbosity)
-%     t_append(verbosity)
-%     t_general_opto(verbosity)
-%     t_if_add_ts(verbosity)
-%     t_no_time(verbosity)
-%     t_timeseries_link(verbosity)
-%     t_epoch_tag(verbosity)
-%     t_general_patch(verbosity)
-%     t_if_isi(verbosity)
-%     t_ref_image(verbosity)
-%     t_top_datasets(verbosity)
-%     t_general_ephys(verbosity)
-%     t_general_species(verbosity)
-%     t_modification_time(verbosity)
-%     t_softlink(verbosity)
-%     t_unittimes(verbosity)
 end
 
